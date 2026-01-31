@@ -6,6 +6,7 @@ import '../pages/invitation_listing_page.dart';
 import '../pages/login_page.dart';
 import '../pages/splash_page.dart';
 import '../pages/visitor_walk_in_page.dart';
+import '../pages/visitor_check_in_page.dart';
 
 const String loginRouteName = 'login';
 const String loginRoutePath = '/login';
@@ -19,6 +20,10 @@ const String invitationListingRouteName = 'invitation_listing';
 const String invitationListingRoutePath = '/invitation/listing';
 const String visitorWalkInRouteName = 'visitor_walk_in';
 const String visitorWalkInRoutePath = '/visitor/walk-in';
+const String visitorCheckInRouteName = 'visitor_check_in';
+const String visitorCheckInRoutePath = '/visitor/check-in';
+const String visitorCheckOutRouteName = 'visitor_check_out';
+const String visitorCheckOutRoutePath = '/visitor/check-out';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: splashRoutePath,
@@ -47,6 +52,16 @@ final GoRouter appRouter = GoRouter(
       name: visitorWalkInRouteName,
       path: visitorWalkInRoutePath,
       builder: (context, state) => const VisitorWalkInPage(),
+    ),
+    GoRoute(
+      name: visitorCheckInRouteName,
+      path: visitorCheckInRoutePath,
+      builder: (context, state) => const VisitorCheckInPage(isCheckIn: true),
+    ),
+    GoRoute(
+      name: visitorCheckOutRouteName,
+      path: visitorCheckOutRoutePath,
+      builder: (context, state) => const VisitorCheckInPage(isCheckIn: false),
     ),
     GoRoute(
       name: homeRouteName,

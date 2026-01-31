@@ -30,8 +30,14 @@ class HomePage extends StatelessWidget {
             title: 'Visitor Registration (Walk-In) - No login',
             onTap: () => context.push(visitorWalkInRoutePath),
           ),
-          const _MenuTile(title: 'Check-In'),
-          const _MenuTile(title: 'Check-Out'),
+          _MenuTile(
+            title: 'Check-In',
+            onTap: () => context.push(visitorCheckInRoutePath),
+          ),
+          _MenuTile(
+            title: 'Check-Out',
+            onTap: () => context.push(visitorCheckOutRoutePath),
+          ),
           const SizedBox(height: 16),
           _SectionHeader(title: 'Employees', textTheme: textTheme),
           const _MenuTile(title: 'Employee Check-In'),
