@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/app_dropdown_form_field.dart';
 import '../widgets/app_text_form_field.dart';
 import '../widgets/read_only_field.dart';
 
@@ -500,13 +501,13 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                       value: 'Auto-generated',
                     ),
                     const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
+                    AppDropdownFormField<String>(
                       value: _entity,
-                      decoration: const InputDecoration(labelText: 'Entity *'),
-                      items: const [
-                        DropdownMenuItem(
+                      label: 'Entity *',
+                      items: [
+                        AppDropdownMenuItem(
                           value: 'AGYTEK - Agytek1231',
-                          child: Text('AGYTEK - Agytek1231'),
+                          label: 'AGYTEK - Agytek1231',
                         ),
                       ],
                       onChanged: (value) => setState(() => _entity = value),
@@ -514,13 +515,13 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                           value == null ? 'Entity is required.' : null,
                     ),
                     const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
+                    AppDropdownFormField<String>(
                       value: _site,
-                      decoration: const InputDecoration(labelText: 'Site *'),
-                      items: const [
-                        DropdownMenuItem(
+                      label: 'Site *',
+                      items: [
+                        AppDropdownMenuItem(
                           value: 'FACTORY1 - FACTORY1 T',
-                          child: Text('FACTORY1 - FACTORY1 T'),
+                          label: 'FACTORY1 - FACTORY1 T',
                         ),
                       ],
                       onChanged: (value) => setState(() => _site = value),
@@ -528,19 +529,17 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                           value == null ? 'Site is required.' : null,
                     ),
                     const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
+                    AppDropdownFormField<String>(
                       value: _department,
-                      decoration: const InputDecoration(
-                        labelText: 'Department *',
-                      ),
-                      items: const [
-                        DropdownMenuItem(
+                      label: 'Department *',
+                      items: [
+                        AppDropdownMenuItem(
                           value: 'BOD1 - BOARD OF DIRECTOR',
-                          child: Text('BOD1 - BOARD OF DIRECTOR'),
+                          label: 'BOD1 - BOARD OF DIRECTOR',
                         ),
-                        DropdownMenuItem(
+                        AppDropdownMenuItem(
                           value: 'OPERATIONS',
-                          child: Text('OPERATIONS'),
+                          label: 'OPERATIONS',
                         ),
                       ],
                       onChanged: (value) => setState(() => _department = value),
@@ -548,14 +547,12 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                           value == null ? 'Department is required.' : null,
                     ),
                     const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
+                    AppDropdownFormField<String>(
                       value: _personToVisit,
-                      decoration: const InputDecoration(
-                        labelText: 'Person to Visit *',
-                      ),
-                      items: const [
-                        DropdownMenuItem(value: 'Ryan', child: Text('Ryan')),
-                        DropdownMenuItem(value: 'Aisha', child: Text('Aisha')),
+                      label: 'Person to Visit *',
+                      items: [
+                        AppDropdownMenuItem(value: 'Ryan', label: 'Ryan'),
+                        AppDropdownMenuItem(value: 'Aisha', label: 'Aisha'),
                       ],
                       onChanged: (value) =>
                           setState(() => _personToVisit = value),
@@ -563,19 +560,14 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                           value == null ? 'Person to visit is required.' : null,
                     ),
                     const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
+                    AppDropdownFormField<String>(
                       value: _visitorType,
-                      decoration: const InputDecoration(
-                        labelText: 'Visitor Type *',
-                      ),
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'Visitor',
-                          child: Text('Visitor'),
-                        ),
-                        DropdownMenuItem(
+                      label: 'Visitor Type *',
+                      items: [
+                        AppDropdownMenuItem(value: 'Visitor', label: 'Visitor'),
+                        AppDropdownMenuItem(
                           value: 'Contractor',
-                          child: Text('Contractor'),
+                          label: 'Contractor',
                         ),
                       ],
                       onChanged: (value) =>
@@ -666,18 +658,13 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                       maxLines: 4,
                     ),
                     const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
+                    AppDropdownFormField<String>(
                       value: _workLevel,
-                      decoration: const InputDecoration(
-                        labelText: 'Work Level',
-                      ),
-                      items: const [
-                        DropdownMenuItem(value: 'Low', child: Text('Low')),
-                        DropdownMenuItem(
-                          value: 'Medium',
-                          child: Text('Medium'),
-                        ),
-                        DropdownMenuItem(value: 'High', child: Text('High')),
+                      label: 'Work Level',
+                      items: [
+                        AppDropdownMenuItem(value: 'Low', label: 'Low'),
+                        AppDropdownMenuItem(value: 'Medium', label: 'Medium'),
+                        AppDropdownMenuItem(value: 'High', label: 'High'),
                       ],
                       onChanged: (value) => setState(() => _workLevel = value),
                     ),

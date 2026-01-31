@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
+import '../widgets/app_dropdown_form_field.dart';
 import '../widgets/app_text_form_field.dart';
 import '../widgets/info_row.dart';
 
@@ -246,54 +247,54 @@ class _InvitationListingPageState extends State<InvitationListingPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                DropdownButtonFormField<String>(
+                AppDropdownFormField<String>(
                   value: _entity,
-                  decoration: const InputDecoration(labelText: 'Entity *'),
-                  items: const [
-                    DropdownMenuItem(
+                  label: 'Entity *',
+                  items: [
+                    AppDropdownMenuItem(
                       value: 'AGYTEK - Agytek1231',
-                      child: Text('AGYTEK - Agytek1231'),
+                      label: 'AGYTEK - Agytek1231',
                     ),
                   ],
                   onChanged: (value) => setState(() => _entity = value),
                 ),
                 const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
+                AppDropdownFormField<String>(
                   value: _site,
-                  decoration: const InputDecoration(labelText: 'Site *'),
-                  items: const [
-                    DropdownMenuItem(
+                  label: 'Site *',
+                  items: [
+                    AppDropdownMenuItem(
                       value: 'FACTORY1 - FACTORY1 T',
-                      child: Text('FACTORY1 - FACTORY1 T'),
+                      label: 'FACTORY1 - FACTORY1 T',
                     ),
                   ],
                   onChanged: (value) => setState(() => _site = value),
                 ),
                 const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
+                AppDropdownFormField<String>(
                   value: _department,
-                  decoration: const InputDecoration(labelText: 'Department *'),
-                  items: const [
-                    DropdownMenuItem(
+                  label: 'Department *',
+                  items: [
+                    AppDropdownMenuItem(
                       value: 'ADMIN CENTER',
-                      child: Text('ADMIN CENTER'),
+                      label: 'ADMIN CENTER',
                     ),
-                    DropdownMenuItem(
+                    AppDropdownMenuItem(
                       value: 'OPERATIONS',
-                      child: Text('OPERATIONS'),
+                      label: 'OPERATIONS',
                     ),
                   ],
                   onChanged: (value) => setState(() => _department = value),
                 ),
                 const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
+                AppDropdownFormField<String>(
                   value: _visitorType,
-                  decoration: const InputDecoration(labelText: 'Visitor Type'),
-                  items: const [
-                    DropdownMenuItem(value: 'Visitor', child: Text('Visitor')),
-                    DropdownMenuItem(
+                  label: 'Visitor Type',
+                  items: [
+                    AppDropdownMenuItem(value: 'Visitor', label: 'Visitor'),
+                    AppDropdownMenuItem(
                       value: 'Contractor',
-                      child: Text('Contractor'),
+                      label: 'Contractor',
                     ),
                   ],
                   onChanged: (value) => setState(() => _visitorType = value),
@@ -320,19 +321,13 @@ class _InvitationListingPageState extends State<InvitationListingPage> {
                   onTap: () => _pickDate(controller: _dateToController),
                 ),
                 const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
+                AppDropdownFormField<String>(
                   value: _status,
-                  decoration: const InputDecoration(labelText: 'Status'),
-                  items: const [
-                    DropdownMenuItem(value: 'New', child: Text('New')),
-                    DropdownMenuItem(
-                      value: 'Approved',
-                      child: Text('Approved'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'Rejected',
-                      child: Text('Rejected'),
-                    ),
+                  label: 'Status',
+                  items: [
+                    AppDropdownMenuItem(value: 'New', label: 'New'),
+                    AppDropdownMenuItem(value: 'Approved', label: 'Approved'),
+                    AppDropdownMenuItem(value: 'Rejected', label: 'Rejected'),
                   ],
                   onChanged: (value) => setState(() => _status = value),
                 ),
