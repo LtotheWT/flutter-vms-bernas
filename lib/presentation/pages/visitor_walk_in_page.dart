@@ -232,143 +232,152 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
+      enableDrag: true,
+      isDismissible: true,
       builder: (context) {
         final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          child: SizedBox(
-            height: MediaQuery.of(context).size.height * 0.8,
-            child: Column(
-              children: [
-                Expanded(
-                  child: ListView(
-                    padding: EdgeInsets.only(bottom: 16 + bottomInset),
-                    children: [
-                      Text(
-                        'Review & Confirm',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(height: 12),
-                      _ReviewRow(label: 'Entity', value: _entity ?? '-'),
-                      _ReviewRow(label: 'Site', value: _site ?? '-'),
-                      _ReviewRow(
-                        label: 'Department',
-                        value: _department ?? '-',
-                      ),
-                      _ReviewRow(
-                        label: 'Person to Visit',
-                        value: _personToVisit ?? '-',
-                      ),
-                      _ReviewRow(
-                        label: 'Visitor Type',
-                        value: _visitorType ?? '-',
-                      ),
-                      _ReviewRow(
-                        label: 'Purpose',
-                        value: _purposeController.text,
-                      ),
-                      const SizedBox(height: 8),
-                      _ReviewRow(
-                        label: 'Company',
-                        value: _companyController.text,
-                      ),
-                      _ReviewRow(
-                        label: 'Contact',
-                        value: _contactController.text,
-                      ),
-                      _ReviewRow(
-                        label: 'Vehicle Plate',
-                        value: _vehiclePlateController.text,
-                      ),
-                      _ReviewRow(
-                        label: 'Visit From',
-                        value: _dateFromController.text,
-                      ),
-                      _ReviewRow(
-                        label: 'Visit To',
-                        value: _dateToController.text,
-                      ),
-                      const SizedBox(height: 8),
-                      _ReviewRow(
-                        label: 'Visitors Added',
-                        value: _visitors.length.toString(),
-                      ),
-                      _ReviewRow(
-                        label: 'Policies Read',
-                        value: _visitors.every((visitor) => visitor.policyRead)
-                            ? 'Yes'
-                            : 'No',
-                      ),
-                      if (_visitors.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          'Visitors',
-                          style: Theme.of(context).textTheme.labelLarge,
-                        ),
-                        const SizedBox(height: 6),
-                        ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: _visitors.length,
-                          separatorBuilder: (_, __) =>
-                              const Divider(height: 12),
-                          itemBuilder: (context, index) {
-                            final visitor = _visitors[index];
-                            return Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('${index + 1}.'),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(visitor.name),
-                                      Text(
-                                        visitor.idNumber,
-                                        style: Theme.of(
-                                          context,
-                                        ).textTheme.bodySmall,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                SafeArea(
-                  top: false,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Row(
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.8,
+          minChildSize: 0.3,
+          maxChildSize: 0.9,
+          builder: (context, scrollController) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: ListView(
+                      controller: scrollController,
+                      padding: EdgeInsets.only(bottom: 16 + bottomInset),
                       children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.of(context).pop(false),
-                            child: const Text('Back to Edit'),
-                          ),
+                        Text(
+                          'Review & Confirm',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: FilledButton(
-                            onPressed: () => Navigator.of(context).pop(true),
-                            child: const Text('Confirm'),
-                          ),
+                        const SizedBox(height: 12),
+                        _ReviewRow(label: 'Entity', value: _entity ?? '-'),
+                        _ReviewRow(label: 'Site', value: _site ?? '-'),
+                        _ReviewRow(
+                          label: 'Department',
+                          value: _department ?? '-',
                         ),
+                        _ReviewRow(
+                          label: 'Person to Visit',
+                          value: _personToVisit ?? '-',
+                        ),
+                        _ReviewRow(
+                          label: 'Visitor Type',
+                          value: _visitorType ?? '-',
+                        ),
+                        _ReviewRow(
+                          label: 'Purpose',
+                          value: _purposeController.text,
+                        ),
+                        const SizedBox(height: 8),
+                        _ReviewRow(
+                          label: 'Company',
+                          value: _companyController.text,
+                        ),
+                        _ReviewRow(
+                          label: 'Contact',
+                          value: _contactController.text,
+                        ),
+                        _ReviewRow(
+                          label: 'Vehicle Plate',
+                          value: _vehiclePlateController.text,
+                        ),
+                        _ReviewRow(
+                          label: 'Visit From',
+                          value: _dateFromController.text,
+                        ),
+                        _ReviewRow(
+                          label: 'Visit To',
+                          value: _dateToController.text,
+                        ),
+                        const SizedBox(height: 8),
+                        _ReviewRow(
+                          label: 'Visitors Added',
+                          value: _visitors.length.toString(),
+                        ),
+                        _ReviewRow(
+                          label: 'Policies Read',
+                          value:
+                              _visitors.every((visitor) => visitor.policyRead)
+                              ? 'Yes'
+                              : 'No',
+                        ),
+                        if (_visitors.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            'Visitors',
+                            style: Theme.of(context).textTheme.labelLarge,
+                          ),
+                          const SizedBox(height: 6),
+                          ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: _visitors.length,
+                            separatorBuilder: (_, __) =>
+                                const Divider(height: 12),
+                            itemBuilder: (context, index) {
+                              final visitor = _visitors[index];
+                              return Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('${index + 1}.'),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(visitor.name),
+                                        Text(
+                                          visitor.idNumber,
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.bodySmall,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ],
                       ],
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
+                  SafeArea(
+                    top: false,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.of(context).pop(false),
+                              child: const Text('Back to Edit'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: FilledButton(
+                              onPressed: () => Navigator.of(context).pop(true),
+                              child: const Text('Confirm'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         );
       },
     );
