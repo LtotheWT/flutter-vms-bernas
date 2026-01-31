@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+import '../app/router.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -8,14 +11,15 @@ class HomePage extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Operations'),
-      ),
+      appBar: AppBar(title: const Text('Operations')),
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         children: [
           _SectionHeader(title: 'Invitations', textTheme: textTheme),
-          const _MenuTile(title: 'New Invitation'),
+          _MenuTile(
+            title: 'New Invitation',
+            onTap: () => context.go(invitationAddRoutePath),
+          ),
           const _MenuTile(title: 'Invitation Listing'),
           const SizedBox(height: 16),
           _SectionHeader(title: 'Visitors', textTheme: textTheme),
@@ -41,10 +45,7 @@ class HomePage extends StatelessWidget {
 }
 
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({
-    required this.title,
-    required this.textTheme,
-  });
+  const _SectionHeader({required this.title, required this.textTheme});
 
   final String title;
   final TextTheme textTheme;
@@ -62,9 +63,10 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _MenuTile extends StatelessWidget {
-  const _MenuTile({required this.title});
+  const _MenuTile({required this.title, this.onTap});
 
   final String title;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +75,7 @@ class _MenuTile extends StatelessWidget {
       child: ListTile(
         title: Text(title),
         trailing: const Icon(Icons.chevron_right),
-        onTap: () {},
+        onTap: onTap,
       ),
     );
   }
