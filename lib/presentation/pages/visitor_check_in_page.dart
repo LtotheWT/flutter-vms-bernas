@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/app_text_form_field.dart';
+import '../widgets/info_row.dart';
+
 class VisitorCheckInPage extends StatefulWidget {
   const VisitorCheckInPage({super.key, required this.isCheckIn});
 
@@ -79,19 +82,15 @@ class _VisitorCheckInPageState extends State<VisitorCheckInPage> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  TextField(
+                  AppTextFormField(
                     controller: _scanController,
-                    decoration: const InputDecoration(
-                      labelText: 'Scan QR Code',
-                      suffixIcon: Icon(Icons.qr_code_scanner),
-                    ),
+                    label: 'Scan QR Code',
+                    suffixIcon: const Icon(Icons.qr_code_scanner),
                   ),
                   const SizedBox(height: 12),
-                  TextField(
-                    decoration: const InputDecoration(
-                      labelText: 'Scan Physical Tag',
-                      suffixIcon: Icon(Icons.nfc),
-                    ),
+                  AppTextFormField(
+                    label: 'Scan Physical Tag',
+                    suffixIcon: const Icon(Icons.nfc),
                   ),
                   const SizedBox(height: 12),
                   // Buttons removed; scan actions are via field suffix icons.
@@ -113,17 +112,20 @@ class _VisitorCheckInPageState extends State<VisitorCheckInPage> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  _InfoRow(label: 'Invitation ID', value: 'IV20251200074'),
-                  _InfoRow(label: 'Department', value: 'Admin Center'),
-                  _InfoRow(label: 'Purpose', value: 'Meeting'),
-                  _InfoRow(label: 'Site', value: 'FACTORY1 T'),
-                  _InfoRow(label: 'Company', value: 'JOHNHANSON LIMITED'),
-                  _InfoRow(label: 'Contact', value: '012-3456789'),
+                  const InfoRow(
+                    label: 'Invitation ID',
+                    value: 'IV20251200074',
+                  ),
+                  const InfoRow(label: 'Department', value: 'Admin Center'),
+                  const InfoRow(label: 'Purpose', value: 'Meeting'),
+                  const InfoRow(label: 'Site', value: 'FACTORY1 T'),
+                  const InfoRow(label: 'Company', value: 'JOHNHANSON LIMITED'),
+                  const InfoRow(label: 'Contact', value: '012-3456789'),
                   const Divider(height: 24),
-                  _InfoRow(label: 'Visitor Type', value: 'Visitor'),
-                  _InfoRow(label: 'Invite By', value: 'Suraya'),
-                  _InfoRow(label: 'Work Level', value: 'Low'),
-                  _InfoRow(label: 'Vehicle Plate', value: 'WSD 011234'),
+                  const InfoRow(label: 'Visitor Type', value: 'Visitor'),
+                  const InfoRow(label: 'Invite By', value: 'Suraya'),
+                  const InfoRow(label: 'Work Level', value: 'Low'),
+                  const InfoRow(label: 'Vehicle Plate', value: 'WSD 011234'),
                 ],
               ),
             ),
@@ -238,34 +240,6 @@ class _VisitorCheckInPageState extends State<VisitorCheckInPage> {
   }
 }
 
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              label,
-              style: textTheme.bodySmall?.copyWith(color: Colors.grey[700]),
-            ),
-          ),
-          Expanded(child: Text(value, style: textTheme.bodySmall)),
-        ],
-      ),
-    );
-  }
-}
-
 class _VisitorCard extends StatelessWidget {
   const _VisitorCard({
     required this.visitor,
@@ -300,15 +274,15 @@ class _VisitorCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 4),
-            _InfoRow(label: 'Name', value: visitor.name),
-            _InfoRow(label: 'IC/Passport', value: visitor.idNumber),
-            _InfoRow(label: 'Check In/Out', value: visitor.checkStatus),
-            _InfoRow(label: 'Check In Date', value: visitor.checkInDate),
-            _InfoRow(label: 'Check Out Date', value: visitor.checkOutDate),
-            _InfoRow(label: 'Gate In', value: 'F1_A'),
-            _InfoRow(label: 'Gate Out', value: '-'),
-            _InfoRow(label: 'Check In By', value: 'ryan'),
-            _InfoRow(label: 'Check Out By', value: '-'),
+            InfoRow(label: 'Name', value: visitor.name),
+            InfoRow(label: 'IC/Passport', value: visitor.idNumber),
+            InfoRow(label: 'Check In/Out', value: visitor.checkStatus),
+            InfoRow(label: 'Check In Date', value: visitor.checkInDate),
+            InfoRow(label: 'Check Out Date', value: visitor.checkOutDate),
+            const InfoRow(label: 'Gate In', value: 'F1_A'),
+            const InfoRow(label: 'Gate Out', value: '-'),
+            const InfoRow(label: 'Check In By', value: 'ryan'),
+            const InfoRow(label: 'Check Out By', value: '-'),
             const SizedBox(height: 6),
             Row(
               children: [
@@ -322,11 +296,10 @@ class _VisitorCard extends StatelessWidget {
                   ),
                 ),
                 Expanded(
-                  child: TextField(
-                    decoration: const InputDecoration(
-                      isDense: true,
-                      suffixIcon: Icon(Icons.qr_code_scanner),
-                    ),
+                  child: AppTextFormField(
+                    label: '',
+                    isDense: true,
+                    suffixIcon: const Icon(Icons.qr_code_scanner),
                   ),
                 ),
               ],

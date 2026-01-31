@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/app_text_form_field.dart';
+import '../widgets/read_only_field.dart';
+
 class VisitorWalkInPage extends StatefulWidget {
   const VisitorWalkInPage({super.key});
 
@@ -492,7 +495,7 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                       style: textTheme.bodySmall,
                     ),
                     const SizedBox(height: 16),
-                    const _ReadOnlyField(
+                    const ReadOnlyField(
                       label: 'Invitation ID',
                       value: 'Auto-generated',
                     ),
@@ -581,9 +584,9 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                           value == null ? 'Visitor type is required.' : null,
                     ),
                     const SizedBox(height: 12),
-                    TextFormField(
+                    AppTextFormField(
                       controller: _purposeController,
-                      decoration: const InputDecoration(labelText: 'Purpose *'),
+                      label: 'Purpose *',
                       validator: (value) =>
                           value == null || value.trim().isEmpty
                           ? 'Purpose is required.'
@@ -598,20 +601,18 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                 content: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    TextFormField(
+                    AppTextFormField(
                       controller: _companyController,
-                      decoration: const InputDecoration(labelText: 'Company *'),
+                      label: 'Company *',
                       validator: (value) =>
                           value == null || value.trim().isEmpty
                           ? 'Company is required.'
                           : null,
                     ),
                     const SizedBox(height: 12),
-                    TextFormField(
+                    AppTextFormField(
                       controller: _contactController,
-                      decoration: const InputDecoration(
-                        labelText: 'Contact Number *',
-                      ),
+                      label: 'Contact Number *',
                       keyboardType: TextInputType.phone,
                       validator: (value) =>
                           value == null || value.trim().isEmpty
@@ -619,24 +620,20 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                           : null,
                     ),
                     const SizedBox(height: 12),
-                    TextFormField(
+                    AppTextFormField(
                       controller: _vehiclePlateController,
-                      decoration: const InputDecoration(
-                        labelText: 'Vehicle Plate Number *',
-                      ),
+                      label: 'Vehicle Plate Number *',
                       validator: (value) =>
                           value == null || value.trim().isEmpty
                           ? 'Vehicle plate number is required.'
                           : null,
                     ),
                     const SizedBox(height: 12),
-                    TextFormField(
+                    AppTextFormField(
                       controller: _dateFromController,
+                      label: 'Visit Date From *',
                       readOnly: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Visit Date From *',
-                        suffixIcon: Icon(Icons.calendar_today),
-                      ),
+                      suffixIcon: const Icon(Icons.calendar_today),
                       onTap: () =>
                           _pickDateTime(controller: _dateFromController),
                       validator: (value) =>
@@ -645,13 +642,11 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                           : null,
                     ),
                     const SizedBox(height: 12),
-                    TextFormField(
+                    AppTextFormField(
                       controller: _dateToController,
+                      label: 'Visit Date To *',
                       readOnly: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Visit Date To *',
-                        suffixIcon: Icon(Icons.calendar_today),
-                      ),
+                      suffixIcon: const Icon(Icons.calendar_today),
                       onTap: () => _pickDateTime(controller: _dateToController),
                       validator: (value) =>
                           value == null || value.trim().isEmpty
@@ -659,16 +654,14 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                           : null,
                     ),
                     const SizedBox(height: 12),
-                    TextFormField(
+                    AppTextFormField(
                       controller: _projectController,
-                      decoration: const InputDecoration(labelText: 'Project'),
+                      label: 'Project',
                     ),
                     const SizedBox(height: 12),
-                    TextFormField(
+                    AppTextFormField(
                       controller: _workDescriptionController,
-                      decoration: const InputDecoration(
-                        labelText: 'Work Description',
-                      ),
+                      label: 'Work Description',
                       minLines: 2,
                       maxLines: 4,
                     ),
@@ -689,9 +682,9 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                       onChanged: (value) => setState(() => _workLevel = value),
                     ),
                     const SizedBox(height: 12),
-                    TextFormField(
+                    AppTextFormField(
                       controller: _remarkController,
-                      decoration: const InputDecoration(labelText: 'Remark'),
+                      label: 'Remark',
                       minLines: 2,
                       maxLines: 4,
                     ),
@@ -748,19 +741,15 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    TextFormField(
+                    AppTextFormField(
                       controller: _visitorNameController,
                       focusNode: _visitorNameFocus,
-                      decoration: const InputDecoration(
-                        labelText: 'Name (as per IC/Passport) *',
-                      ),
+                      label: 'Name (as per IC/Passport) *',
                     ),
                     const SizedBox(height: 12),
-                    TextFormField(
+                    AppTextFormField(
                       controller: _visitorIdController,
-                      decoration: const InputDecoration(
-                        labelText: 'IC/Passport Number *',
-                      ),
+                      label: 'IC/Passport Number *',
                     ),
                     const SizedBox(height: 12),
                     OutlinedButton.icon(
@@ -1002,21 +991,6 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _ReadOnlyField extends StatelessWidget {
-  const _ReadOnlyField({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return InputDecorator(
-      decoration: InputDecoration(labelText: label),
-      child: Text(value),
     );
   }
 }

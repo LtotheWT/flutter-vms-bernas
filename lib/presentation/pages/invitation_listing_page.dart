@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
+import '../widgets/app_text_form_field.dart';
+import '../widgets/info_row.dart';
+
 class InvitationListingPage extends StatefulWidget {
   const InvitationListingPage({super.key});
 
@@ -296,28 +299,24 @@ class _InvitationListingPageState extends State<InvitationListingPage> {
                   onChanged: (value) => setState(() => _visitorType = value),
                 ),
                 const SizedBox(height: 12),
-                TextFormField(
+                AppTextFormField(
                   controller: _invitationIdController,
-                  decoration: const InputDecoration(labelText: 'Invitation ID'),
+                  label: 'Invitation ID',
                 ),
                 const SizedBox(height: 12),
-                TextFormField(
+                AppTextFormField(
                   controller: _dateFromController,
+                  label: 'Visit Date From',
                   readOnly: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Visit Date From',
-                    suffixIcon: Icon(Icons.calendar_today),
-                  ),
+                  suffixIcon: const Icon(Icons.calendar_today),
                   onTap: () => _pickDate(controller: _dateFromController),
                 ),
                 const SizedBox(height: 12),
-                TextFormField(
+                AppTextFormField(
                   controller: _dateToController,
+                  label: 'Visit Date To',
                   readOnly: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Visit Date To',
-                    suffixIcon: Icon(Icons.calendar_today),
-                  ),
+                  suffixIcon: const Icon(Icons.calendar_today),
                   onTap: () => _pickDate(controller: _dateToController),
                 ),
                 const SizedBox(height: 12),
@@ -555,9 +554,9 @@ class _InvitationCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 6),
-            _InfoRow(label: 'Status', value: item.status),
-            _InfoRow(label: 'Purpose', value: item.purpose),
-            _InfoRow(
+            InfoRow(label: 'Status', value: item.status),
+            InfoRow(label: 'Purpose', value: item.purpose),
+            InfoRow(
               label: 'Visit',
               value:
                   '${item.visitDateFrom} ${item.visitTimeFrom} → ${item.visitDateTo} ${item.visitTimeTo}',
@@ -565,17 +564,17 @@ class _InvitationCard extends StatelessWidget {
           ],
         ),
         children: [
-          _InfoRow(label: 'Entity', value: item.entity),
-          _InfoRow(label: 'Site', value: item.site),
-          _InfoRow(label: 'Department', value: item.department),
-          _InfoRow(label: 'Person to Visit', value: item.personToVisit),
-          _InfoRow(label: 'Visitor Type', value: item.visitorType),
-          _InfoRow(label: 'Company', value: item.company),
-          _InfoRow(label: 'Vehicle Plate', value: item.vehiclePlateNumber),
-          _InfoRow(label: 'Created By', value: item.createdBy),
-          _InfoRow(label: 'Create Date', value: item.createDate),
-          _InfoRow(label: 'Update Date', value: item.updateDate),
-          _InfoRow(label: 'Update By', value: item.updateBy),
+          InfoRow(label: 'Entity', value: item.entity),
+          InfoRow(label: 'Site', value: item.site),
+          InfoRow(label: 'Department', value: item.department),
+          InfoRow(label: 'Person to Visit', value: item.personToVisit),
+          InfoRow(label: 'Visitor Type', value: item.visitorType),
+          InfoRow(label: 'Company', value: item.company),
+          InfoRow(label: 'Vehicle Plate', value: item.vehiclePlateNumber),
+          InfoRow(label: 'Created By', value: item.createdBy),
+          InfoRow(label: 'Create Date', value: item.createDate),
+          InfoRow(label: 'Update Date', value: item.updateDate),
+          InfoRow(label: 'Update By', value: item.updateBy),
         ],
       ),
     );
@@ -662,34 +661,6 @@ class _InvitationItem {
       createDate: createDate ?? this.createDate,
       updateDate: updateDate ?? this.updateDate,
       updateBy: updateBy ?? this.updateBy,
-    );
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              label,
-              style: textTheme.bodySmall?.copyWith(color: Colors.grey[700]),
-            ),
-          ),
-          Expanded(child: Text(value, style: textTheme.bodySmall)),
-        ],
-      ),
     );
   }
 }

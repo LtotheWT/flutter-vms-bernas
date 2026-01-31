@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/app_text_form_field.dart';
+import '../widgets/read_only_field.dart';
+
 class InvitationAddPage extends StatefulWidget {
   const InvitationAddPage({super.key});
 
@@ -164,7 +167,7 @@ class _InvitationAddPageState extends State<InvitationAddPage> {
                       style: textTheme.bodySmall,
                     ),
                     const SizedBox(height: 16),
-                    _ReadOnlyField(label: 'User Name', value: 'Ryan'),
+                    const ReadOnlyField(label: 'User Name', value: 'Ryan'),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
                       value: _entity,
@@ -250,11 +253,9 @@ class _InvitationAddPageState extends State<InvitationAddPage> {
                           value == null ? 'Visitor type is required.' : null,
                     ),
                     const SizedBox(height: 12),
-                    TextFormField(
+                    AppTextFormField(
                       controller: _companyController,
-                      decoration: const InputDecoration(
-                        labelText: 'Company/Visitor Name *',
-                      ),
+                      label: 'Company/Visitor Name *',
                       validator: (value) =>
                           value == null || value.trim().isEmpty
                           ? 'Company/visitor name is required.'
@@ -269,11 +270,9 @@ class _InvitationAddPageState extends State<InvitationAddPage> {
                 content: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    TextFormField(
+                    AppTextFormField(
                       controller: _purposeController,
-                      decoration: const InputDecoration(
-                        labelText: 'Invitation Purpose *',
-                      ),
+                      label: 'Invitation Purpose *',
                       minLines: 3,
                       maxLines: 5,
                       validator: (value) =>
@@ -282,11 +281,9 @@ class _InvitationAddPageState extends State<InvitationAddPage> {
                           : null,
                     ),
                     const SizedBox(height: 12),
-                    TextFormField(
+                    AppTextFormField(
                       controller: _emailController,
-                      decoration: const InputDecoration(
-                        labelText: 'Send Invitation To (Email) *',
-                      ),
+                      label: 'Send Invitation To (Email) *',
                       keyboardType: TextInputType.emailAddress,
                       validator: (value) =>
                           value == null || value.trim().isEmpty
@@ -294,13 +291,11 @@ class _InvitationAddPageState extends State<InvitationAddPage> {
                           : null,
                     ),
                     const SizedBox(height: 12),
-                    TextFormField(
+                    AppTextFormField(
                       controller: _dateFromController,
+                      label: 'Visit Date From *',
                       readOnly: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Visit Date From *',
-                        suffixIcon: Icon(Icons.calendar_today),
-                      ),
+                      suffixIcon: const Icon(Icons.calendar_today),
                       onTap: () => _pickDate(controller: _dateFromController),
                       validator: (value) =>
                           value == null || value.trim().isEmpty
@@ -308,13 +303,11 @@ class _InvitationAddPageState extends State<InvitationAddPage> {
                           : null,
                     ),
                     const SizedBox(height: 12),
-                    TextFormField(
+                    AppTextFormField(
                       controller: _dateToController,
+                      label: 'Visit Date To *',
                       readOnly: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Visit Date To *',
-                        suffixIcon: Icon(Icons.calendar_today),
-                      ),
+                      suffixIcon: const Icon(Icons.calendar_today),
                       onTap: () => _pickDate(controller: _dateToController),
                       validator: (value) =>
                           value == null || value.trim().isEmpty
@@ -328,21 +321,6 @@ class _InvitationAddPageState extends State<InvitationAddPage> {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _ReadOnlyField extends StatelessWidget {
-  const _ReadOnlyField({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return InputDecorator(
-      decoration: InputDecoration(labelText: label),
-      child: Text(value),
     );
   }
 }
