@@ -20,6 +20,7 @@
   - `pages/`
   - `widgets/`
   - `state/` (Riverpod providers + state classes)
+  - Prefer extracting shared UI into `widgets/` and reusing from there.
 
 ## Dependencies
 - UI depends on `domain` via `usecases`.

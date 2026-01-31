@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 import '../widgets/app_dropdown_form_field.dart';
+import '../widgets/app_filled_button.dart';
+import '../widgets/app_outlined_button.dart';
 import '../widgets/app_text_form_field.dart';
 import '../widgets/info_row.dart';
 
@@ -206,7 +208,7 @@ class _InvitationListingPageState extends State<InvitationListingPage> {
             onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Cancel'),
           ),
-          FilledButton(
+          AppFilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             child: const Text('Delete'),
           ),
@@ -342,14 +344,14 @@ class _InvitationListingPageState extends State<InvitationListingPage> {
                 Row(
                   children: [
                     Expanded(
-                      child: FilledButton(
+                      child: AppFilledButton(
                         onPressed: () => Navigator.of(context).pop(),
                         child: const Text('Search'),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: OutlinedButton(
+                      child: AppOutlinedButton(
                         onPressed: () {
                           _clearFilters();
                           Navigator.of(context).pop();
@@ -426,7 +428,7 @@ class _InvitationListingPageState extends State<InvitationListingPage> {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        OutlinedButton.icon(
+                        AppOutlinedButtonIcon(
                           onPressed: _selectedIds.isEmpty
                               ? null
                               : _deleteSelected,

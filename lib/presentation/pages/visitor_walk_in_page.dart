@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../widgets/app_dropdown_form_field.dart';
+import '../widgets/app_filled_button.dart';
+import '../widgets/app_outlined_button.dart';
 import '../widgets/app_text_form_field.dart';
 import '../widgets/read_only_field.dart';
 
@@ -198,7 +200,7 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
             onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Cancel'),
           ),
-          FilledButton(
+          AppFilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             child: const Text('Clear'),
           ),
@@ -362,14 +364,14 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                       child: Row(
                         children: [
                           Expanded(
-                            child: OutlinedButton(
+                            child: AppOutlinedButton(
                               onPressed: () => Navigator.of(context).pop(false),
                               child: const Text('Back to Edit'),
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: FilledButton(
+                            child: AppFilledButton(
                               onPressed: () => Navigator.of(context).pop(true),
                               child: const Text('Confirm'),
                             ),
@@ -458,7 +460,7 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                 child: Row(
                   children: [
                     Expanded(
-                      child: FilledButton(
+                      child: AppFilledButton(
                         onPressed: details.onStepContinue,
                         child: Text(isLast ? 'Register Walk-In' : 'Next'),
                       ),
@@ -466,10 +468,10 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                     const SizedBox(width: 12),
                     if (_currentStep > 0)
                       Expanded(
-                        child: OutlinedButton(
-                          onPressed: details.onStepCancel,
-                          child: const Text('Back'),
-                        ),
+                      child: AppOutlinedButton(
+                        onPressed: details.onStepCancel,
+                        child: const Text('Back'),
+                      ),
                       ),
                   ],
                 ),
@@ -739,7 +741,7 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                       label: 'IC/Passport Number *',
                     ),
                     const SizedBox(height: 12),
-                    OutlinedButton.icon(
+                    AppOutlinedButtonIcon(
                       onPressed: () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Photo capture mock.')),
@@ -749,7 +751,7 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                       label: const Text('Visitor Photo'),
                     ),
                     const SizedBox(height: 12),
-                    OutlinedButton.icon(
+                    AppOutlinedButtonIcon(
                       onPressed: _addVisitor,
                       icon: const Icon(Icons.person_add_alt_1),
                       label: const Text('Add Visitor'),
@@ -790,7 +792,7 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                             ),
                           ),
                           const SizedBox(width: 12),
-                          OutlinedButton.icon(
+                          AppOutlinedButtonIcon(
                             onPressed: _selectedVisitorIndexes.isEmpty
                                 ? null
                                 : () {
@@ -915,7 +917,7 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                               style: textTheme.titleSmall,
                             ),
                             const SizedBox(height: 6),
-                            OutlinedButton.icon(
+                            AppOutlinedButtonIcon(
                               onPressed: () {},
                               icon: const Icon(Icons.download_outlined),
                               label: const Text('Download Test Checklist'),
@@ -928,7 +930,7 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                             const SizedBox(height: 6),
                             Row(
                               children: [
-                                OutlinedButton(
+                                AppOutlinedButton(
                                   onPressed: () {},
                                   child: const Text('Choose file'),
                                 ),
@@ -943,7 +945,7 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                               ],
                             ),
                             const SizedBox(height: 8),
-                            FilledButton(
+                            AppFilledButton(
                               onPressed: () {},
                               child: const Text('Upload'),
                             ),
@@ -957,11 +959,11 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                               spacing: 8,
                               runSpacing: 8,
                               children: [
-                                OutlinedButton(
+                                AppOutlinedButton(
                                   onPressed: () {},
                                   child: const Text('Download uploaded'),
                                 ),
-                                OutlinedButton(
+                                AppOutlinedButton(
                                   onPressed: () {},
                                   child: const Text('Delete uploaded'),
                                 ),

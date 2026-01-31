@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/app_filled_button.dart';
+import '../widgets/app_outlined_button.dart';
 import '../widgets/app_text_form_field.dart';
 import '../widgets/info_row.dart';
 
@@ -85,12 +87,18 @@ class _VisitorCheckInPageState extends State<VisitorCheckInPage> {
                   AppTextFormField(
                     controller: _scanController,
                     label: 'Scan QR Code',
-                    suffixIcon: const Icon(Icons.qr_code_scanner),
+                    suffixIcon: IconButton(
+                      icon: Icon(Icons.qr_code_scanner),
+                      onPressed: () {},
+                    ),
                   ),
                   const SizedBox(height: 12),
                   AppTextFormField(
                     label: 'Scan Physical Tag',
-                    suffixIcon: const Icon(Icons.nfc),
+                    suffixIcon: IconButton(
+                      icon: Icon(Icons.nfc),
+                      onPressed: () {},
+                    ),
                   ),
                   const SizedBox(height: 12),
                   // Buttons removed; scan actions are via field suffix icons.
@@ -112,10 +120,7 @@ class _VisitorCheckInPageState extends State<VisitorCheckInPage> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const InfoRow(
-                    label: 'Invitation ID',
-                    value: 'IV20251200074',
-                  ),
+                  const InfoRow(label: 'Invitation ID', value: 'IV20251200074'),
                   const InfoRow(label: 'Department', value: 'Admin Center'),
                   const InfoRow(label: 'Purpose', value: 'Meeting'),
                   const InfoRow(label: 'Site', value: 'FACTORY1 T'),
@@ -199,12 +204,11 @@ class _VisitorCheckInPageState extends State<VisitorCheckInPage> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  OutlinedButton.icon(
+                  AppOutlinedButtonIcon(
                     onPressed: () {},
                     icon: const Icon(Icons.camera_alt_outlined),
                     label: const Text('Camera'),
                     style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(44),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -229,7 +233,7 @@ class _VisitorCheckInPageState extends State<VisitorCheckInPage> {
       ),
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.all(16),
-        child: FilledButton(
+        child: AppFilledButton(
           onPressed: _selectedIndexes.isEmpty ? null : () {},
           child: Text(
             widget.isCheckIn ? 'Confirm Check-In' : 'Confirm Check-Out',
@@ -318,7 +322,7 @@ class _VisitorCard extends StatelessWidget {
                 ),
                 _PhotoMock(hasPhoto: visitor.hasPhoto),
                 const SizedBox(width: 12),
-                OutlinedButton.icon(
+                AppOutlinedButtonIcon(
                   onPressed: () {},
                   icon: const Icon(Icons.history),
                   label: const Text('History'),

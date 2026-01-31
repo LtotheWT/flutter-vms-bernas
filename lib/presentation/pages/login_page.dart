@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../app/router.dart';
 import '../state/login_providers.dart';
+import '../widgets/app_filled_button.dart';
 import '../widgets/app_text_form_field.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -87,7 +88,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  FilledButton(
+                  AppFilledButton(
                     onPressed: loginState.isLoading
                         ? null
                         : () async {

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../widgets/app_dropdown_form_field.dart';
+import '../widgets/app_filled_button.dart';
+import '../widgets/app_outlined_button.dart';
 import '../widgets/app_text_form_field.dart';
 import '../widgets/read_only_field.dart';
 
@@ -88,7 +90,7 @@ class _InvitationAddPageState extends State<InvitationAddPage> {
             onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Cancel'),
           ),
-          FilledButton(
+          AppFilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             child: const Text('Clear'),
           ),
@@ -139,7 +141,7 @@ class _InvitationAddPageState extends State<InvitationAddPage> {
                 child: Row(
                   children: [
                     Expanded(
-                      child: FilledButton(
+                      child: AppFilledButton(
                         onPressed: details.onStepContinue,
                         child: Text(isLast ? 'Send Invite' : 'Next'),
                       ),
@@ -147,7 +149,7 @@ class _InvitationAddPageState extends State<InvitationAddPage> {
                     const SizedBox(width: 12),
                     if (_currentStep > 0)
                       Expanded(
-                        child: OutlinedButton(
+                        child: AppOutlinedButton(
                           onPressed: details.onStepCancel,
                           child: const Text('Back'),
                         ),

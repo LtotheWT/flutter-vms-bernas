@@ -41,6 +41,7 @@ class AppTextFormField extends StatelessWidget {
   Widget build(BuildContext context) {
     final effectiveMinLines = obscureText ? 1 : minLines;
     final effectiveMaxLines = obscureText ? 1 : maxLines;
+
     return TextFormField(
       controller: controller,
       focusNode: focusNode,
