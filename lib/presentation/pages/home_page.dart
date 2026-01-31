@@ -18,7 +18,7 @@ class HomePage extends StatelessWidget {
           _SectionHeader(title: 'Invitations', textTheme: textTheme),
           _MenuTile(
             title: 'New Invitation',
-            onTap: () => context.go(invitationAddRoutePath),
+            onTap: () => context.push(invitationAddRoutePath),
           ),
           const _MenuTile(title: 'Invitation Listing'),
           const SizedBox(height: 16),
