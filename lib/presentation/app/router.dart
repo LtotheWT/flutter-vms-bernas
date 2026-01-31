@@ -2,8 +2,10 @@ import 'package:go_router/go_router.dart';
 
 import '../pages/home_page.dart';
 import '../pages/invitation_add_page.dart';
+import '../pages/invitation_listing_page.dart';
 import '../pages/login_page.dart';
 import '../pages/splash_page.dart';
+import '../pages/visitor_walk_in_page.dart';
 
 const String loginRouteName = 'login';
 const String loginRoutePath = '/login';
@@ -13,6 +15,10 @@ const String splashRouteName = 'splash';
 const String splashRoutePath = '/';
 const String invitationAddRouteName = 'invitation_add';
 const String invitationAddRoutePath = '/invitation/add';
+const String invitationListingRouteName = 'invitation_listing';
+const String invitationListingRoutePath = '/invitation/listing';
+const String visitorWalkInRouteName = 'visitor_walk_in';
+const String visitorWalkInRoutePath = '/visitor/walk-in';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: splashRoutePath,
@@ -31,6 +37,16 @@ final GoRouter appRouter = GoRouter(
       name: invitationAddRouteName,
       path: invitationAddRoutePath,
       builder: (context, state) => const InvitationAddPage(),
+    ),
+    GoRoute(
+      name: invitationListingRouteName,
+      path: invitationListingRoutePath,
+      builder: (context, state) => const InvitationListingPage(),
+    ),
+    GoRoute(
+      name: visitorWalkInRouteName,
+      path: visitorWalkInRoutePath,
+      builder: (context, state) => const VisitorWalkInPage(),
     ),
     GoRoute(
       name: homeRouteName,

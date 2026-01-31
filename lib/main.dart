@@ -18,11 +18,7 @@ class MyApp extends StatelessWidget {
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
           useMaterial3: true,
-          filledButtonTheme: FilledButtonThemeData(
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-            ),
-          ),
+          filledButtonTheme: FilledButtonThemeData(),
           inputDecorationTheme: const InputDecorationTheme(
             border: OutlineInputBorder(),
           ),

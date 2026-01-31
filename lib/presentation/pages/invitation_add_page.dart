@@ -32,9 +32,7 @@ class _InvitationAddPageState extends State<InvitationAddPage> {
     super.dispose();
   }
 
-  Future<void> _pickDate({
-    required TextEditingController controller,
-  }) async {
+  Future<void> _pickDate({required TextEditingController controller}) async {
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
@@ -43,7 +41,8 @@ class _InvitationAddPageState extends State<InvitationAddPage> {
       lastDate: DateTime(now.year + 2),
     );
     if (picked != null) {
-      controller.text = '${picked.year}-${_two(picked.month)}-${_two(picked.day)}';
+      controller.text =
+          '${picked.year}-${_two(picked.month)}-${_two(picked.day)}';
     }
   }
 
@@ -68,9 +67,9 @@ class _InvitationAddPageState extends State<InvitationAddPage> {
   void _submit() {
     if (_formKey.currentState?.validate() ?? false) {
       FocusScope.of(context).unfocus();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invitation submitted.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Invitation submitted.')));
     }
   }
 
@@ -165,10 +164,7 @@ class _InvitationAddPageState extends State<InvitationAddPage> {
                       style: textTheme.bodySmall,
                     ),
                     const SizedBox(height: 16),
-                    _ReadOnlyField(
-                      label: 'User Name',
-                      value: 'Ryan',
-                    ),
+                    _ReadOnlyField(label: 'User Name', value: 'Ryan'),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
                       value: _entity,
@@ -200,8 +196,9 @@ class _InvitationAddPageState extends State<InvitationAddPage> {
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
                       value: _department,
-                      decoration:
-                          const InputDecoration(labelText: 'Department *'),
+                      decoration: const InputDecoration(
+                        labelText: 'Department *',
+                      ),
                       items: const [
                         DropdownMenuItem(
                           value: 'Administration',
@@ -219,27 +216,24 @@ class _InvitationAddPageState extends State<InvitationAddPage> {
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
                       value: _personToVisit,
-                      decoration:
-                          const InputDecoration(labelText: 'Person to Visit *'),
+                      decoration: const InputDecoration(
+                        labelText: 'Person to Visit *',
+                      ),
                       items: const [
-                        DropdownMenuItem(
-                          value: 'Ryan',
-                          child: Text('Ryan'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'Aisha',
-                          child: Text('Aisha'),
-                        ),
+                        DropdownMenuItem(value: 'Ryan', child: Text('Ryan')),
+                        DropdownMenuItem(value: 'Aisha', child: Text('Aisha')),
                       ],
-                      onChanged: (value) => setState(() => _personToVisit = value),
+                      onChanged: (value) =>
+                          setState(() => _personToVisit = value),
                       validator: (value) =>
                           value == null ? 'Person to visit is required.' : null,
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
                       value: _visitorType,
-                      decoration:
-                          const InputDecoration(labelText: 'Visitor Type *'),
+                      decoration: const InputDecoration(
+                        labelText: 'Visitor Type *',
+                      ),
                       items: const [
                         DropdownMenuItem(
                           value: 'Visitor',
@@ -250,7 +244,8 @@ class _InvitationAddPageState extends State<InvitationAddPage> {
                           child: Text('Contractor'),
                         ),
                       ],
-                      onChanged: (value) => setState(() => _visitorType = value),
+                      onChanged: (value) =>
+                          setState(() => _visitorType = value),
                       validator: (value) =>
                           value == null ? 'Visitor type is required.' : null,
                     ),
@@ -262,8 +257,8 @@ class _InvitationAddPageState extends State<InvitationAddPage> {
                       ),
                       validator: (value) =>
                           value == null || value.trim().isEmpty
-                              ? 'Company/visitor name is required.'
-                              : null,
+                          ? 'Company/visitor name is required.'
+                          : null,
                     ),
                   ],
                 ),
@@ -283,8 +278,8 @@ class _InvitationAddPageState extends State<InvitationAddPage> {
                       maxLines: 5,
                       validator: (value) =>
                           value == null || value.trim().isEmpty
-                              ? 'Invitation purpose is required.'
-                              : null,
+                          ? 'Invitation purpose is required.'
+                          : null,
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -295,8 +290,8 @@ class _InvitationAddPageState extends State<InvitationAddPage> {
                       keyboardType: TextInputType.emailAddress,
                       validator: (value) =>
                           value == null || value.trim().isEmpty
-                              ? 'Email is required.'
-                              : null,
+                          ? 'Email is required.'
+                          : null,
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -309,8 +304,8 @@ class _InvitationAddPageState extends State<InvitationAddPage> {
                       onTap: () => _pickDate(controller: _dateFromController),
                       validator: (value) =>
                           value == null || value.trim().isEmpty
-                              ? 'Visit date from is required.'
-                              : null,
+                          ? 'Visit date from is required.'
+                          : null,
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -323,8 +318,8 @@ class _InvitationAddPageState extends State<InvitationAddPage> {
                       onTap: () => _pickDate(controller: _dateToController),
                       validator: (value) =>
                           value == null || value.trim().isEmpty
-                              ? 'Visit date to is required.'
-                              : null,
+                          ? 'Visit date to is required.'
+                          : null,
                     ),
                   ],
                 ),
@@ -338,10 +333,7 @@ class _InvitationAddPageState extends State<InvitationAddPage> {
 }
 
 class _ReadOnlyField extends StatelessWidget {
-  const _ReadOnlyField({
-    required this.label,
-    required this.value,
-  });
+  const _ReadOnlyField({required this.label, required this.value});
 
   final String label;
   final String value;

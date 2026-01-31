@@ -20,10 +20,16 @@ class HomePage extends StatelessWidget {
             title: 'New Invitation',
             onTap: () => context.push(invitationAddRoutePath),
           ),
-          const _MenuTile(title: 'Invitation Listing'),
+          _MenuTile(
+            title: 'Invitation Listing',
+            onTap: () => context.push(invitationListingRoutePath),
+          ),
           const SizedBox(height: 16),
           _SectionHeader(title: 'Visitors', textTheme: textTheme),
-          const _MenuTile(title: 'Visitor Registration (Walk-In) - No login'),
+          _MenuTile(
+            title: 'Visitor Registration (Walk-In) - No login',
+            onTap: () => context.push(visitorWalkInRoutePath),
+          ),
           const _MenuTile(title: 'Check-In'),
           const _MenuTile(title: 'Check-Out'),
           const SizedBox(height: 16),
