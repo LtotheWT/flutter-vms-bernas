@@ -16,7 +16,7 @@ class MyApp extends StatelessWidget {
       child: MaterialApp.router(
         title: 'VMS Bernas',
         theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
           useMaterial3: true,
           filledButtonTheme: FilledButtonThemeData(),
           inputDecorationTheme: const InputDecorationTheme(

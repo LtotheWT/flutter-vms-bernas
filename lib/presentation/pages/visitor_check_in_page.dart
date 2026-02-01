@@ -208,11 +208,6 @@ class _VisitorCheckInPageState extends State<VisitorCheckInPage> {
                     onPressed: () {},
                     icon: const Icon(Icons.camera_alt_outlined),
                     label: const Text('Camera'),
-                    style: OutlinedButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
                   ),
                   const SizedBox(height: 12),
                   Wrap(
