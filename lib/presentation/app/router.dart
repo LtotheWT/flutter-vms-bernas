@@ -1,9 +1,11 @@
 import 'package:go_router/go_router.dart';
 
+import '../app/app_shell.dart';
 import '../pages/home_page.dart';
 import '../pages/invitation_add_page.dart';
 import '../pages/invitation_listing_page.dart';
 import '../pages/login_page.dart';
+import '../pages/report_page.dart';
 import '../pages/splash_page.dart';
 import '../pages/visitor_walk_in_page.dart';
 import '../pages/visitor_check_in_page.dart';
@@ -12,6 +14,8 @@ const String loginRouteName = 'login';
 const String loginRoutePath = '/login';
 const String homeRouteName = 'home';
 const String homeRoutePath = '/home';
+const String reportRouteName = 'report';
+const String reportRoutePath = '/report';
 const String splashRouteName = 'splash';
 const String splashRoutePath = '/';
 const String invitationAddRouteName = 'invitation_add';
@@ -63,10 +67,30 @@ final GoRouter appRouter = GoRouter(
       path: visitorCheckOutRoutePath,
       builder: (context, state) => const VisitorCheckInPage(isCheckIn: false),
     ),
-    GoRoute(
-      name: homeRouteName,
-      path: homeRoutePath,
-      builder: (context, state) => const HomePage(),
+    StatefulShellRoute.indexedStack(
+      builder: (context, state, navigationShell) => AppShell(
+        navigationShell: navigationShell,
+      ),
+      branches: [
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              name: homeRouteName,
+              path: homeRoutePath,
+              builder: (context, state) => const HomePage(),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              name: reportRouteName,
+              path: reportRoutePath,
+              builder: (context, state) => const ReportPage(),
+            ),
+          ],
+        ),
+      ],
     ),
   ],
 );
