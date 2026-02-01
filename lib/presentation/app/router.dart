@@ -13,6 +13,8 @@ import '../pages/visitor_check_in_page.dart';
 import '../pages/visitor_log_page.dart';
 import '../pages/employee_log_page.dart';
 import '../pages/permanent_contractor_log_page.dart';
+import '../pages/report_dashboard_page.dart';
+import '../pages/report_dashboard_list_page.dart';
 
 const String loginRouteName = 'login';
 const String loginRoutePath = '/login';
@@ -25,7 +27,12 @@ const String visitorLogRoutePath = '/report/visitor-log';
 const String employeeLogRouteName = 'employee_log';
 const String employeeLogRoutePath = '/report/employee-log';
 const String permanentContractorLogRouteName = 'permanent_contractor_log';
-const String permanentContractorLogRoutePath = '/report/permanent-contractor-log';
+const String permanentContractorLogRoutePath =
+    '/report/permanent-contractor-log';
+const String reportDashboardRouteName = 'report_dashboard';
+const String reportDashboardRoutePath = '/report/dashboard';
+const String reportDashboardListRouteName = 'report_dashboard_list';
+const String reportDashboardListRoutePath = '/report/dashboard/list';
 const String splashRouteName = 'splash';
 const String splashRoutePath = '/';
 const String invitationAddRouteName = 'invitation_add';
@@ -81,9 +88,8 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const VisitorCheckInPage(isCheckIn: false),
     ),
     StatefulShellRoute.indexedStack(
-      builder: (context, state, navigationShell) => AppShell(
-        navigationShell: navigationShell,
-      ),
+      builder: (context, state, navigationShell) =>
+          AppShell(navigationShell: navigationShell),
       branches: [
         StatefulShellBranch(
           routes: [
@@ -119,6 +125,21 @@ final GoRouter appRouter = GoRouter(
                   parentNavigatorKey: _rootNavigatorKey,
                   builder: (context, state) =>
                       const PermanentContractorLogPage(),
+                ),
+                GoRoute(
+                  name: reportDashboardRouteName,
+                  path: 'dashboard',
+                  parentNavigatorKey: _rootNavigatorKey,
+                  builder: (context, state) => const ReportDashboardPage(),
+                ),
+                GoRoute(
+                  name: reportDashboardListRouteName,
+                  path: 'dashboard/list',
+                  parentNavigatorKey: _rootNavigatorKey,
+                  builder: (context, state) {
+                    final filter = state.extra as ReportDashboardListFilter?;
+                    return ReportDashboardListPage(filter: filter);
+                  },
                 ),
               ],
             ),

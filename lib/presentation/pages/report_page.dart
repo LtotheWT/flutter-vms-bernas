@@ -51,6 +51,7 @@ class ReportPage extends StatelessWidget {
             icon: Icons.insert_chart_outlined,
             color: colorScheme.primaryContainer.withOpacity(0.6),
             textTheme: textTheme,
+            onTap: () => context.push(reportDashboardRoutePath),
           ),
         ],
       ),
