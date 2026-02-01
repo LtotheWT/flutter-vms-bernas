@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+import '../app/router.dart';
 
 class ReportPage extends StatelessWidget {
   const ReportPage({super.key});
@@ -21,6 +24,7 @@ class ReportPage extends StatelessWidget {
             icon: Icons.badge_outlined,
             color: colorScheme.primaryContainer,
             textTheme: textTheme,
+            onTap: () => context.push(visitorLogRoutePath),
           ),
           const SizedBox(height: 16),
           _ReportCard(
@@ -29,6 +33,7 @@ class ReportPage extends StatelessWidget {
             icon: Icons.work_outline,
             color: colorScheme.secondaryContainer,
             textTheme: textTheme,
+            onTap: () => context.push(employeeLogRoutePath),
           ),
           const SizedBox(height: 16),
           _ReportCard(
@@ -59,6 +64,7 @@ class _ReportCard extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.textTheme,
+    this.onTap,
   });
 
   final String title;
@@ -66,6 +72,7 @@ class _ReportCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final TextTheme textTheme;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -90,7 +97,7 @@ class _ReportCard extends StatelessWidget {
         ),
         subtitle: Text(subtitle),
         trailing: const Icon(Icons.chevron_right),
-        onTap: () {},
+        onTap: onTap,
       ),
     );
   }

@@ -256,3 +256,39 @@
 
 - Must NOT:
   - Add skills unrelated to executable workflows.
+
+## Skill: report_table_listing_pattern
+**Title:** Report Table Listing Pattern
+
+- Purpose:
+  Build report screens that mirror the Invitation Listing pattern (filters + results + empty state),
+  while allowing action buttons to vary by report (e.g., Search/Export).
+
+- Inputs:
+  - Filter fields (entity/site/date range/ids/etc.)
+  - Action buttons (report-specific)
+  - Result rows (table or list)
+
+- Outputs:
+  - Filter UI (often in a sheet or top section)
+  - Results view with empty state
+  - Report-specific actions
+
+- Preconditions:
+  - Report requires tabular or list-based results
+  - Filters are required before querying
+
+- Steps:
+  1. Reuse filter layout patterns from Invitation Listing.
+  2. Provide Search and any report-specific actions.
+  3. Render results using the Invitation Listing list style (cards + expansion).
+  4. Match Invitation Listing spacing (list padding, header spacing, card margins).
+  5. Show empty state when no records exist (centered text).
+
+- Constraints / Failures:
+  - Buttons must reflect report needs; do not hardcode global actions.
+  - Keep filter UX consistent with Invitation Listing for familiarity.
+  - Do not add extra outer borders around the results list.
+
+- Must NOT:
+  - Diverge from the established listing structure without a clear reason.
