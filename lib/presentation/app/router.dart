@@ -12,6 +12,7 @@ import '../pages/visitor_walk_in_page.dart';
 import '../pages/visitor_check_in_page.dart';
 import '../pages/visitor_log_page.dart';
 import '../pages/employee_log_page.dart';
+import '../pages/permanent_contractor_log_page.dart';
 
 const String loginRouteName = 'login';
 const String loginRoutePath = '/login';
@@ -23,6 +24,8 @@ const String visitorLogRouteName = 'visitor_log';
 const String visitorLogRoutePath = '/report/visitor-log';
 const String employeeLogRouteName = 'employee_log';
 const String employeeLogRoutePath = '/report/employee-log';
+const String permanentContractorLogRouteName = 'permanent_contractor_log';
+const String permanentContractorLogRoutePath = '/report/permanent-contractor-log';
 const String splashRouteName = 'splash';
 const String splashRoutePath = '/';
 const String invitationAddRouteName = 'invitation_add';
@@ -109,6 +112,13 @@ final GoRouter appRouter = GoRouter(
                   path: 'employee-log',
                   parentNavigatorKey: _rootNavigatorKey,
                   builder: (context, state) => const EmployeeLogPage(),
+                ),
+                GoRoute(
+                  name: permanentContractorLogRouteName,
+                  path: 'permanent-contractor-log',
+                  parentNavigatorKey: _rootNavigatorKey,
+                  builder: (context, state) =>
+                      const PermanentContractorLogPage(),
                 ),
               ],
             ),

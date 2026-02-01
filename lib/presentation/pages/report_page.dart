@@ -42,6 +42,7 @@ class ReportPage extends StatelessWidget {
             icon: Icons.construction_outlined,
             color: colorScheme.tertiaryContainer,
             textTheme: textTheme,
+            onTap: () => context.push(permanentContractorLogRoutePath),
           ),
           const SizedBox(height: 16),
           _ReportCard(
