@@ -4,6 +4,8 @@ import '../widgets/app_dropdown_form_field.dart';
 import '../widgets/app_filled_button.dart';
 import '../widgets/app_outlined_button.dart';
 import '../widgets/app_text_form_field.dart';
+import '../widgets/double_back_exit_scope.dart';
+import '../widgets/loading_overlay.dart';
 import '../widgets/read_only_field.dart';
 
 class VisitorWalkInPage extends StatefulWidget {
@@ -39,6 +41,7 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
   final Set<int> _selectedVisitorIndexes = <int>{};
   bool _policyOneOpened = false;
   bool _policyTwoOpened = false;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -123,6 +126,30 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
 
   bool _isBlank(String? value) => value == null || value.trim().isEmpty;
 
+  bool _hasUnsavedChanges() {
+    return !_isBlank(_purposeController.text) ||
+        !_isBlank(_companyController.text) ||
+        !_isBlank(_contactController.text) ||
+        !_isBlank(_vehiclePlateController.text) ||
+        !_isBlank(_dateFromController.text) ||
+        !_isBlank(_dateToController.text) ||
+        !_isBlank(_projectController.text) ||
+        !_isBlank(_workDescriptionController.text) ||
+        !_isBlank(_remarkController.text) ||
+        !_isBlank(_visitorNameController.text) ||
+        !_isBlank(_visitorIdController.text) ||
+        _entity != null ||
+        _site != null ||
+        _department != null ||
+        _personToVisit != null ||
+        _visitorType != null ||
+        _workLevel != null ||
+        _visitors.isNotEmpty ||
+        _selectedVisitorIndexes.isNotEmpty ||
+        _policyOneOpened ||
+        _policyTwoOpened;
+  }
+
   bool _validateStep(int step) {
     String? error;
     if (step == 0) {
@@ -186,6 +213,7 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
       _selectedVisitorIndexes.clear();
       _policyOneOpened = false;
       _policyTwoOpened = false;
+      _isSubmitting = false;
     });
   }
 
@@ -212,9 +240,12 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
     }
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (_formKey.currentState?.validate() ?? false) {
       FocusScope.of(context).unfocus();
+      if (_isSubmitting) {
+        return;
+      }
       if (_visitors.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Add at least one visitor.')),
@@ -229,7 +260,7 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
         );
         return;
       }
-      _showReviewSheet();
+      await _showReviewSheet();
     }
   }
 
@@ -392,6 +423,12 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
       if (!mounted) {
         return;
       }
+      setState(() => _isSubmitting = true);
+      await Future<void>.delayed(const Duration(milliseconds: 600));
+      if (!mounted) {
+        return;
+      }
+      setState(() => _isSubmitting = false);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Walk-in registered.')));
@@ -427,556 +464,584 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Visitor Walk-In'),
-        actions: [
-          TextButton(onPressed: _confirmClear, child: const Text('Clear')),
-        ],
-      ),
-      body: SafeArea(
-        child: Form(
-          key: _formKey,
-          child: Stepper(
-            currentStep: _currentStep,
-            onStepContinue: () {
-              if (_currentStep < 3) {
-                if (_validateStep(_currentStep)) {
-                  setState(() => _currentStep = _currentStep + 1);
-                }
-                return;
-              }
-              _submit();
-            },
-            onStepCancel: () {
-              if (_currentStep > 0) {
-                setState(() => _currentStep = _currentStep - 1);
-              }
-            },
-            controlsBuilder: (context, details) {
-              final isLast = _currentStep == 3;
-              return Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: AppFilledButton(
-                        onPressed: details.onStepContinue,
-                        child: Text(isLast ? 'Register Walk-In' : 'Next'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    if (_currentStep > 0)
-                      Expanded(
-                      child: AppOutlinedButton(
-                        onPressed: details.onStepCancel,
-                        child: const Text('Back'),
-                      ),
-                      ),
-                  ],
-                ),
-              );
-            },
-            onStepTapped: (index) {
-              if (index <= _currentStep) {
-                setState(() => _currentStep = index);
-                return;
-              }
-              if (_validateStep(_currentStep)) {
-                setState(() => _currentStep = index);
-              }
-            },
-            steps: [
-              Step(
-                title: const Text('Invitation Details'),
-                isActive: _currentStep == 0,
-                content: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'All fields with an asterisk (*) are mandatory.',
-                      style: textTheme.bodySmall,
-                    ),
-                    const SizedBox(height: 16),
-                    const ReadOnlyField(
-                      label: 'Invitation ID',
-                      value: 'Auto-generated',
-                    ),
-                    const SizedBox(height: 12),
-                    AppDropdownFormField<String>(
-                      value: _entity,
-                      label: 'Entity *',
-                      items: [
-                        AppDropdownMenuItem(
-                          value: 'AGYTEK - Agytek1231',
-                          label: 'AGYTEK - Agytek1231',
+    return DoubleBackExitScope(
+      hasUnsavedChanges: _hasUnsavedChanges(),
+      isBlocked: _isSubmitting,
+      child: LoadingOverlay(
+        isLoading: _isSubmitting,
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text('Visitor Walk-In'),
+            actions: [
+              TextButton(onPressed: _confirmClear, child: const Text('Clear')),
+            ],
+          ),
+          body: SafeArea(
+            child: Form(
+              key: _formKey,
+              child: Stepper(
+                currentStep: _currentStep,
+                onStepContinue: () {
+                  if (_currentStep < 3) {
+                    if (_validateStep(_currentStep)) {
+                      setState(() => _currentStep = _currentStep + 1);
+                    }
+                    return;
+                  }
+                  _submit();
+                },
+                onStepCancel: () {
+                  if (_currentStep > 0) {
+                    setState(() => _currentStep = _currentStep - 1);
+                  }
+                },
+                controlsBuilder: (context, details) {
+                  final isLast = _currentStep == 3;
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: AppFilledButton(
+                            onPressed: details.onStepContinue,
+                            child: Text(isLast ? 'Register Walk-In' : 'Next'),
+                          ),
                         ),
-                      ],
-                      onChanged: (value) => setState(() => _entity = value),
-                      validator: (value) =>
-                          value == null ? 'Entity is required.' : null,
-                    ),
-                    const SizedBox(height: 12),
-                    AppDropdownFormField<String>(
-                      value: _site,
-                      label: 'Site *',
-                      items: [
-                        AppDropdownMenuItem(
-                          value: 'FACTORY1 - FACTORY1 T',
-                          label: 'FACTORY1 - FACTORY1 T',
-                        ),
-                      ],
-                      onChanged: (value) => setState(() => _site = value),
-                      validator: (value) =>
-                          value == null ? 'Site is required.' : null,
-                    ),
-                    const SizedBox(height: 12),
-                    AppDropdownFormField<String>(
-                      value: _department,
-                      label: 'Department *',
-                      items: [
-                        AppDropdownMenuItem(
-                          value: 'BOD1 - BOARD OF DIRECTOR',
-                          label: 'BOD1 - BOARD OF DIRECTOR',
-                        ),
-                        AppDropdownMenuItem(
-                          value: 'OPERATIONS',
-                          label: 'OPERATIONS',
-                        ),
-                      ],
-                      onChanged: (value) => setState(() => _department = value),
-                      validator: (value) =>
-                          value == null ? 'Department is required.' : null,
-                    ),
-                    const SizedBox(height: 12),
-                    AppDropdownFormField<String>(
-                      value: _personToVisit,
-                      label: 'Person to Visit *',
-                      items: [
-                        AppDropdownMenuItem(value: 'Ryan', label: 'Ryan'),
-                        AppDropdownMenuItem(value: 'Aisha', label: 'Aisha'),
-                      ],
-                      onChanged: (value) =>
-                          setState(() => _personToVisit = value),
-                      validator: (value) =>
-                          value == null ? 'Person to visit is required.' : null,
-                    ),
-                    const SizedBox(height: 12),
-                    AppDropdownFormField<String>(
-                      value: _visitorType,
-                      label: 'Visitor Type *',
-                      items: [
-                        AppDropdownMenuItem(value: 'Visitor', label: 'Visitor'),
-                        AppDropdownMenuItem(
-                          value: 'Contractor',
-                          label: 'Contractor',
-                        ),
-                      ],
-                      onChanged: (value) =>
-                          setState(() => _visitorType = value),
-                      validator: (value) =>
-                          value == null ? 'Visitor type is required.' : null,
-                    ),
-                    const SizedBox(height: 12),
-                    AppTextFormField(
-                      controller: _purposeController,
-                      label: 'Purpose *',
-                      validator: (value) =>
-                          value == null || value.trim().isEmpty
-                          ? 'Purpose is required.'
-                          : null,
-                    ),
-                  ],
-                ),
-              ),
-              Step(
-                title: const Text('Visitor Information'),
-                isActive: _currentStep == 1,
-                content: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    AppTextFormField(
-                      controller: _companyController,
-                      label: 'Company *',
-                      validator: (value) =>
-                          value == null || value.trim().isEmpty
-                          ? 'Company is required.'
-                          : null,
-                    ),
-                    const SizedBox(height: 12),
-                    AppTextFormField(
-                      controller: _contactController,
-                      label: 'Contact Number *',
-                      keyboardType: TextInputType.phone,
-                      validator: (value) =>
-                          value == null || value.trim().isEmpty
-                          ? 'Contact number is required.'
-                          : null,
-                    ),
-                    const SizedBox(height: 12),
-                    AppTextFormField(
-                      controller: _vehiclePlateController,
-                      label: 'Vehicle Plate Number *',
-                      validator: (value) =>
-                          value == null || value.trim().isEmpty
-                          ? 'Vehicle plate number is required.'
-                          : null,
-                    ),
-                    const SizedBox(height: 12),
-                    AppTextFormField(
-                      controller: _dateFromController,
-                      label: 'Visit Date From *',
-                      readOnly: true,
-                      suffixIcon: const Icon(Icons.calendar_today),
-                      onTap: () =>
-                          _pickDateTime(controller: _dateFromController),
-                      validator: (value) =>
-                          value == null || value.trim().isEmpty
-                          ? 'Visit date from is required.'
-                          : null,
-                    ),
-                    const SizedBox(height: 12),
-                    AppTextFormField(
-                      controller: _dateToController,
-                      label: 'Visit Date To *',
-                      readOnly: true,
-                      suffixIcon: const Icon(Icons.calendar_today),
-                      onTap: () => _pickDateTime(controller: _dateToController),
-                      validator: (value) =>
-                          value == null || value.trim().isEmpty
-                          ? 'Visit date to is required.'
-                          : null,
-                    ),
-                    const SizedBox(height: 12),
-                    AppTextFormField(
-                      controller: _projectController,
-                      label: 'Project',
-                    ),
-                    const SizedBox(height: 12),
-                    AppTextFormField(
-                      controller: _workDescriptionController,
-                      label: 'Work Description',
-                      minLines: 2,
-                      maxLines: 4,
-                    ),
-                    const SizedBox(height: 12),
-                    AppDropdownFormField<String>(
-                      value: _workLevel,
-                      label: 'Work Level',
-                      items: [
-                        AppDropdownMenuItem(value: 'Low', label: 'Low'),
-                        AppDropdownMenuItem(value: 'Medium', label: 'Medium'),
-                        AppDropdownMenuItem(value: 'High', label: 'High'),
-                      ],
-                      onChanged: (value) => setState(() => _workLevel = value),
-                    ),
-                    const SizedBox(height: 12),
-                    AppTextFormField(
-                      controller: _remarkController,
-                      label: 'Remark',
-                      minLines: 2,
-                      maxLines: 4,
-                    ),
-                  ],
-                ),
-              ),
-              Step(
-                title: const Text('Visitor List'),
-                isActive: _currentStep == 2,
-                content: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'Enter Name and IC/Passport Number to enable photo capture.',
-                      style: textTheme.bodySmall,
-                    ),
-                    const SizedBox(height: 12),
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Policy, Rules & Regulations',
-                              style: textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            _PolicyLink(
-                              title: 'Environmental Policy',
-                              opened: _policyOneOpened,
-                              onTap: () => _openPolicy(
-                                title: 'Environmental Policy',
-                                index: 1,
-                              ),
-                            ),
-                            _PolicyLink(
-                              title: 'Safety Health Management Policy',
-                              opened: _policyTwoOpened,
-                              onTap: () => _openPolicy(
-                                title: 'Safety Health Management Policy',
-                                index: 2,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Open both policies before marking "Read".',
-                              style: textTheme.bodySmall,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    AppTextFormField(
-                      controller: _visitorNameController,
-                      focusNode: _visitorNameFocus,
-                      label: 'Name (as per IC/Passport) *',
-                    ),
-                    const SizedBox(height: 12),
-                    AppTextFormField(
-                      controller: _visitorIdController,
-                      label: 'IC/Passport Number *',
-                    ),
-                    const SizedBox(height: 12),
-                    AppOutlinedButtonIcon(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Photo capture mock.')),
-                        );
-                      },
-                      icon: const Icon(Icons.camera_alt_outlined),
-                      label: const Text('Visitor Photo'),
-                    ),
-                    const SizedBox(height: 12),
-                    AppOutlinedButtonIcon(
-                      onPressed: _addVisitor,
-                      icon: const Icon(Icons.person_add_alt_1),
-                      label: const Text('Add Visitor'),
-                    ),
-                    const SizedBox(height: 12),
-                    if (_visitors.isEmpty)
-                      const Text('No visitors added yet.')
-                    else ...[
-                      Row(
-                        children: [
+                        const SizedBox(width: 12),
+                        if (_currentStep > 0)
                           Expanded(
-                            child: CheckboxListTile(
-                              value:
-                                  _selectedVisitorIndexes.length ==
-                                      _visitors.length &&
-                                  _visitors.isNotEmpty,
-                              onChanged: (checked) {
-                                setState(() {
-                                  if (checked == true) {
-                                    _selectedVisitorIndexes
-                                      ..clear()
-                                      ..addAll(
-                                        List<int>.generate(
-                                          _visitors.length,
-                                          (index) => index,
-                                        ),
-                                      );
-                                  } else {
-                                    _selectedVisitorIndexes.clear();
-                                  }
-                                });
-                              },
-                              title: Text(
-                                'Select all (${_selectedVisitorIndexes.length}/${_visitors.length})',
-                              ),
-                              controlAffinity: ListTileControlAffinity.leading,
-                              contentPadding: EdgeInsets.zero,
+                            child: AppOutlinedButton(
+                              onPressed: details.onStepCancel,
+                              child: const Text('Back'),
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          AppOutlinedButtonIcon(
-                            onPressed: _selectedVisitorIndexes.isEmpty
-                                ? null
-                                : () {
+                      ],
+                    ),
+                  );
+                },
+                onStepTapped: (index) {
+                  if (index <= _currentStep) {
+                    setState(() => _currentStep = index);
+                    return;
+                  }
+                  if (_validateStep(_currentStep)) {
+                    setState(() => _currentStep = index);
+                  }
+                },
+                steps: [
+                  Step(
+                    title: const Text('Invitation Details'),
+                    isActive: _currentStep == 0,
+                    content: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          'All fields with an asterisk (*) are mandatory.',
+                          style: textTheme.bodySmall,
+                        ),
+                        const SizedBox(height: 16),
+                        const ReadOnlyField(
+                          label: 'Invitation ID',
+                          value: 'Auto-generated',
+                        ),
+                        const SizedBox(height: 12),
+                        AppDropdownFormField<String>(
+                          value: _entity,
+                          label: 'Entity *',
+                          items: [
+                            AppDropdownMenuItem(
+                              value: 'AGYTEK - Agytek1231',
+                              label: 'AGYTEK - Agytek1231',
+                            ),
+                          ],
+                          onChanged: (value) => setState(() => _entity = value),
+                          validator: (value) =>
+                              value == null ? 'Entity is required.' : null,
+                        ),
+                        const SizedBox(height: 12),
+                        AppDropdownFormField<String>(
+                          value: _site,
+                          label: 'Site *',
+                          items: [
+                            AppDropdownMenuItem(
+                              value: 'FACTORY1 - FACTORY1 T',
+                              label: 'FACTORY1 - FACTORY1 T',
+                            ),
+                          ],
+                          onChanged: (value) => setState(() => _site = value),
+                          validator: (value) =>
+                              value == null ? 'Site is required.' : null,
+                        ),
+                        const SizedBox(height: 12),
+                        AppDropdownFormField<String>(
+                          value: _department,
+                          label: 'Department *',
+                          items: [
+                            AppDropdownMenuItem(
+                              value: 'BOD1 - BOARD OF DIRECTOR',
+                              label: 'BOD1 - BOARD OF DIRECTOR',
+                            ),
+                            AppDropdownMenuItem(
+                              value: 'OPERATIONS',
+                              label: 'OPERATIONS',
+                            ),
+                          ],
+                          onChanged: (value) =>
+                              setState(() => _department = value),
+                          validator: (value) =>
+                              value == null ? 'Department is required.' : null,
+                        ),
+                        const SizedBox(height: 12),
+                        AppDropdownFormField<String>(
+                          value: _personToVisit,
+                          label: 'Person to Visit *',
+                          items: [
+                            AppDropdownMenuItem(value: 'Ryan', label: 'Ryan'),
+                            AppDropdownMenuItem(value: 'Aisha', label: 'Aisha'),
+                          ],
+                          onChanged: (value) =>
+                              setState(() => _personToVisit = value),
+                          validator: (value) => value == null
+                              ? 'Person to visit is required.'
+                              : null,
+                        ),
+                        const SizedBox(height: 12),
+                        AppDropdownFormField<String>(
+                          value: _visitorType,
+                          label: 'Visitor Type *',
+                          items: [
+                            AppDropdownMenuItem(
+                              value: 'Visitor',
+                              label: 'Visitor',
+                            ),
+                            AppDropdownMenuItem(
+                              value: 'Contractor',
+                              label: 'Contractor',
+                            ),
+                          ],
+                          onChanged: (value) =>
+                              setState(() => _visitorType = value),
+                          validator: (value) => value == null
+                              ? 'Visitor type is required.'
+                              : null,
+                        ),
+                        const SizedBox(height: 12),
+                        AppTextFormField(
+                          controller: _purposeController,
+                          label: 'Purpose *',
+                          validator: (value) =>
+                              value == null || value.trim().isEmpty
+                              ? 'Purpose is required.'
+                              : null,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Step(
+                    title: const Text('Visitor Information'),
+                    isActive: _currentStep == 1,
+                    content: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        AppTextFormField(
+                          controller: _companyController,
+                          label: 'Company *',
+                          validator: (value) =>
+                              value == null || value.trim().isEmpty
+                              ? 'Company is required.'
+                              : null,
+                        ),
+                        const SizedBox(height: 12),
+                        AppTextFormField(
+                          controller: _contactController,
+                          label: 'Contact Number *',
+                          keyboardType: TextInputType.phone,
+                          validator: (value) =>
+                              value == null || value.trim().isEmpty
+                              ? 'Contact number is required.'
+                              : null,
+                        ),
+                        const SizedBox(height: 12),
+                        AppTextFormField(
+                          controller: _vehiclePlateController,
+                          label: 'Vehicle Plate Number *',
+                          validator: (value) =>
+                              value == null || value.trim().isEmpty
+                              ? 'Vehicle plate number is required.'
+                              : null,
+                        ),
+                        const SizedBox(height: 12),
+                        AppTextFormField(
+                          controller: _dateFromController,
+                          label: 'Visit Date From *',
+                          readOnly: true,
+                          suffixIcon: const Icon(Icons.calendar_today),
+                          onTap: () =>
+                              _pickDateTime(controller: _dateFromController),
+                          validator: (value) =>
+                              value == null || value.trim().isEmpty
+                              ? 'Visit date from is required.'
+                              : null,
+                        ),
+                        const SizedBox(height: 12),
+                        AppTextFormField(
+                          controller: _dateToController,
+                          label: 'Visit Date To *',
+                          readOnly: true,
+                          suffixIcon: const Icon(Icons.calendar_today),
+                          onTap: () =>
+                              _pickDateTime(controller: _dateToController),
+                          validator: (value) =>
+                              value == null || value.trim().isEmpty
+                              ? 'Visit date to is required.'
+                              : null,
+                        ),
+                        const SizedBox(height: 12),
+                        AppTextFormField(
+                          controller: _projectController,
+                          label: 'Project',
+                        ),
+                        const SizedBox(height: 12),
+                        AppTextFormField(
+                          controller: _workDescriptionController,
+                          label: 'Work Description',
+                          minLines: 2,
+                          maxLines: 4,
+                        ),
+                        const SizedBox(height: 12),
+                        AppDropdownFormField<String>(
+                          value: _workLevel,
+                          label: 'Work Level',
+                          items: [
+                            AppDropdownMenuItem(value: 'Low', label: 'Low'),
+                            AppDropdownMenuItem(
+                              value: 'Medium',
+                              label: 'Medium',
+                            ),
+                            AppDropdownMenuItem(value: 'High', label: 'High'),
+                          ],
+                          onChanged: (value) =>
+                              setState(() => _workLevel = value),
+                        ),
+                        const SizedBox(height: 12),
+                        AppTextFormField(
+                          controller: _remarkController,
+                          label: 'Remark',
+                          minLines: 2,
+                          maxLines: 4,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Step(
+                    title: const Text('Visitor List'),
+                    isActive: _currentStep == 2,
+                    content: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          'Enter Name and IC/Passport Number to enable photo capture.',
+                          style: textTheme.bodySmall,
+                        ),
+                        const SizedBox(height: 12),
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Policy, Rules & Regulations',
+                                  style: textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                _PolicyLink(
+                                  title: 'Environmental Policy',
+                                  opened: _policyOneOpened,
+                                  onTap: () => _openPolicy(
+                                    title: 'Environmental Policy',
+                                    index: 1,
+                                  ),
+                                ),
+                                _PolicyLink(
+                                  title: 'Safety Health Management Policy',
+                                  opened: _policyTwoOpened,
+                                  onTap: () => _openPolicy(
+                                    title: 'Safety Health Management Policy',
+                                    index: 2,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Open both policies before marking "Read".',
+                                  style: textTheme.bodySmall,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        AppTextFormField(
+                          controller: _visitorNameController,
+                          focusNode: _visitorNameFocus,
+                          label: 'Name (as per IC/Passport) *',
+                        ),
+                        const SizedBox(height: 12),
+                        AppTextFormField(
+                          controller: _visitorIdController,
+                          label: 'IC/Passport Number *',
+                        ),
+                        const SizedBox(height: 12),
+                        AppOutlinedButtonIcon(
+                          onPressed: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Photo capture mock.'),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.camera_alt_outlined),
+                          label: const Text('Visitor Photo'),
+                        ),
+                        const SizedBox(height: 12),
+                        AppOutlinedButtonIcon(
+                          onPressed: _addVisitor,
+                          icon: const Icon(Icons.person_add_alt_1),
+                          label: const Text('Add Visitor'),
+                        ),
+                        const SizedBox(height: 12),
+                        if (_visitors.isEmpty)
+                          const Text('No visitors added yet.')
+                        else ...[
+                          Row(
+                            children: [
+                              Expanded(
+                                child: CheckboxListTile(
+                                  value:
+                                      _selectedVisitorIndexes.length ==
+                                          _visitors.length &&
+                                      _visitors.isNotEmpty,
+                                  onChanged: (checked) {
                                     setState(() {
-                                      final toRemove =
-                                          _selectedVisitorIndexes.toList()
-                                            ..sort((a, b) => b.compareTo(a));
-                                      for (final index in toRemove) {
-                                        _visitors.removeAt(index);
+                                      if (checked == true) {
+                                        _selectedVisitorIndexes
+                                          ..clear()
+                                          ..addAll(
+                                            List<int>.generate(
+                                              _visitors.length,
+                                              (index) => index,
+                                            ),
+                                          );
+                                      } else {
+                                        _selectedVisitorIndexes.clear();
                                       }
-                                      _selectedVisitorIndexes.clear();
                                     });
                                   },
-                            icon: const Icon(Icons.delete_outline),
-                            label: const Text('Delete'),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _visitors.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
-                        itemBuilder: (context, index) {
-                          final visitor = _visitors[index];
-                          final selected = _selectedVisitorIndexes.contains(
-                            index,
-                          );
-                          return Card(
-                            child: ListTile(
-                              leading: Checkbox(
-                                value: selected,
-                                onChanged: (checked) {
-                                  setState(() {
-                                    if (checked == true) {
-                                      _selectedVisitorIndexes.add(index);
-                                    } else {
-                                      _selectedVisitorIndexes.remove(index);
-                                    }
-                                  });
-                                },
+                                  title: Text(
+                                    'Select all (${_selectedVisitorIndexes.length}/${_visitors.length})',
+                                  ),
+                                  controlAffinity:
+                                      ListTileControlAffinity.leading,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
                               ),
-                              title: Text(visitor.name),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(visitor.idNumber),
-                                  const SizedBox(height: 6),
-                                  CheckboxListTile(
-                                    value: visitor.policyRead,
+                              const SizedBox(width: 12),
+                              AppOutlinedButtonIcon(
+                                onPressed: _selectedVisitorIndexes.isEmpty
+                                    ? null
+                                    : () {
+                                        setState(() {
+                                          final toRemove =
+                                              _selectedVisitorIndexes.toList()
+                                                ..sort(
+                                                  (a, b) => b.compareTo(a),
+                                                );
+                                          for (final index in toRemove) {
+                                            _visitors.removeAt(index);
+                                          }
+                                          _selectedVisitorIndexes.clear();
+                                        });
+                                      },
+                                icon: const Icon(Icons.delete_outline),
+                                label: const Text('Delete'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: _visitors.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 8),
+                            itemBuilder: (context, index) {
+                              final visitor = _visitors[index];
+                              final selected = _selectedVisitorIndexes.contains(
+                                index,
+                              );
+                              return Card(
+                                child: ListTile(
+                                  leading: Checkbox(
+                                    value: selected,
                                     onChanged: (checked) {
-                                      if (!(_policyOneOpened &&
-                                          _policyTwoOpened)) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'Open both policy links before marking as read.',
-                                            ),
-                                          ),
-                                        );
-                                        return;
-                                      }
                                       setState(() {
-                                        _visitors[index] = visitor.copyWith(
-                                          policyRead: checked ?? false,
-                                        );
+                                        if (checked == true) {
+                                          _selectedVisitorIndexes.add(index);
+                                        } else {
+                                          _selectedVisitorIndexes.remove(index);
+                                        }
                                       });
                                     },
-                                    title: const Text('Read'),
-                                    controlAffinity:
-                                        ListTileControlAffinity.leading,
-                                    dense: true,
-                                    contentPadding: EdgeInsets.zero,
                                   ),
-                                ],
-                              ),
-                              trailing: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.photo_outlined, size: 28),
-                                  Text(
-                                    visitor.photoLabel,
-                                    style: textTheme.bodySmall,
+                                  title: Text(visitor.name),
+                                  subtitle: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(visitor.idNumber),
+                                      const SizedBox(height: 6),
+                                      CheckboxListTile(
+                                        value: visitor.policyRead,
+                                        onChanged: (checked) {
+                                          if (!(_policyOneOpened &&
+                                              _policyTwoOpened)) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'Open both policy links before marking as read.',
+                                                ),
+                                              ),
+                                            );
+                                            return;
+                                          }
+                                          setState(() {
+                                            _visitors[index] = visitor.copyWith(
+                                              policyRead: checked ?? false,
+                                            );
+                                          });
+                                        },
+                                        title: const Text('Read'),
+                                        controlAffinity:
+                                            ListTileControlAffinity.leading,
+                                        dense: true,
+                                        contentPadding: EdgeInsets.zero,
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              Step(
-                title: const Text('Others (Optional)'),
-                isActive: _currentStep == 3,
-                content: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'Upload supporting documents if needed.',
-                      style: textTheme.bodySmall,
+                                  trailing: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(
+                                        Icons.photo_outlined,
+                                        size: 28,
+                                      ),
+                                      Text(
+                                        visitor.photoLabel,
+                                        style: textTheme.bodySmall,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ],
                     ),
-                    const SizedBox(height: 12),
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Document: Test Checklist (pdf)',
-                              style: textTheme.bodyMedium,
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              '1) Download template',
-                              style: textTheme.titleSmall,
-                            ),
-                            const SizedBox(height: 6),
-                            AppOutlinedButtonIcon(
-                              onPressed: () {},
-                              icon: const Icon(Icons.download_outlined),
-                              label: const Text('Download Test Checklist'),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              '2) Upload modified file',
-                              style: textTheme.titleSmall,
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                AppOutlinedButton(
-                                  onPressed: () {},
-                                  child: const Text('Choose file'),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'No file chosen',
-                                    style: textTheme.bodySmall,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            AppFilledButton(
-                              onPressed: () {},
-                              child: const Text('Upload'),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              '3) Uploaded file actions',
-                              style: textTheme.titleSmall,
-                            ),
-                            const SizedBox(height: 6),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                AppOutlinedButton(
-                                  onPressed: () {},
-                                  child: const Text('Download uploaded'),
-                                ),
-                                AppOutlinedButton(
-                                  onPressed: () {},
-                                  child: const Text('Delete uploaded'),
-                                ),
-                              ],
-                            ),
-                          ],
+                  ),
+                  Step(
+                    title: const Text('Others (Optional)'),
+                    isActive: _currentStep == 3,
+                    content: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          'Upload supporting documents if needed.',
+                          style: textTheme.bodySmall,
                         ),
-                      ),
+                        const SizedBox(height: 12),
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Document: Test Checklist (pdf)',
+                                  style: textTheme.bodyMedium,
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  '1) Download template',
+                                  style: textTheme.titleSmall,
+                                ),
+                                const SizedBox(height: 6),
+                                AppOutlinedButtonIcon(
+                                  onPressed: () {},
+                                  icon: const Icon(Icons.download_outlined),
+                                  label: const Text('Download Test Checklist'),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  '2) Upload modified file',
+                                  style: textTheme.titleSmall,
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    AppOutlinedButton(
+                                      onPressed: () {},
+                                      child: const Text('Choose file'),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'No file chosen',
+                                        style: textTheme.bodySmall,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                AppFilledButton(
+                                  onPressed: () {},
+                                  child: const Text('Upload'),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  '3) Uploaded file actions',
+                                  style: textTheme.titleSmall,
+                                ),
+                                const SizedBox(height: 6),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    AppOutlinedButton(
+                                      onPressed: () {},
+                                      child: const Text('Download uploaded'),
+                                    ),
+                                    AppOutlinedButton(
+                                      onPressed: () {},
+                                      child: const Text('Delete uploaded'),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

@@ -5,6 +5,7 @@ import '../widgets/app_dropdown_form_field.dart';
 import '../widgets/app_filled_button.dart';
 import '../widgets/app_outlined_button.dart';
 import '../widgets/app_text_form_field.dart';
+import '../widgets/double_back_exit_scope.dart';
 import '../widgets/loading_overlay.dart';
 import '../widgets/read_only_field.dart';
 import '../state/invitation_add_providers.dart';
@@ -61,6 +62,19 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
     ref.read(invitationAddControllerProvider.notifier).clear();
   }
 
+  bool _hasUnsavedChanges(InvitationAddState formState) {
+    return _companyController.text.trim().isNotEmpty ||
+        _purposeController.text.trim().isNotEmpty ||
+        _emailController.text.trim().isNotEmpty ||
+        _dateFromController.text.trim().isNotEmpty ||
+        _dateToController.text.trim().isNotEmpty ||
+        formState.entity != null ||
+        formState.site != null ||
+        formState.department != null ||
+        formState.personToVisit != null ||
+        formState.visitorType != null;
+  }
+
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;
@@ -104,8 +118,9 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
     final textTheme = Theme.of(context).textTheme;
     final formState = ref.watch(invitationAddControllerProvider);
 
-    return PopScope(
-      canPop: !formState.isSubmitting,
+    return DoubleBackExitScope(
+      hasUnsavedChanges: _hasUnsavedChanges(formState),
+      isBlocked: formState.isSubmitting,
       child: LoadingOverlay(
         isLoading: formState.isSubmitting,
         child: Scaffold(
