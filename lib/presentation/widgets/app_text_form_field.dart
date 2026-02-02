@@ -17,6 +17,7 @@ class AppTextFormField extends StatelessWidget {
     this.onTap,
     this.onChanged,
     this.validator,
+    this.autovalidateMode,
   }) : assert(
          !obscureText ||
              ((minLines == null || minLines <= 1) &&
@@ -38,6 +39,7 @@ class AppTextFormField extends StatelessWidget {
   final VoidCallback? onTap;
   final ValueChanged<String>? onChanged;
   final String? Function(String?)? validator;
+  final AutovalidateMode? autovalidateMode;
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +58,7 @@ class AppTextFormField extends StatelessWidget {
       onTap: onTap,
       onChanged: onChanged,
       validator: validator,
+      autovalidateMode: autovalidateMode,
       decoration: InputDecoration(
         labelText: label.isEmpty ? null : label,
         suffixIcon: suffixIcon,

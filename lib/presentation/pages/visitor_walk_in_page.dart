@@ -16,7 +16,8 @@ class VisitorWalkInPage extends StatefulWidget {
 }
 
 class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
-  final _formKey = GlobalKey<FormState>();
+  final _stepOneFormKey = GlobalKey<FormState>();
+  final _stepTwoFormKey = GlobalKey<FormState>();
   final _purposeController = TextEditingController();
   final _companyController = TextEditingController();
   final _contactController = TextEditingController();
@@ -150,47 +151,19 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
         _policyTwoOpened;
   }
 
-  bool _validateStep(int step) {
-    String? error;
+  bool _validateStepForm(int step) {
     if (step == 0) {
-      if (_entity == null) {
-        error = 'Entity is required.';
-      } else if (_site == null) {
-        error = 'Site is required.';
-      } else if (_department == null) {
-        error = 'Department is required.';
-      } else if (_personToVisit == null) {
-        error = 'Person to visit is required.';
-      } else if (_visitorType == null) {
-        error = 'Visitor type is required.';
-      } else if (_isBlank(_purposeController.text)) {
-        error = 'Purpose is required.';
-      }
-    } else if (step == 1) {
-      if (_isBlank(_companyController.text)) {
-        error = 'Company is required.';
-      } else if (_isBlank(_contactController.text)) {
-        error = 'Contact number is required.';
-      } else if (_isBlank(_vehiclePlateController.text)) {
-        error = 'Vehicle plate number is required.';
-      } else if (_isBlank(_dateFromController.text)) {
-        error = 'Visit date from is required.';
-      } else if (_isBlank(_dateToController.text)) {
-        error = 'Visit date to is required.';
-      }
+      return _stepOneFormKey.currentState?.validate() ?? false;
     }
-
-    if (error != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error)));
-      return false;
+    if (step == 1) {
+      return _stepTwoFormKey.currentState?.validate() ?? false;
     }
     return true;
   }
 
   void _clearForm() {
-    _formKey.currentState?.reset();
+    _stepOneFormKey.currentState?.reset();
+    _stepTwoFormKey.currentState?.reset();
     _purposeController.clear();
     _companyController.clear();
     _contactController.clear();
@@ -241,27 +214,33 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
   }
 
   Future<void> _submit() async {
-    if (_formKey.currentState?.validate() ?? false) {
-      FocusScope.of(context).unfocus();
-      if (_isSubmitting) {
-        return;
-      }
-      if (_visitors.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Add at least one visitor.')),
-        );
-        return;
-      }
-      if (_visitors.any((visitor) => !visitor.policyRead)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('All visitors must mark Policy/Rules as read.'),
-          ),
-        );
-        return;
-      }
-      await _showReviewSheet();
+    if (!_validateStepForm(0)) {
+      setState(() => _currentStep = 0);
+      return;
     }
+    if (!_validateStepForm(1)) {
+      setState(() => _currentStep = 1);
+      return;
+    }
+    FocusScope.of(context).unfocus();
+    if (_isSubmitting) {
+      return;
+    }
+    if (_visitors.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Add at least one visitor.')),
+      );
+      return;
+    }
+    if (_visitors.any((visitor) => !visitor.policyRead)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('All visitors must mark Policy/Rules as read.'),
+        ),
+      );
+      return;
+    }
+    await _showReviewSheet();
   }
 
   Future<void> _showReviewSheet() async {
@@ -477,62 +456,62 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
             ],
           ),
           body: SafeArea(
-            child: Form(
-              key: _formKey,
-              child: Stepper(
-                currentStep: _currentStep,
-                onStepContinue: () {
-                  if (_currentStep < 3) {
-                    if (_validateStep(_currentStep)) {
-                      setState(() => _currentStep = _currentStep + 1);
-                    }
-                    return;
+            child: Stepper(
+              currentStep: _currentStep,
+              onStepContinue: () {
+                if (_currentStep < 3) {
+                  if (_validateStepForm(_currentStep)) {
+                    setState(() => _currentStep = _currentStep + 1);
                   }
-                  _submit();
-                },
-                onStepCancel: () {
-                  if (_currentStep > 0) {
-                    setState(() => _currentStep = _currentStep - 1);
-                  }
-                },
-                controlsBuilder: (context, details) {
-                  final isLast = _currentStep == 3;
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: Row(
-                      children: [
+                  return;
+                }
+                _submit();
+              },
+              onStepCancel: () {
+                if (_currentStep > 0) {
+                  setState(() => _currentStep = _currentStep - 1);
+                }
+              },
+              controlsBuilder: (context, details) {
+                final isLast = _currentStep == 3;
+                return Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: AppFilledButton(
+                          onPressed: details.onStepContinue,
+                          child: Text(isLast ? 'Register Walk-In' : 'Next'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      if (_currentStep > 0)
                         Expanded(
-                          child: AppFilledButton(
-                            onPressed: details.onStepContinue,
-                            child: Text(isLast ? 'Register Walk-In' : 'Next'),
+                          child: AppOutlinedButton(
+                            onPressed: details.onStepCancel,
+                            child: const Text('Back'),
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        if (_currentStep > 0)
-                          Expanded(
-                            child: AppOutlinedButton(
-                              onPressed: details.onStepCancel,
-                              child: const Text('Back'),
-                            ),
-                          ),
-                      ],
-                    ),
-                  );
-                },
-                onStepTapped: (index) {
-                  if (index <= _currentStep) {
-                    setState(() => _currentStep = index);
-                    return;
-                  }
-                  if (_validateStep(_currentStep)) {
-                    setState(() => _currentStep = index);
-                  }
-                },
-                steps: [
-                  Step(
-                    title: const Text('Invitation Details'),
-                    isActive: _currentStep == 0,
-                    content: Column(
+                    ],
+                  ),
+                );
+              },
+              onStepTapped: (index) {
+                if (index <= _currentStep) {
+                  setState(() => _currentStep = index);
+                  return;
+                }
+                if (_validateStepForm(_currentStep)) {
+                  setState(() => _currentStep = index);
+                }
+              },
+              steps: [
+                Step(
+                  title: const Text('Invitation Details'),
+                  isActive: _currentStep == 0,
+                  content: Form(
+                    key: _stepOneFormKey,
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
@@ -548,6 +527,7 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                         AppDropdownFormField<String>(
                           value: _entity,
                           label: 'Entity *',
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
                           items: [
                             AppDropdownMenuItem(
                               value: 'AGYTEK - Agytek1231',
@@ -562,6 +542,7 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                         AppDropdownFormField<String>(
                           value: _site,
                           label: 'Site *',
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
                           items: [
                             AppDropdownMenuItem(
                               value: 'FACTORY1 - FACTORY1 T',
@@ -576,6 +557,7 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                         AppDropdownFormField<String>(
                           value: _department,
                           label: 'Department *',
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
                           items: [
                             AppDropdownMenuItem(
                               value: 'BOD1 - BOARD OF DIRECTOR',
@@ -595,6 +577,7 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                         AppDropdownFormField<String>(
                           value: _personToVisit,
                           label: 'Person to Visit *',
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
                           items: [
                             AppDropdownMenuItem(value: 'Ryan', label: 'Ryan'),
                             AppDropdownMenuItem(value: 'Aisha', label: 'Aisha'),
@@ -609,6 +592,7 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                         AppDropdownFormField<String>(
                           value: _visitorType,
                           label: 'Visitor Type *',
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
                           items: [
                             AppDropdownMenuItem(
                               value: 'Visitor',
@@ -629,6 +613,7 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                         AppTextFormField(
                           controller: _purposeController,
                           label: 'Purpose *',
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
                           validator: (value) =>
                               value == null || value.trim().isEmpty
                               ? 'Purpose is required.'
@@ -637,15 +622,19 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                       ],
                     ),
                   ),
-                  Step(
-                    title: const Text('Visitor Information'),
-                    isActive: _currentStep == 1,
-                    content: Column(
+                ),
+                Step(
+                  title: const Text('Visitor Information'),
+                  isActive: _currentStep == 1,
+                  content: Form(
+                    key: _stepTwoFormKey,
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         AppTextFormField(
                           controller: _companyController,
                           label: 'Company *',
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
                           validator: (value) =>
                               value == null || value.trim().isEmpty
                               ? 'Company is required.'
@@ -656,6 +645,7 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                           controller: _contactController,
                           label: 'Contact Number *',
                           keyboardType: TextInputType.phone,
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
                           validator: (value) =>
                               value == null || value.trim().isEmpty
                               ? 'Contact number is required.'
@@ -665,6 +655,7 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                         AppTextFormField(
                           controller: _vehiclePlateController,
                           label: 'Vehicle Plate Number *',
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
                           validator: (value) =>
                               value == null || value.trim().isEmpty
                               ? 'Vehicle plate number is required.'
@@ -678,6 +669,7 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                           suffixIcon: const Icon(Icons.calendar_today),
                           onTap: () =>
                               _pickDateTime(controller: _dateFromController),
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
                           validator: (value) =>
                               value == null || value.trim().isEmpty
                               ? 'Visit date from is required.'
@@ -691,6 +683,7 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                           suffixIcon: const Icon(Icons.calendar_today),
                           onTap: () =>
                               _pickDateTime(controller: _dateToController),
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
                           validator: (value) =>
                               value == null || value.trim().isEmpty
                               ? 'Visit date to is required.'
@@ -733,314 +726,308 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                       ],
                     ),
                   ),
-                  Step(
-                    title: const Text('Visitor List'),
-                    isActive: _currentStep == 2,
-                    content: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          'Enter Name and IC/Passport Number to enable photo capture.',
-                          style: textTheme.bodySmall,
-                        ),
-                        const SizedBox(height: 12),
-                        Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Policy, Rules & Regulations',
-                                  style: textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                _PolicyLink(
-                                  title: 'Environmental Policy',
-                                  opened: _policyOneOpened,
-                                  onTap: () => _openPolicy(
-                                    title: 'Environmental Policy',
-                                    index: 1,
-                                  ),
-                                ),
-                                _PolicyLink(
-                                  title: 'Safety Health Management Policy',
-                                  opened: _policyTwoOpened,
-                                  onTap: () => _openPolicy(
-                                    title: 'Safety Health Management Policy',
-                                    index: 2,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  'Open both policies before marking "Read".',
-                                  style: textTheme.bodySmall,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        AppTextFormField(
-                          controller: _visitorNameController,
-                          focusNode: _visitorNameFocus,
-                          label: 'Name (as per IC/Passport) *',
-                        ),
-                        const SizedBox(height: 12),
-                        AppTextFormField(
-                          controller: _visitorIdController,
-                          label: 'IC/Passport Number *',
-                        ),
-                        const SizedBox(height: 12),
-                        AppOutlinedButtonIcon(
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Photo capture mock.'),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.camera_alt_outlined),
-                          label: const Text('Visitor Photo'),
-                        ),
-                        const SizedBox(height: 12),
-                        AppOutlinedButtonIcon(
-                          onPressed: _addVisitor,
-                          icon: const Icon(Icons.person_add_alt_1),
-                          label: const Text('Add Visitor'),
-                        ),
-                        const SizedBox(height: 12),
-                        if (_visitors.isEmpty)
-                          const Text('No visitors added yet.')
-                        else ...[
-                          Row(
+                ),
+                Step(
+                  title: const Text('Visitor List'),
+                  isActive: _currentStep == 2,
+                  content: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Enter Name and IC/Passport Number to enable photo capture.',
+                        style: textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 12),
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(
-                                child: CheckboxListTile(
-                                  value:
-                                      _selectedVisitorIndexes.length ==
-                                          _visitors.length &&
-                                      _visitors.isNotEmpty,
-                                  onChanged: (checked) {
-                                    setState(() {
-                                      if (checked == true) {
-                                        _selectedVisitorIndexes
-                                          ..clear()
-                                          ..addAll(
-                                            List<int>.generate(
-                                              _visitors.length,
-                                              (index) => index,
-                                            ),
-                                          );
-                                      } else {
-                                        _selectedVisitorIndexes.clear();
-                                      }
-                                    });
-                                  },
-                                  title: Text(
-                                    'Select all (${_selectedVisitorIndexes.length}/${_visitors.length})',
-                                  ),
-                                  controlAffinity:
-                                      ListTileControlAffinity.leading,
-                                  contentPadding: EdgeInsets.zero,
+                              Text(
+                                'Policy, Rules & Regulations',
+                                style: textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
-                              const SizedBox(width: 12),
-                              AppOutlinedButtonIcon(
-                                onPressed: _selectedVisitorIndexes.isEmpty
-                                    ? null
-                                    : () {
-                                        setState(() {
-                                          final toRemove =
-                                              _selectedVisitorIndexes.toList()
-                                                ..sort(
-                                                  (a, b) => b.compareTo(a),
-                                                );
-                                          for (final index in toRemove) {
-                                            _visitors.removeAt(index);
-                                          }
-                                          _selectedVisitorIndexes.clear();
-                                        });
-                                      },
-                                icon: const Icon(Icons.delete_outline),
-                                label: const Text('Delete'),
+                              const SizedBox(height: 8),
+                              _PolicyLink(
+                                title: 'Environmental Policy',
+                                opened: _policyOneOpened,
+                                onTap: () => _openPolicy(
+                                  title: 'Environmental Policy',
+                                  index: 1,
+                                ),
+                              ),
+                              _PolicyLink(
+                                title: 'Safety Health Management Policy',
+                                opened: _policyTwoOpened,
+                                onTap: () => _openPolicy(
+                                  title: 'Safety Health Management Policy',
+                                  index: 2,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Open both policies before marking "Read".',
+                                style: textTheme.bodySmall,
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
-                          ListView.separated(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: _visitors.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 8),
-                            itemBuilder: (context, index) {
-                              final visitor = _visitors[index];
-                              final selected = _selectedVisitorIndexes.contains(
-                                index,
-                              );
-                              return Card(
-                                child: ListTile(
-                                  leading: Checkbox(
-                                    value: selected,
-                                    onChanged: (checked) {
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      AppTextFormField(
+                        controller: _visitorNameController,
+                        focusNode: _visitorNameFocus,
+                        label: 'Name (as per IC/Passport) *',
+                      ),
+                      const SizedBox(height: 12),
+                      AppTextFormField(
+                        controller: _visitorIdController,
+                        label: 'IC/Passport Number *',
+                      ),
+                      const SizedBox(height: 12),
+                      AppOutlinedButtonIcon(
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Photo capture mock.'),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.camera_alt_outlined),
+                        label: const Text('Visitor Photo'),
+                      ),
+                      const SizedBox(height: 12),
+                      AppOutlinedButtonIcon(
+                        onPressed: _addVisitor,
+                        icon: const Icon(Icons.person_add_alt_1),
+                        label: const Text('Add Visitor'),
+                      ),
+                      const SizedBox(height: 12),
+                      if (_visitors.isEmpty)
+                        const Text('No visitors added yet.')
+                      else ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              child: CheckboxListTile(
+                                value:
+                                    _selectedVisitorIndexes.length ==
+                                        _visitors.length &&
+                                    _visitors.isNotEmpty,
+                                onChanged: (checked) {
+                                  setState(() {
+                                    if (checked == true) {
+                                      _selectedVisitorIndexes
+                                        ..clear()
+                                        ..addAll(
+                                          List<int>.generate(
+                                            _visitors.length,
+                                            (index) => index,
+                                          ),
+                                        );
+                                    } else {
+                                      _selectedVisitorIndexes.clear();
+                                    }
+                                  });
+                                },
+                                title: Text(
+                                  'Select all (${_selectedVisitorIndexes.length}/${_visitors.length})',
+                                ),
+                                controlAffinity:
+                                    ListTileControlAffinity.leading,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            AppOutlinedButtonIcon(
+                              onPressed: _selectedVisitorIndexes.isEmpty
+                                  ? null
+                                  : () {
                                       setState(() {
-                                        if (checked == true) {
-                                          _selectedVisitorIndexes.add(index);
-                                        } else {
-                                          _selectedVisitorIndexes.remove(index);
+                                        final toRemove =
+                                            _selectedVisitorIndexes.toList()
+                                              ..sort((a, b) => b.compareTo(a));
+                                        for (final index in toRemove) {
+                                          _visitors.removeAt(index);
                                         }
+                                        _selectedVisitorIndexes.clear();
                                       });
                                     },
-                                  ),
-                                  title: Text(visitor.name),
-                                  subtitle: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(visitor.idNumber),
-                                      const SizedBox(height: 6),
-                                      CheckboxListTile(
-                                        value: visitor.policyRead,
-                                        onChanged: (checked) {
-                                          if (!(_policyOneOpened &&
-                                              _policyTwoOpened)) {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              const SnackBar(
-                                                content: Text(
-                                                  'Open both policy links before marking as read.',
-                                                ),
-                                              ),
-                                            );
-                                            return;
-                                          }
-                                          setState(() {
-                                            _visitors[index] = visitor.copyWith(
-                                              policyRead: checked ?? false,
-                                            );
-                                          });
-                                        },
-                                        title: const Text('Read'),
-                                        controlAffinity:
-                                            ListTileControlAffinity.leading,
-                                        dense: true,
-                                        contentPadding: EdgeInsets.zero,
-                                      ),
-                                    ],
-                                  ),
-                                  trailing: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const Icon(
-                                        Icons.photo_outlined,
-                                        size: 28,
-                                      ),
-                                      Text(
-                                        visitor.photoLabel,
-                                        style: textTheme.bodySmall,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  Step(
-                    title: const Text('Others (Optional)'),
-                    isActive: _currentStep == 3,
-                    content: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          'Upload supporting documents if needed.',
-                          style: textTheme.bodySmall,
-                        ),
-                        const SizedBox(height: 12),
-                        Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Document: Test Checklist (pdf)',
-                                  style: textTheme.bodyMedium,
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  '1) Download template',
-                                  style: textTheme.titleSmall,
-                                ),
-                                const SizedBox(height: 6),
-                                AppOutlinedButtonIcon(
-                                  onPressed: () {},
-                                  icon: const Icon(Icons.download_outlined),
-                                  label: const Text('Download Test Checklist'),
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  '2) Upload modified file',
-                                  style: textTheme.titleSmall,
-                                ),
-                                const SizedBox(height: 6),
-                                Row(
-                                  children: [
-                                    AppOutlinedButton(
-                                      onPressed: () {},
-                                      child: const Text('Choose file'),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        'No file chosen',
-                                        style: textTheme.bodySmall,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                AppFilledButton(
-                                  onPressed: () {},
-                                  child: const Text('Upload'),
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  '3) Uploaded file actions',
-                                  style: textTheme.titleSmall,
-                                ),
-                                const SizedBox(height: 6),
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children: [
-                                    AppOutlinedButton(
-                                      onPressed: () {},
-                                      child: const Text('Download uploaded'),
-                                    ),
-                                    AppOutlinedButton(
-                                      onPressed: () {},
-                                      child: const Text('Delete uploaded'),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                              icon: const Icon(Icons.delete_outline),
+                              label: const Text('Delete'),
                             ),
-                          ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _visitors.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 8),
+                          itemBuilder: (context, index) {
+                            final visitor = _visitors[index];
+                            final selected = _selectedVisitorIndexes.contains(
+                              index,
+                            );
+                            return Card(
+                              child: ListTile(
+                                leading: Checkbox(
+                                  value: selected,
+                                  onChanged: (checked) {
+                                    setState(() {
+                                      if (checked == true) {
+                                        _selectedVisitorIndexes.add(index);
+                                      } else {
+                                        _selectedVisitorIndexes.remove(index);
+                                      }
+                                    });
+                                  },
+                                ),
+                                title: Text(visitor.name),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(visitor.idNumber),
+                                    const SizedBox(height: 6),
+                                    CheckboxListTile(
+                                      value: visitor.policyRead,
+                                      onChanged: (checked) {
+                                        if (!(_policyOneOpened &&
+                                            _policyTwoOpened)) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'Open both policy links before marking as read.',
+                                              ),
+                                            ),
+                                          );
+                                          return;
+                                        }
+                                        setState(() {
+                                          _visitors[index] = visitor.copyWith(
+                                            policyRead: checked ?? false,
+                                          );
+                                        });
+                                      },
+                                      title: const Text('Read'),
+                                      controlAffinity:
+                                          ListTileControlAffinity.leading,
+                                      dense: true,
+                                      contentPadding: EdgeInsets.zero,
+                                    ),
+                                  ],
+                                ),
+                                trailing: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.photo_outlined, size: 28),
+                                    Text(
+                                      visitor.photoLabel,
+                                      style: textTheme.bodySmall,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       ],
-                    ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                Step(
+                  title: const Text('Others (Optional)'),
+                  isActive: _currentStep == 3,
+                  content: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Upload supporting documents if needed.',
+                        style: textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 12),
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Document: Test Checklist (pdf)',
+                                style: textTheme.bodyMedium,
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                '1) Download template',
+                                style: textTheme.titleSmall,
+                              ),
+                              const SizedBox(height: 6),
+                              AppOutlinedButtonIcon(
+                                onPressed: () {},
+                                icon: const Icon(Icons.download_outlined),
+                                label: const Text('Download Test Checklist'),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                '2) Upload modified file',
+                                style: textTheme.titleSmall,
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  AppOutlinedButton(
+                                    onPressed: () {},
+                                    child: const Text('Choose file'),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'No file chosen',
+                                      style: textTheme.bodySmall,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              AppFilledButton(
+                                onPressed: () {},
+                                child: const Text('Upload'),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                '3) Uploaded file actions',
+                                style: textTheme.titleSmall,
+                              ),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  AppOutlinedButton(
+                                    onPressed: () {},
+                                    child: const Text('Download uploaded'),
+                                  ),
+                                  AppOutlinedButton(
+                                    onPressed: () {},
+                                    child: const Text('Delete uploaded'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ),

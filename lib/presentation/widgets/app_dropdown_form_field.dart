@@ -8,6 +8,7 @@ class AppDropdownFormField<T> extends StatelessWidget {
     this.value,
     this.onChanged,
     this.validator,
+    this.autovalidateMode,
     this.isExpanded = true,
     this.hint,
   });
@@ -17,6 +18,7 @@ class AppDropdownFormField<T> extends StatelessWidget {
   final List<DropdownMenuItem<T>> items;
   final ValueChanged<T?>? onChanged;
   final String? Function(T?)? validator;
+  final AutovalidateMode? autovalidateMode;
   final bool isExpanded;
   final Widget? hint;
 
@@ -27,6 +29,7 @@ class AppDropdownFormField<T> extends StatelessWidget {
       items: items,
       onChanged: onChanged,
       validator: validator,
+      autovalidateMode: autovalidateMode,
       isExpanded: isExpanded,
       hint: hint,
       decoration: InputDecoration(labelText: label),
