@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/app_dropdown_form_field.dart';
 import '../widgets/app_filled_button.dart';
 import '../widgets/app_outlined_button.dart';
+import '../widgets/app_snackbar.dart';
 import '../widgets/app_text_form_field.dart';
 import '../widgets/double_back_exit_scope.dart';
 import '../widgets/loading_overlay.dart';
@@ -101,9 +102,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Invitation submitted.')));
+    showAppSnackBar(context, 'Invitation submitted.');
   }
 
   Future<void> _confirmClear() async {

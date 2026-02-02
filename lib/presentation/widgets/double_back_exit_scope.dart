@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'app_snackbar.dart';
+
 class DoubleBackExitScope extends StatefulWidget {
   const DoubleBackExitScope({
     super.key,
@@ -38,9 +40,7 @@ class _DoubleBackExitScopeState extends State<DoubleBackExitScope> {
     final lastPressed = _lastBackPressedAt;
     if (lastPressed == null || now.difference(lastPressed) > widget.interval) {
       _lastBackPressedAt = now;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(widget.snackBarMessage)),
-      );
+      showAppSnackBar(context, widget.snackBarMessage);
       return;
     }
 

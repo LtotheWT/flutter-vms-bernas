@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../widgets/app_dropdown_form_field.dart';
 import '../widgets/app_filled_button.dart';
 import '../widgets/app_outlined_button.dart';
+import '../widgets/app_snackbar.dart';
 import '../widgets/app_text_form_field.dart';
 import '../widgets/double_back_exit_scope.dart';
 import '../widgets/loading_overlay.dart';
@@ -227,17 +228,11 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
       return;
     }
     if (_visitors.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Add at least one visitor.')),
-      );
+      showAppSnackBar(context, 'Add at least one visitor.');
       return;
     }
     if (_visitors.any((visitor) => !visitor.policyRead)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('All visitors must mark Policy/Rules as read.'),
-        ),
-      );
+      showAppSnackBar(context, 'All visitors must mark Policy/Rules as read.');
       return;
     }
     await _showReviewSheet();
@@ -408,9 +403,7 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
         return;
       }
       setState(() => _isSubmitting = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Walk-in registered.')));
+      showAppSnackBar(context, 'Walk-in registered.');
     }
   }
 
@@ -418,9 +411,7 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
     final name = _visitorNameController.text.trim();
     final id = _visitorIdController.text.trim();
     if (name.isEmpty || id.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Name and IC/Passport are required.')),
-      );
+      showAppSnackBar(context, 'Name and IC/Passport are required.');
       return;
     }
     setState(() {
@@ -790,11 +781,7 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                       const SizedBox(height: 12),
                       AppOutlinedButtonIcon(
                         onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Photo capture mock.'),
-                            ),
-                          );
+                          showAppSnackBar(context, 'Photo capture mock.');
                         },
                         icon: const Icon(Icons.camera_alt_outlined),
                         label: const Text('Visitor Photo'),
@@ -898,14 +885,9 @@ class _VisitorWalkInPageState extends State<VisitorWalkInPage> {
                                       onChanged: (checked) {
                                         if (!(_policyOneOpened &&
                                             _policyTwoOpened)) {
-                                          ScaffoldMessenger.of(
+                                          showAppSnackBar(
                                             context,
-                                          ).showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                'Open both policy links before marking as read.',
-                                              ),
-                                            ),
+                                            'Open both policy links before marking as read.',
                                           );
                                           return;
                                         }
