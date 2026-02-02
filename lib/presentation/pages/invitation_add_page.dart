@@ -18,7 +18,8 @@ class InvitationAddPage extends ConsumerStatefulWidget {
 }
 
 class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
-  final _formKey = GlobalKey<FormState>();
+  final _stepOneFormKey = GlobalKey<FormState>();
+  final _stepTwoFormKey = GlobalKey<FormState>();
   final _companyController = TextEditingController();
   final _purposeController = TextEditingController();
   final _emailController = TextEditingController();
@@ -53,13 +54,24 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
   String _two(int value) => value.toString().padLeft(2, '0');
 
   void _clearForm() {
-    _formKey.currentState?.reset();
+    _stepOneFormKey.currentState?.reset();
+    _stepTwoFormKey.currentState?.reset();
     _companyController.clear();
     _purposeController.clear();
     _emailController.clear();
     _dateFromController.clear();
     _dateToController.clear();
     ref.read(invitationAddControllerProvider.notifier).clear();
+  }
+
+  bool _validateStepForm(int step) {
+    if (step == 0) {
+      return _stepOneFormKey.currentState?.validate() ?? false;
+    }
+    if (step == 1) {
+      return _stepTwoFormKey.currentState?.validate() ?? false;
+    }
+    return true;
   }
 
   bool _hasUnsavedChanges(InvitationAddState formState) {
@@ -76,7 +88,12 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
   }
 
   Future<void> _submit() async {
-    if (!(_formKey.currentState?.validate() ?? false)) {
+    if (!_validateStepForm(0)) {
+      setState(() => _currentStep = 0);
+      return;
+    }
+    if (!_validateStepForm(1)) {
+      setState(() => _currentStep = 1);
       return;
     }
     FocusScope.of(context).unfocus();
@@ -134,51 +151,62 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
             ],
           ),
           body: SafeArea(
-            child: Form(
-              key: _formKey,
-              child: Stepper(
-                currentStep: _currentStep,
-                onStepContinue: () {
-                  if (_currentStep == 0) {
+            child: Stepper(
+              currentStep: _currentStep,
+              onStepContinue: () {
+                if (_currentStep == 0) {
+                  if (_validateStepForm(_currentStep)) {
                     setState(() => _currentStep = 1);
-                  } else {
-                    _submit();
                   }
-                },
-                onStepCancel: () {
-                  if (_currentStep > 0) {
-                    setState(() => _currentStep = _currentStep - 1);
-                  }
-                },
-                controlsBuilder: (context, details) {
-                  final isLast = _currentStep == 1;
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: Row(
-                      children: [
+                } else {
+                  _submit();
+                }
+              },
+              onStepCancel: () {
+                if (_currentStep > 0) {
+                  setState(() => _currentStep = _currentStep - 1);
+                }
+              },
+              onStepTapped: (index) {
+                if (index <= _currentStep) {
+                  setState(() => _currentStep = index);
+                  return;
+                }
+                if (_validateStepForm(_currentStep)) {
+                  setState(() => _currentStep = index);
+                }
+              },
+              controlsBuilder: (context, details) {
+                final isLast = _currentStep == 1;
+                return Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: AppFilledButton(
+                          onPressed: details.onStepContinue,
+                          child: Text(isLast ? 'Send Invite' : 'Next'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      if (_currentStep > 0)
                         Expanded(
-                          child: AppFilledButton(
-                            onPressed: details.onStepContinue,
-                            child: Text(isLast ? 'Send Invite' : 'Next'),
+                          child: AppOutlinedButton(
+                            onPressed: details.onStepCancel,
+                            child: const Text('Back'),
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        if (_currentStep > 0)
-                          Expanded(
-                            child: AppOutlinedButton(
-                              onPressed: details.onStepCancel,
-                              child: const Text('Back'),
-                            ),
-                          ),
-                      ],
-                    ),
-                  );
-                },
-                steps: [
-                  Step(
-                    title: const Text('Visitor & Host'),
-                    isActive: _currentStep == 0,
-                    content: Column(
+                    ],
+                  ),
+                );
+              },
+              steps: [
+                Step(
+                  title: const Text('Visitor & Host'),
+                  isActive: _currentStep == 0,
+                  content: Form(
+                    key: _stepOneFormKey,
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
@@ -191,8 +219,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                         AppDropdownFormField<String>(
                           value: formState.entity,
                           label: 'Entity *',
-                          autovalidateMode:
-                              AutovalidateMode.onUserInteraction,
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
                           items: [
                             AppDropdownMenuItem(
                               value: 'AGYTEK - Agytek1231',
@@ -209,8 +236,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                         AppDropdownFormField<String>(
                           value: formState.site,
                           label: 'Site *',
-                          autovalidateMode:
-                              AutovalidateMode.onUserInteraction,
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
                           items: [
                             AppDropdownMenuItem(
                               value: 'FACTORY1 - FACTORY1 T',
@@ -227,8 +253,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                         AppDropdownFormField<String>(
                           value: formState.department,
                           label: 'Department *',
-                          autovalidateMode:
-                              AutovalidateMode.onUserInteraction,
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
                           items: [
                             AppDropdownMenuItem(
                               value: 'Administration',
@@ -249,8 +274,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                         AppDropdownFormField<String>(
                           value: formState.personToVisit,
                           label: 'Person to Visit *',
-                          autovalidateMode:
-                              AutovalidateMode.onUserInteraction,
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
                           items: [
                             AppDropdownMenuItem(value: 'Ryan', label: 'Ryan'),
                             AppDropdownMenuItem(value: 'Aisha', label: 'Aisha'),
@@ -266,8 +290,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                         AppDropdownFormField<String>(
                           value: formState.visitorType,
                           label: 'Visitor Type *',
-                          autovalidateMode:
-                              AutovalidateMode.onUserInteraction,
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
                           items: [
                             AppDropdownMenuItem(
                               value: 'Visitor',
@@ -289,8 +312,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                         AppTextFormField(
                           controller: _companyController,
                           label: 'Company/Visitor Name *',
-                          autovalidateMode:
-                              AutovalidateMode.onUserInteraction,
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
                           onChanged: ref
                               .read(invitationAddControllerProvider.notifier)
                               .updateCompanyName,
@@ -302,10 +324,13 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                       ],
                     ),
                   ),
-                  Step(
-                    title: const Text('Invitation Details'),
-                    isActive: _currentStep == 1,
-                    content: Column(
+                ),
+                Step(
+                  title: const Text('Invitation Details'),
+                  isActive: _currentStep == 1,
+                  content: Form(
+                    key: _stepTwoFormKey,
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         AppTextFormField(
@@ -313,8 +338,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                           label: 'Invitation Purpose *',
                           minLines: 3,
                           maxLines: 5,
-                          autovalidateMode:
-                              AutovalidateMode.onUserInteraction,
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
                           onChanged: ref
                               .read(invitationAddControllerProvider.notifier)
                               .updatePurpose,
@@ -328,8 +352,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                           controller: _emailController,
                           label: 'Send Invitation To (Email) *',
                           keyboardType: TextInputType.emailAddress,
-                          autovalidateMode:
-                              AutovalidateMode.onUserInteraction,
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
                           onChanged: ref
                               .read(invitationAddControllerProvider.notifier)
                               .updateEmail,
@@ -344,8 +367,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                           label: 'Visit Date From *',
                           readOnly: true,
                           suffixIcon: const Icon(Icons.calendar_today),
-                          autovalidateMode:
-                              AutovalidateMode.onUserInteraction,
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
                           onTap: () =>
                               _pickDate(controller: _dateFromController).then((
                                 _,
@@ -367,8 +389,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                           label: 'Visit Date To *',
                           readOnly: true,
                           suffixIcon: const Icon(Icons.calendar_today),
-                          autovalidateMode:
-                              AutovalidateMode.onUserInteraction,
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
                           onTap: () => _pickDate(controller: _dateToController)
                               .then((_) {
                                 ref
@@ -385,8 +406,8 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                       ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
