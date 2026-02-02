@@ -15,6 +15,7 @@ class AppTextFormField extends StatelessWidget {
     this.isDense = false,
     this.suffixIcon,
     this.onTap,
+    this.onChanged,
     this.validator,
   }) : assert(
          !obscureText ||
@@ -35,6 +36,7 @@ class AppTextFormField extends StatelessWidget {
   final bool isDense;
   final Widget? suffixIcon;
   final VoidCallback? onTap;
+  final ValueChanged<String>? onChanged;
   final String? Function(String?)? validator;
 
   @override
@@ -52,6 +54,7 @@ class AppTextFormField extends StatelessWidget {
       minLines: effectiveMinLines,
       maxLines: effectiveMaxLines,
       onTap: onTap,
+      onChanged: onChanged,
       validator: validator,
       decoration: InputDecoration(
         labelText: label.isEmpty ? null : label,
