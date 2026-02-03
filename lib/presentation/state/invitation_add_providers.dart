@@ -1,6 +1,36 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+const Map<String, List<String>> _mockEntitySites = {
+  'Entity A': ['Site 1', 'Site 2'],
+  'Entity B': ['Site 3'],
+  'Entity C': [
+    'Site 4',
+    'Site 5',
+    'Site 6',
+    'Site 7',
+    'Site 8',
+    'Site 9',
+    'Site 10',
+  ],
+  'Entity D': ['Site 11'],
+};
+
+final entityOptionsProvider = Provider<List<String>>(
+  (ref) => _mockEntitySites.keys.toList(growable: false),
+);
+
+Future<List<String>> _fetchSitesForEntity(String? entity) async {
+  if (entity == null) return const [];
+  await Future<void>.delayed(const Duration(milliseconds: 500));
+  return _mockEntitySites[entity] ?? const [];
+}
+
+final siteOptionsProvider = FutureProvider.autoDispose
+    .family<List<String>, String?>(
+      (ref, entity) => _fetchSitesForEntity(entity),
+    );
+
 @immutable
 class InvitationAddState {
   const InvitationAddState({

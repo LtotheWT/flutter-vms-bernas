@@ -11,6 +11,7 @@ class AppDropdownMenuFormField<T> extends StatefulWidget {
     this.validator,
     this.autovalidateMode,
     this.enableSearch = true,
+    this.enabled = true,
     this.hintText,
     this.helperText,
     this.menuHeight = 240,
@@ -26,6 +27,7 @@ class AppDropdownMenuFormField<T> extends StatefulWidget {
   final String? Function(T?)? validator;
   final AutovalidateMode? autovalidateMode;
   final bool enableSearch;
+  final bool enabled;
   final String? hintText;
   final String? helperText;
   final double menuHeight;
@@ -262,9 +264,11 @@ class _AppDropdownMenuFormFieldState<T>
             return TextFormField(
               key: _anchorKey,
               controller: _controller,
+              enabled: widget.enabled,
               focusNode: _focusNode,
-              readOnly: !widget.enableSearch,
+              readOnly: !widget.enableSearch || !widget.enabled,
               onTap: () {
+                if (!widget.enabled) return;
                 _updateAnchorHeight();
                 _pendingScrollToSelection = true;
                 controller.open();
@@ -276,6 +280,7 @@ class _AppDropdownMenuFormFieldState<T>
                 });
               },
               onChanged: (value) {
+                if (!widget.enabled) return;
                 _filterEntries(value);
                 if (!controller.isOpen) {
                   controller.open();
@@ -288,17 +293,19 @@ class _AppDropdownMenuFormFieldState<T>
                 errorText: state.errorText,
                 suffixIcon: IconButton(
                   icon: const Icon(Icons.arrow_drop_down),
-                  onPressed: () {
-                    _updateAnchorHeight();
-                    _pendingScrollToSelection = true;
-                    controller.isOpen ? controller.close() : controller.open();
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (_pendingScrollToSelection) {
-                        _scrollToSelection();
-                        _pendingScrollToSelection = false;
+                  onPressed: widget.enabled
+                      ? () {
+                        _updateAnchorHeight();
+                        _pendingScrollToSelection = true;
+                        controller.isOpen ? controller.close() : controller.open();
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (_pendingScrollToSelection) {
+                            _scrollToSelection();
+                            _pendingScrollToSelection = false;
+                          }
+                        });
                       }
-                    });
-                  },
+                      : null,
                 ),
               ),
             );

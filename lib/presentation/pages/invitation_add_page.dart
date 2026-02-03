@@ -149,6 +149,17 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final formState = ref.watch(invitationAddControllerProvider);
+    final entityOptions = ref.watch(entityOptionsProvider);
+    final siteOptionsAsync = ref.watch(siteOptionsProvider(formState.entity));
+    final bool hasEntity = formState.entity != null;
+    final bool siteLoading = siteOptionsAsync.isLoading;
+    final bool siteEnabled = hasEntity && !siteLoading && !siteOptionsAsync.hasError;
+    final String? siteHelperText =
+        !hasEntity ? 'Select entity first' : siteLoading ? 'Loading sites...' : null;
+    final List<String> siteOptions = siteOptionsAsync.maybeWhen(
+      data: (data) => data,
+      orElse: () => const [],
+    );
 
     return DoubleBackExitScope(
       hasUnsavedChanges: _hasUnsavedChanges(formState),
@@ -234,58 +245,51 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                         const SizedBox(height: 12),
 
                         AppDropdownMenuFormField<String>(
-                          key: ValueKey("Entity"),
+                          key: const ValueKey('Entity'),
                           controller: _entityController,
                           initialSelection: formState.entity,
                           hintText: 'Entity *',
+                          helperText: 'Entity *',
                           autovalidateMode: AutovalidateMode.onUserInteraction,
-                          entries: List.generate(20, (i) {
-                            return AppDropdownMenuEntry(
-                              value: 'AGYTEK - Agytek123$i',
-                              label: 'AGYTEK - Agytek123$i',
-                            );
-                          }),
-                          // entries: [
-                          //   AppDropdownMenuEntry(
-                          //     value: 'AGYTEK - Agytek1231',
-                          //     label: 'AGYTEK - Agytek1231',
-                          //   ),
-                          //   AppDropdownMenuEntry(
-                          //     value: 'AGYTEK - Agytek1232',
-                          //     label: 'AGYTEK - Agytek1232',
-                          //   ),
-                          // ],
-                          onSelected: ref
-                              .read(invitationAddControllerProvider.notifier)
-                              .updateEntity,
+                          entries: [
+                            for (final entity in entityOptions)
+                              AppDropdownMenuEntry(
+                                value: entity,
+                                label: entity,
+                              ),
+                          ],
+                          onSelected: (value) {
+                            ref
+                                .read(invitationAddControllerProvider.notifier)
+                                .updateEntity(value);
+                            ref
+                                .read(invitationAddControllerProvider.notifier)
+                                .updateSite(null);
+                            _siteController.clear();
+                          },
                           validator: (value) =>
                               value == null ? 'Entity is required.' : null,
                         ),
                         const SizedBox(height: 12),
                         AppDropdownMenuFormField<String>(
-                          key: ValueKey("Site"),
+                          key: const ValueKey('Site'),
                           controller: _siteController,
                           initialSelection: formState.site,
                           hintText: 'Site *',
+                          helperText: siteHelperText ?? 'Site *',
                           autovalidateMode: AutovalidateMode.onUserInteraction,
-
-                          // entries: [
-                          //   AppDropdownMenuEntry(
-                          //     value: 'FACTORY1 - FACTORY1 T',
-                          //     label: 'FACTORY1 - FACTORY1 T',
-                          //   ),
-                          // ],
-                          entries: List.generate(20, (i) {
-                            return AppDropdownMenuEntry(
-                              value: 'AGYTEK - FACTORY$i T',
-                              label: 'AGYTEK - FACTORY$i T',
-                            );
-                          }),
+                          enabled: siteEnabled,
+                          entries: [
+                            for (final site in siteOptions)
+                              AppDropdownMenuEntry(value: site, label: site),
+                          ],
                           onSelected: ref
                               .read(invitationAddControllerProvider.notifier)
                               .updateSite,
-                          validator: (value) =>
-                              value == null ? 'Site is required.' : null,
+                          validator: (value) {
+                            if (!siteEnabled) return null;
+                            return value == null ? 'Site is required.' : null;
+                          },
                         ),
                         const SizedBox(height: 12),
                         AppDropdownMenuFormField<String>(
@@ -293,7 +297,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                           controller: _departmentController,
                           initialSelection: formState.department,
                           hintText: 'Department *',
-
+                          helperText: 'Department *',
                           autovalidateMode: AutovalidateMode.onUserInteraction,
                           entries: List.generate(20, (i) {
                             return AppDropdownMenuEntry(
@@ -322,7 +326,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                           controller: _personToVisitController,
                           initialSelection: formState.personToVisit,
                           hintText: 'Person to Visit *',
-
+                          helperText: 'Person to Visit *',
                           autovalidateMode: AutovalidateMode.onUserInteraction,
                           entries: List.generate(20, (i) {
                             return AppDropdownMenuEntry(
@@ -350,7 +354,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                           controller: _visitorTypeController,
                           initialSelection: formState.visitorType,
                           hintText: 'Visitor Type *',
-
+                          helperText: 'Visitor Type *',
                           autovalidateMode: AutovalidateMode.onUserInteraction,
                           entries: List.generate(20, (i) {
                             return AppDropdownMenuEntry(
