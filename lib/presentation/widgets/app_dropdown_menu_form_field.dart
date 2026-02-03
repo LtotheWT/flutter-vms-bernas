@@ -17,7 +17,7 @@ class AppDropdownMenuFormField<T> extends StatefulWidget {
     this.openUpwards = true,
     this.controller,
     this.menuItemHeight = 48,
-    this.menuVerticalPadding = 16,
+    this.menuVerticalPadding = 0,
   });
 
   final List<DropdownMenuEntry<T>> entries;
@@ -47,6 +47,9 @@ class _AppDropdownMenuFormFieldState<T>
   final MenuController _menuController = MenuController();
   final GlobalKey _anchorKey = GlobalKey();
   double? _anchorHeight;
+  double? _anchorWidth;
+  final ScrollController _scrollController = ScrollController();
+  bool _pendingScrollToSelection = false;
 
   @override
   void initState() {
@@ -80,6 +83,7 @@ class _AppDropdownMenuFormFieldState<T>
     if (_ownsController) {
       _controller.dispose();
     }
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -117,18 +121,36 @@ class _AppDropdownMenuFormFieldState<T>
     final box = context.findRenderObject();
     if (box is! RenderBox) return;
     final height = box.size.height;
-    if (_anchorHeight != height) {
+    final width = box.size.width;
+    if (_anchorHeight != height || _anchorWidth != width) {
       setState(() {
         _anchorHeight = height;
+        _anchorWidth = width;
       });
     }
   }
 
   double _effectiveMenuHeight() {
     final int count = _filteredEntries.isEmpty ? 1 : _filteredEntries.length;
-    final double estimated =
-        (count * widget.menuItemHeight) + widget.menuVerticalPadding;
-    return math.min(widget.menuHeight, estimated);
+    final int maxVisible = (widget.menuHeight / widget.menuItemHeight)
+        .floor()
+        .clamp(1, count);
+    final int visibleCount = math.min(count, maxVisible);
+    return visibleCount * widget.menuItemHeight;
+  }
+
+  void _scrollToSelection() {
+    if (!_scrollController.hasClients) return;
+    final selected = widget.initialSelection;
+    if (selected == null) return;
+    final int index = _filteredEntries.indexWhere(
+      (entry) => entry.value == selected,
+    );
+    if (index == -1) return;
+    final double target = index * widget.menuItemHeight;
+    _scrollController.jumpTo(
+      target.clamp(0, _scrollController.position.maxScrollExtent),
+    );
   }
 
   @override
@@ -140,42 +162,70 @@ class _AppDropdownMenuFormFieldState<T>
       validator: widget.validator,
       autovalidateMode: widget.autovalidateMode,
       builder: (state) {
-        final menuChildren = _filteredEntries.isEmpty
+        final List<Widget> menuChildren = _filteredEntries.isEmpty
             ? <Widget>[
                 const MenuItemButton(
                   onPressed: null,
                   child: Text('No results'),
                 ),
               ]
-            : _filteredEntries
-                  .map((entry) {
-                    final labelWidget = entry.labelWidget ?? Text(entry.label);
-                    return MenuItemButton(
-                      onPressed: entry.enabled
-                          ? () {
-                              state.didChange(entry.value);
-                              widget.onSelected?.call(entry.value);
-                              _controller.text = entry.label;
-                              _menuController.close();
-                            }
-                          : null,
-                      leadingIcon: entry.leadingIcon,
-                      trailingIcon: entry.trailingIcon,
-                      style: entry.style,
-                      child: labelWidget,
-                    );
-                  })
-                  .toList(growable: false);
+            : <Widget>[
+                SizedBox(
+                  height: _effectiveMenuHeight(),
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    padding: EdgeInsets.zero,
+                    primary: false,
+                    itemExtent: widget.menuItemHeight,
+                    itemCount: _filteredEntries.length,
+                    itemBuilder: (context, index) {
+                      final entry = _filteredEntries[index];
+                      final labelWidget =
+                          entry.labelWidget ?? Text(entry.label);
+                      final bool isSelected = entry.value == state.value;
+                      final ButtonStyle? selectedStyle = isSelected
+                          ? const ButtonStyle(
+                              backgroundColor: MaterialStatePropertyAll(
+                                Color(0xFFE0E0E0),
+                              ),
+                            )
+                          : null;
+
+                      return MenuItemButton(
+                        onPressed: entry.enabled
+                            ? () {
+                                state.didChange(entry.value);
+                                widget.onSelected?.call(entry.value);
+                                _controller.text = entry.label;
+                                _menuController.close();
+                              }
+                            : null,
+                        leadingIcon: entry.leadingIcon,
+                        trailingIcon: entry.trailingIcon,
+                        style: selectedStyle ?? entry.style,
+                        child: labelWidget,
+                      );
+                    },
+                  ),
+                ),
+              ];
 
         return MenuAnchor(
           controller: _menuController,
+          crossAxisUnconstrained: false,
           alignmentOffset: widget.openUpwards
               ? Offset(0, -(_effectiveMenuHeight() + (_anchorHeight ?? 0)))
               : Offset.zero,
           style: MenuStyle(
-            maximumSize: MaterialStatePropertyAll(
-              Size.fromHeight(widget.menuHeight),
-            ),
+            padding: const MaterialStatePropertyAll(EdgeInsets.zero),
+            minimumSize: _anchorWidth == null
+                ? null
+                : MaterialStatePropertyAll(Size(_anchorWidth!, 0)),
+            maximumSize: _anchorWidth == null
+                ? MaterialStatePropertyAll(Size.fromHeight(widget.menuHeight))
+                : MaterialStatePropertyAll(
+                    Size(_anchorWidth!, widget.menuHeight),
+                  ),
           ),
           menuChildren: menuChildren,
           builder: (context, controller, child) {
@@ -185,7 +235,14 @@ class _AppDropdownMenuFormFieldState<T>
               readOnly: !widget.enableSearch,
               onTap: () {
                 _updateAnchorHeight();
+                _pendingScrollToSelection = true;
                 controller.open();
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (_pendingScrollToSelection) {
+                    _scrollToSelection();
+                    _pendingScrollToSelection = false;
+                  }
+                });
               },
               onChanged: (value) {
                 _filterEntries(value);
@@ -201,7 +258,14 @@ class _AppDropdownMenuFormFieldState<T>
                   icon: const Icon(Icons.arrow_drop_down),
                   onPressed: () {
                     _updateAnchorHeight();
+                    _pendingScrollToSelection = true;
                     controller.isOpen ? controller.close() : controller.open();
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (_pendingScrollToSelection) {
+                        _scrollToSelection();
+                        _pendingScrollToSelection = false;
+                      }
+                    });
                   },
                 ),
               ),
