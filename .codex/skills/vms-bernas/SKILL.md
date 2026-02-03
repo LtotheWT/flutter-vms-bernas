@@ -1,3 +1,8 @@
+---
+name: vms-bernas
+description: "Workflows and UI patterns for the vms_bernas Flutter app: GoRouter routing setup, reusable widget extraction, form field and dropdown wrappers, stepper validation, and selection/bulk actions. Use when implementing or refactoring these patterns in this codebase."
+---
+
 # Reusable Skills (vms_bernas)
 
 ## Skill: App Routing and Navigation Shell
@@ -17,9 +22,9 @@
   - Home menu navigation to feature routes
 
 - Preconditions:
-  - All pages are available and importable
-  - Route paths are unique
-  - GoRouter is the routing mechanism
+  - Ensure all pages are available and importable.
+  - Ensure route paths are unique.
+  - Use GoRouter as the routing mechanism.
 
 - Steps:
   1. Declare route name/path constants in `router.dart`.
@@ -28,6 +33,7 @@
   4. Trigger timed navigation from splash to `/login`.
   5. Use home menu tiles to push to feature routes.
 
+- Examples: See `references/examples.md` for repo-based snippets.
 - Constraints / Failures:
   - Time-based splash navigation has no auth gating.
   - Routes are static; no typed parameters or guards.
@@ -53,9 +59,9 @@
   - Consistent UI behavior across screens
 
 - Preconditions:
-  - Pattern appears in 2 or more places
-  - Widget behavior is deterministic
-  - Styling comes from ThemeData
+  - Use when a pattern appears in 2 or more places.
+  - Ensure widget behavior is deterministic.
+  - Use styling from ThemeData.
 
 - Steps:
   1. Identify duplicated UI structure or interaction.
@@ -64,10 +70,11 @@
   4. Keep widgets stateless unless local UI state is required.
   5. Use the widget consistently wherever the pattern appears.
 
+- Examples: See `references/examples.md` for repo-based snippets.
 - Constraints / Failures:
-  - Widgets must not own business logic.
-  - Widgets must not perform navigation.
-  - Widgets must not read repositories or use cases.
+  - Do not own business logic in widgets.
+  - Do not perform navigation in widgets.
+  - Do not read repositories or use cases in widgets.
 
 - Must NOT:
   - Hardcode values that should be configurable.
@@ -90,8 +97,8 @@
   - Centralized input rules (e.g., read-only date fields)
 
 - Preconditions:
-  - Form-based input is required (`TextFormField`)
-  - Field shares common label/suffix behavior
+  - Use when form-based input is required.
+  - Use when fields share common label/suffix behavior.
 
 - Steps:
   1. Replace `TextField`/`TextFormField` with `AppTextFormField`.
@@ -99,9 +106,10 @@
   3. Use `readOnly + onTap` for picker-driven inputs.
   4. Use `obscureText` for passwords.
 
+- Examples: See `references/examples.md` for repo-based snippets.
 - Constraints / Failures:
-  - Obscured fields must be single-line.
-  - Multiline should not be combined with `obscureText`.
+  - Keep obscured fields single-line.
+  - Avoid combining multiline with `obscureText`.
 
 - Must NOT:
   - Bypass validators for required fields.
@@ -122,15 +130,16 @@
   - Reusable item construction via `AppDropdownMenuItem`
 
 - Preconditions:
-  - Dropdowns are form-bound and require validation or labels
+  - Use when dropdowns are form-bound and require validation or labels.
 
 - Steps:
   1. Replace `DropdownButtonFormField` with `AppDropdownFormField`.
   2. Build items using `AppDropdownMenuItem(value, label)`.
   3. Pass `validator` for required selections.
 
+- Examples: See `references/examples.md` for repo-based snippets.
 - Constraints / Failures:
-  - Items must be explicit when value != label.
+  - Make items explicit when value != label.
   - Use non-const lists when labels are dynamic.
 
 - Must NOT:
@@ -151,17 +160,18 @@
   - Submission review and success feedback
 
 - Preconditions:
-  - Multi-step form uses `Stepper`
+  - Use with multi-step forms that use `Stepper`.
 
 - Steps:
-  1. Validate current step before moving forward.
+  1. Validate the current step before moving forward.
   2. Block progression and show errors when invalid.
   3. On final step, validate and submit.
   4. Show confirmation (e.g., bottom sheet) and success feedback.
 
+- Examples: See `references/examples.md` for repo-based snippets.
 - Constraints / Failures:
   - Skipping validation can lead to incomplete data.
-  - Stepper must not advance when required fields are missing.
+  - Do not advance when required fields are missing.
 
 - Must NOT:
   - Perform async submit without validating all required inputs.
@@ -182,7 +192,7 @@
   - Confirmed bulk removal
 
 - Preconditions:
-  - List-based UI with multiple selectable items
+  - Use with list-based UI that supports multiple selection.
 
 - Steps:
   1. Track selected items in a `Set`.
@@ -191,40 +201,10 @@
   4. Confirm destructive actions before mutation.
   5. Update lists and clear selection after action.
 
+- Examples: See `references/examples.md` for repo-based snippets.
 - Constraints / Failures:
-  - Bulk actions must not run with empty selection.
-  - Ensure selection state stays in sync with list mutations.
-
-- Must NOT:
-  - Delete without confirmation.
-
-## Skill: login_usecase_flow
-**Title:** Login Use Case Flow (DDD + Riverpod)
-
-- Purpose:
-  Authenticate via UI → controller → use case → repository → data source.
-
-- Inputs:
-  - User ID and password strings
-
-- Outputs:
-  - Loading state, error state, and navigation on success
-
-- Preconditions:
-  - Providers are wired for data source, repository, and use case
-
-- Steps:
-  1. UI triggers controller login and shows loading state.
-  2. Controller calls use case with value objects.
-  3. Use case calls repository and data source.
-  4. On success, navigate to home; on error, show message.
-
-- Constraints / Failures:
-  - Empty credentials throw validation errors.
-  - Navigation should occur only after successful completion.
-
-- Must NOT:
-  - Bypass value object validation.
+  - Do not run bulk actions with empty selection.
+  - Keep selection state in sync with list mutations.
 
 ## Skill: skills_gap_review
 **Title:** Skills Gap Review
@@ -250,6 +230,7 @@
   4. Add or revise skills using the standard format.
   5. Verify no duplicate or overlapping skills remain.
 
+- Examples: See `references/examples.md` for repo-based snippets.
 - Constraints / Failures:
   - Skipping recent changes leads to undocumented workflows.
   - Overlapping skills reduce clarity and reuse.
@@ -285,6 +266,7 @@
   4. Match Invitation Listing spacing (list padding, header spacing, card margins).
   5. Show empty state when no records exist (centered text).
 
+- Examples: See `references/examples.md` for repo-based snippets.
 - Constraints / Failures:
   - Buttons must reflect report needs; do not hardcode global actions.
   - Keep filter UX consistent with Invitation Listing for familiarity.

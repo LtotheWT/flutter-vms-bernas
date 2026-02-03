@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../widgets/app_dropdown_form_field.dart';
+import '../widgets/app_dropdown_menu_form_field.dart';
 import '../widgets/app_filled_button.dart';
 import '../widgets/app_outlined_button.dart';
 import '../widgets/app_snackbar.dart';
@@ -215,70 +215,82 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                         const SizedBox(height: 16),
                         const ReadOnlyField(label: 'User Name', value: 'Ryan'),
                         const SizedBox(height: 12),
-                        AppDropdownFormField<String>(
-                          value: formState.entity,
-                          label: 'Entity *',
+                        const SizedBox(height: 12),
+
+                        AppDropdownMenuFormField<String>(
+                          initialSelection: formState.entity,
+                          hintText: 'Entity *',
                           autovalidateMode: AutovalidateMode.onUserInteraction,
-                          items: [
-                            AppDropdownMenuItem(
+                          entries: [
+                            AppDropdownMenuEntry(
                               value: 'AGYTEK - Agytek1231',
                               label: 'AGYTEK - Agytek1231',
                             ),
+                            AppDropdownMenuEntry(
+                              value: 'AGYTEK - Agytek1232',
+                              label: 'AGYTEK - Agytek1232',
+                            ),
                           ],
-                          onChanged: ref
+                          onSelected: ref
                               .read(invitationAddControllerProvider.notifier)
                               .updateEntity,
                           validator: (value) =>
                               value == null ? 'Entity is required.' : null,
                         ),
                         const SizedBox(height: 12),
-                        AppDropdownFormField<String>(
-                          value: formState.site,
-                          label: 'Site *',
+                        AppDropdownMenuFormField<String>(
+                          initialSelection: formState.site,
+                          hintText: 'Site *',
+
                           autovalidateMode: AutovalidateMode.onUserInteraction,
-                          items: [
-                            AppDropdownMenuItem(
+                          entries: [
+                            AppDropdownMenuEntry(
                               value: 'FACTORY1 - FACTORY1 T',
                               label: 'FACTORY1 - FACTORY1 T',
                             ),
                           ],
-                          onChanged: ref
+                          onSelected: ref
                               .read(invitationAddControllerProvider.notifier)
                               .updateSite,
                           validator: (value) =>
                               value == null ? 'Site is required.' : null,
                         ),
                         const SizedBox(height: 12),
-                        AppDropdownFormField<String>(
-                          value: formState.department,
-                          label: 'Department *',
+                        AppDropdownMenuFormField<String>(
+                          initialSelection: formState.department,
+                          hintText: 'Department *',
+
                           autovalidateMode: AutovalidateMode.onUserInteraction,
-                          items: [
-                            AppDropdownMenuItem(
+                          entries: [
+                            AppDropdownMenuEntry(
                               value: 'Administration',
                               label: 'Administration',
                             ),
-                            AppDropdownMenuItem(
+                            AppDropdownMenuEntry(
                               value: 'Operations',
                               label: 'Operations',
                             ),
                           ],
-                          onChanged: ref
+                          onSelected: ref
                               .read(invitationAddControllerProvider.notifier)
                               .updateDepartment,
                           validator: (value) =>
                               value == null ? 'Department is required.' : null,
                         ),
                         const SizedBox(height: 12),
-                        AppDropdownFormField<String>(
-                          value: formState.personToVisit,
-                          label: 'Person to Visit *',
+                        AppDropdownMenuFormField<String>(
+                          initialSelection: formState.personToVisit,
+                          hintText: 'Person to Visit *',
+
                           autovalidateMode: AutovalidateMode.onUserInteraction,
-                          items: [
-                            AppDropdownMenuItem(value: 'Ryan', label: 'Ryan'),
-                            AppDropdownMenuItem(value: 'Aisha', label: 'Aisha'),
+                          entries: [
+                            AppDropdownMenuEntry(value: 'Ryan', label: 'Ryan'),
+                            AppDropdownMenuEntry(
+                              value: 'Aisha',
+                              label: 'Aisha',
+                            ),
                           ],
-                          onChanged: ref
+                          onSelected: ref
                               .read(invitationAddControllerProvider.notifier)
                               .updatePersonToVisit,
                           validator: (value) => value == null
@@ -286,21 +298,22 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                               : null,
                         ),
                         const SizedBox(height: 12),
-                        AppDropdownFormField<String>(
-                          value: formState.visitorType,
-                          label: 'Visitor Type *',
+                        AppDropdownMenuFormField<String>(
+                          initialSelection: formState.visitorType,
+                          hintText: 'Visitor Type *',
+
                           autovalidateMode: AutovalidateMode.onUserInteraction,
-                          items: [
-                            AppDropdownMenuItem(
+                          entries: [
+                            AppDropdownMenuEntry(
                               value: 'Visitor',
                               label: 'Visitor',
                             ),
-                            AppDropdownMenuItem(
+                            AppDropdownMenuEntry(
                               value: 'Contractor',
                               label: 'Contractor',
                             ),
                           ],
-                          onChanged: ref
+                          onSelected: ref
                               .read(invitationAddControllerProvider.notifier)
                               .updateVisitorType,
                           validator: (value) => value == null
