@@ -326,6 +326,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                               : null,
                         ),
                         const SizedBox(height: 12),
+
                         AppDropdownMenuFormField<String>(
                           controller: _visitorTypeController,
                           initialSelection: formState.visitorType,
