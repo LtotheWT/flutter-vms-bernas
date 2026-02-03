@@ -4,6 +4,7 @@ class AppDropdownMenuFormField<T> extends StatelessWidget {
   const AppDropdownMenuFormField({
     super.key,
     this.helperText,
+    this.controller,
     required this.entries,
     this.initialSelection,
     this.onSelected,
@@ -15,6 +16,7 @@ class AppDropdownMenuFormField<T> extends StatelessWidget {
     this.width,
   });
 
+  final TextEditingController? controller;
   final String? helperText;
   final List<DropdownMenuEntry<T>> entries;
   final T? initialSelection;
@@ -34,9 +36,11 @@ class AppDropdownMenuFormField<T> extends StatelessWidget {
       autovalidateMode: autovalidateMode,
       builder: (state) {
         return DropdownMenu<T>(
+          controller: controller,
           initialSelection: state.value,
           onSelected: (value) {
             state.didChange(value);
+            FocusManager.instance.primaryFocus?.unfocus();
             onSelected?.call(value);
           },
 
@@ -56,6 +60,7 @@ class AppDropdownMenuFormField<T> extends StatelessWidget {
           hintText: hintText,
           dropdownMenuEntries: entries,
           requestFocusOnTap: true,
+          menuHeight: 400,
         );
       },
     );

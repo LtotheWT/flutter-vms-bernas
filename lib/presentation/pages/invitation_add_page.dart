@@ -19,13 +19,18 @@ class InvitationAddPage extends ConsumerStatefulWidget {
 }
 
 class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
-  final _stepOneFormKey = GlobalKey<FormState>();
+  GlobalKey<FormState> _stepOneFormKey = GlobalKey<FormState>();
   final _stepTwoFormKey = GlobalKey<FormState>();
   final _companyController = TextEditingController();
   final _purposeController = TextEditingController();
   final _emailController = TextEditingController();
   final _dateFromController = TextEditingController();
   final _dateToController = TextEditingController();
+  final _entityController = TextEditingController();
+  final _siteController = TextEditingController();
+  final _departmentController = TextEditingController();
+  final _personToVisitController = TextEditingController();
+  final _visitorTypeController = TextEditingController();
   int _currentStep = 0;
 
   @override
@@ -35,6 +40,11 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
     _emailController.dispose();
     _dateFromController.dispose();
     _dateToController.dispose();
+    _entityController.dispose();
+    _siteController.dispose();
+    _departmentController.dispose();
+    _personToVisitController.dispose();
+    _visitorTypeController.dispose();
     super.dispose();
   }
 
@@ -56,12 +66,18 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
 
   void _clearForm() {
     _stepOneFormKey.currentState?.reset();
+    _stepOneFormKey = GlobalKey<FormState>();
     _stepTwoFormKey.currentState?.reset();
     _companyController.clear();
     _purposeController.clear();
     _emailController.clear();
     _dateFromController.clear();
     _dateToController.clear();
+    _entityController.clear();
+    _siteController.clear();
+    _departmentController.clear();
+    _personToVisitController.clear();
+    _visitorTypeController.clear();
     ref.read(invitationAddControllerProvider.notifier).clear();
   }
 
@@ -218,6 +234,8 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                         const SizedBox(height: 12),
 
                         AppDropdownMenuFormField<String>(
+                          key: ValueKey("Entity"),
+                          controller: _entityController,
                           initialSelection: formState.entity,
                           hintText: 'Entity *',
                           autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -239,9 +257,10 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                         ),
                         const SizedBox(height: 12),
                         AppDropdownMenuFormField<String>(
+                          key: ValueKey("Site"),
+                          controller: _siteController,
                           initialSelection: formState.site,
                           hintText: 'Site *',
-
                           autovalidateMode: AutovalidateMode.onUserInteraction,
                           entries: [
                             AppDropdownMenuEntry(
@@ -257,6 +276,8 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                         ),
                         const SizedBox(height: 12),
                         AppDropdownMenuFormField<String>(
+                          key: ValueKey("Department"),
+                          controller: _departmentController,
                           initialSelection: formState.department,
                           hintText: 'Department *',
 
@@ -279,17 +300,24 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                         ),
                         const SizedBox(height: 12),
                         AppDropdownMenuFormField<String>(
+                          controller: _personToVisitController,
                           initialSelection: formState.personToVisit,
                           hintText: 'Person to Visit *',
 
                           autovalidateMode: AutovalidateMode.onUserInteraction,
-                          entries: [
-                            AppDropdownMenuEntry(value: 'Ryan', label: 'Ryan'),
-                            AppDropdownMenuEntry(
-                              value: 'Aisha',
-                              label: 'Aisha',
-                            ),
-                          ],
+                          entries: List.generate(20, (i) {
+                            return AppDropdownMenuEntry(
+                              value: 'Ryan $i',
+                              label: 'Ryan $i',
+                            );
+                          }),
+                          // entries: [
+                          //   AppDropdownMenuEntry(value: 'Ryan', label: 'Ryan'),
+                          //   AppDropdownMenuEntry(
+                          //     value: 'Aisha',
+                          //     label: 'Aisha',
+                          //   ),
+                          // ],
                           onSelected: ref
                               .read(invitationAddControllerProvider.notifier)
                               .updatePersonToVisit,
@@ -299,6 +327,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                         ),
                         const SizedBox(height: 12),
                         AppDropdownMenuFormField<String>(
+                          controller: _visitorTypeController,
                           initialSelection: formState.visitorType,
                           hintText: 'Visitor Type *',
 
