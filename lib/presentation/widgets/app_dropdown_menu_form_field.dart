@@ -50,6 +50,8 @@ class _AppDropdownMenuFormFieldState<T>
   double? _anchorWidth;
   final ScrollController _scrollController = ScrollController();
   bool _pendingScrollToSelection = false;
+  final FocusNode _focusNode = FocusNode();
+  FormFieldState<T>? _fieldState;
 
   @override
   void initState() {
@@ -58,6 +60,7 @@ class _AppDropdownMenuFormFieldState<T>
     _controller = widget.controller ?? TextEditingController();
     _filteredEntries = List<DropdownMenuEntry<T>>.from(widget.entries);
     _syncControllerText(widget.initialSelection);
+    _focusNode.addListener(_handleFocusChange);
   }
 
   @override
@@ -84,6 +87,8 @@ class _AppDropdownMenuFormFieldState<T>
       _controller.dispose();
     }
     _scrollController.dispose();
+    _focusNode.removeListener(_handleFocusChange);
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -113,6 +118,30 @@ class _AppDropdownMenuFormFieldState<T>
           .where((entry) => entry.label.toLowerCase().contains(lowerQuery))
           .toList(growable: false);
     });
+  }
+
+  void _handleFocusChange() {
+    if (_focusNode.hasFocus) return;
+    _syncSelectionFromText();
+  }
+
+  void _syncSelectionFromText() {
+    final text = _controller.text.trim();
+    if (text.isEmpty) {
+      _fieldState?.didChange(null);
+      widget.onSelected?.call(null);
+      return;
+    }
+    final match = widget.entries.where((e) => e.label == text);
+    if (match.isEmpty) {
+      _syncControllerText(_fieldState?.value);
+      return;
+    }
+    final value = match.first.value;
+    if (_fieldState?.value != value) {
+      _fieldState?.didChange(value);
+      widget.onSelected?.call(value);
+    }
   }
 
   void _updateAnchorHeight() {
@@ -162,6 +191,7 @@ class _AppDropdownMenuFormFieldState<T>
       validator: widget.validator,
       autovalidateMode: widget.autovalidateMode,
       builder: (state) {
+        _fieldState = state;
         final List<Widget> menuChildren = _filteredEntries.isEmpty
             ? <Widget>[
                 const MenuItemButton(
@@ -185,7 +215,7 @@ class _AppDropdownMenuFormFieldState<T>
                       final bool isSelected = entry.value == state.value;
                       final ButtonStyle? selectedStyle = isSelected
                           ? const ButtonStyle(
-                              backgroundColor: MaterialStatePropertyAll(
+                              backgroundColor: WidgetStatePropertyAll(
                                 Color(0xFFE0E0E0),
                               ),
                             )
@@ -217,13 +247,13 @@ class _AppDropdownMenuFormFieldState<T>
               ? Offset(0, -(_effectiveMenuHeight() + (_anchorHeight ?? 0)))
               : Offset.zero,
           style: MenuStyle(
-            padding: const MaterialStatePropertyAll(EdgeInsets.zero),
+            padding: const WidgetStatePropertyAll(EdgeInsets.zero),
             minimumSize: _anchorWidth == null
                 ? null
-                : MaterialStatePropertyAll(Size(_anchorWidth!, 0)),
+                : WidgetStatePropertyAll(Size(_anchorWidth!, 0)),
             maximumSize: _anchorWidth == null
-                ? MaterialStatePropertyAll(Size.fromHeight(widget.menuHeight))
-                : MaterialStatePropertyAll(
+                ? WidgetStatePropertyAll(Size.fromHeight(widget.menuHeight))
+                : WidgetStatePropertyAll(
                     Size(_anchorWidth!, widget.menuHeight),
                   ),
           ),
@@ -232,6 +262,7 @@ class _AppDropdownMenuFormFieldState<T>
             return TextFormField(
               key: _anchorKey,
               controller: _controller,
+              focusNode: _focusNode,
               readOnly: !widget.enableSearch,
               onTap: () {
                 _updateAnchorHeight();
@@ -250,6 +281,7 @@ class _AppDropdownMenuFormFieldState<T>
                   controller.open();
                 }
               },
+              onEditingComplete: _syncSelectionFromText,
               decoration: InputDecoration(
                 hintText: widget.hintText,
                 helperText: widget.helperText,
