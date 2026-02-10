@@ -60,7 +60,7 @@ class AppTheme {
     onError: AppColors.neutral0,
     errorContainer: Color(0xFFF7D8D5),
     onErrorContainer: Color(0xFF7A201A),
-    surface: AppColors.neutral50,
+    surface: AppColors.neutral200,
     onSurface: AppColors.neutral900,
     surfaceContainerHighest: AppColors.neutral200,
     onSurfaceVariant: AppColors.neutral700,
@@ -73,11 +73,19 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: lightColorScheme,
-      scaffoldBackgroundColor: AppColors.neutral50,
+      scaffoldBackgroundColor: lightColorScheme.surface,
       inputDecorationTheme: const InputDecorationTheme(
         border: OutlineInputBorder(),
       ),
       tabBarTheme: TabBarThemeData(dividerHeight: 0),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: AppColors.neutral50,
+      ),
+      cardTheme: CardThemeData(
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        color: AppColors.neutral50,
+      ),
       extensions: const [
         AppSemanticColors(
           success: AppColors.success500,

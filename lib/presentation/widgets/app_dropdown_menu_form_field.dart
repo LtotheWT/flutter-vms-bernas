@@ -19,6 +19,7 @@ class AppDropdownMenuFormField<T> extends StatefulWidget {
     this.controller,
     this.menuItemHeight = 48,
     this.menuVerticalPadding = 0,
+    this.compact = false,
   });
 
   final List<DropdownMenuEntry<T>> entries;
@@ -35,6 +36,7 @@ class AppDropdownMenuFormField<T> extends StatefulWidget {
   final TextEditingController? controller;
   final double menuItemHeight;
   final double menuVerticalPadding;
+  final bool compact;
 
   @override
   State<AppDropdownMenuFormField<T>> createState() =>
@@ -291,8 +293,20 @@ class _AppDropdownMenuFormFieldState<T>
                 hintText: widget.hintText,
                 helperText: widget.helperText,
                 errorText: state.errorText,
+                isDense: widget.compact,
+                contentPadding: widget.compact ? EdgeInsets.zero : null,
                 suffixIcon: IconButton(
-                  icon: const Icon(Icons.arrow_drop_down),
+                  icon: Icon(
+                    Icons.arrow_drop_down,
+                    size: widget.compact ? 20 : 24,
+                  ),
+                  padding: EdgeInsets.zero,
+                  constraints: widget.compact
+                      ? const BoxConstraints(minWidth: 22, minHeight: 22)
+                      : null,
+                  visualDensity: widget.compact
+                      ? VisualDensity.compact
+                      : null,
                   onPressed: widget.enabled
                       ? () {
                         _updateAnchorHeight();
