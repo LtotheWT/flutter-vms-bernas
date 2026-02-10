@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../widgets/app_filled_button.dart';
 import '../widgets/app_outlined_button.dart';
-import '../widgets/app_text_form_field.dart';
 import '../widgets/info_row.dart';
 
 class VisitorCheckInPage extends StatefulWidget {
@@ -84,21 +83,19 @@ class _VisitorCheckInPageState extends State<VisitorCheckInPage> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  AppTextFormField(
+                  _FlatInputField(
                     controller: _scanController,
                     label: 'Scan QR Code',
-                    suffixIcon: IconButton(
-                      icon: Icon(Icons.qr_code_scanner),
-                      onPressed: () {},
-                    ),
+                    hintText: 'Please input',
+                    trailingIcon: Icons.qr_code_scanner,
+                    onTrailingTap: () {},
                   ),
-                  const SizedBox(height: 12),
-                  AppTextFormField(
+                  const SizedBox(height: 8),
+                  _FlatInputField(
                     label: 'Scan Physical Tag',
-                    suffixIcon: IconButton(
-                      icon: Icon(Icons.nfc),
-                      onPressed: () {},
-                    ),
+                    hintText: 'Please input',
+                    trailingIcon: Icons.nfc,
+                    onTrailingTap: () {},
                   ),
                   const SizedBox(height: 12),
                   // Buttons removed; scan actions are via field suffix icons.
@@ -283,25 +280,10 @@ class _VisitorCard extends StatelessWidget {
             const InfoRow(label: 'Check In By', value: 'ryan'),
             const InfoRow(label: 'Check Out By', value: '-'),
             const SizedBox(height: 6),
-            Row(
-              children: [
-                SizedBox(
-                  width: 120,
-                  child: Text(
-                    'Physical Tag',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: Colors.grey[700],
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: AppTextFormField(
-                    label: '',
-                    isDense: true,
-                    suffixIcon: const Icon(Icons.qr_code_scanner),
-                  ),
-                ),
-              ],
+            const _FlatInputField(
+              label: 'Physical Tag',
+              hintText: 'Please input',
+              trailingIcon: Icons.qr_code_scanner,
             ),
             const SizedBox(height: 10),
             Row(
@@ -420,6 +402,82 @@ class _PhotoThumb extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _FlatInputField extends StatelessWidget {
+  const _FlatInputField({
+    required this.label,
+    required this.hintText,
+    this.controller,
+    this.trailingIcon,
+    this.onTrailingTap,
+  });
+
+  final String label;
+  final String hintText;
+  final TextEditingController? controller;
+  final IconData? trailingIcon;
+  final VoidCallback? onTrailingTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          label,
+          style: textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: controller,
+                decoration: InputDecoration(
+                  hintText: hintText,
+                  border: InputBorder.none,
+                  isCollapsed: true,
+                  contentPadding: EdgeInsets.zero,
+                  hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+                ),
+              ),
+            ),
+            if (trailingIcon != null) ...[
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: onTrailingTap,
+                icon: Icon(trailingIcon),
+                visualDensity: VisualDensity.compact,
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 6),
+        const _FieldRowDivider(),
+      ],
+    );
+  }
+}
+
+class _FieldRowDivider extends StatelessWidget {
+  const _FieldRowDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Divider(
+      height: 1,
+      thickness: 0.6,
+      color: colorScheme.outline.withOpacity(0.25),
     );
   }
 }
