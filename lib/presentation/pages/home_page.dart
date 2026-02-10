@@ -15,18 +15,18 @@ class HomePage extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Operations'),
-          centerTitle: true,
-          backgroundColor: colorScheme.surface,
-          bottom: TabBar(
-            labelColor: colorScheme.primary,
-            unselectedLabelColor: colorScheme.onSurfaceVariant,
-            indicatorColor: colorScheme.primary,
-            indicatorSize: TabBarIndicatorSize.label,
-            tabs: const [
-              Tab(text: 'Invitations'),
-              Tab(text: 'Visitors'),
-              Tab(text: 'Workforce'),
-            ],
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(kTextTabBarHeight),
+            child: ColoredBox(
+              color: colorScheme.surface,
+              child: TabBar(
+                tabs: const [
+                  Tab(text: 'Invitations'),
+                  Tab(text: 'Visitors'),
+                  Tab(text: 'Workforce'),
+                ],
+              ),
+            ),
           ),
         ),
         body: TabBarView(
@@ -52,17 +52,17 @@ class HomePage extends StatelessWidget {
             ),
             _SectionList(
               children: [
-                _SectionCard(
-                  title: 'Visitor Registration',
-                  icon: Icons.badge_outlined,
-                  color: colorScheme.secondaryContainer,
-                  children: [
-                    _MenuTile(
-                      title: 'Visitor Registration (Walk-In)',
-                      onTap: () => context.push(visitorWalkInRoutePath),
-                    ),
-                  ],
-                ),
+                // _SectionCard(
+                //   title: 'Visitor Registration',
+                //   icon: Icons.badge_outlined,
+                //   color: colorScheme.secondaryContainer,
+                //   children: [
+                //     _MenuTile(
+                //       title: 'Visitor Registration (Walk-In)',
+                //       onTap: () => context.push(visitorWalkInRoutePath),
+                //     ),
+                //   ],
+                // ),
                 _SectionCard(
                   title: 'Visitor Access',
                   icon: Icons.login_rounded,

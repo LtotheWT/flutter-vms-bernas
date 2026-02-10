@@ -21,6 +21,19 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
   final _emailController = TextEditingController();
   final _dateFromController = TextEditingController();
   final _dateToController = TextEditingController();
+  final _companyFocusNode = FocusNode();
+  final _purposeFocusNode = FocusNode();
+  final _emailFocusNode = FocusNode();
+  final _entityRowKey = GlobalKey();
+  final _siteRowKey = GlobalKey();
+  final _departmentRowKey = GlobalKey();
+  final _hostRowKey = GlobalKey();
+  final _visitorTypeRowKey = GlobalKey();
+  final _companyRowKey = GlobalKey();
+  final _purposeRowKey = GlobalKey();
+  final _emailRowKey = GlobalKey();
+  final _dateFromRowKey = GlobalKey();
+  final _dateToRowKey = GlobalKey();
   int _submitAttempt = 0;
 
   @override
@@ -30,26 +43,47 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
     _emailController.dispose();
     _dateFromController.dispose();
     _dateToController.dispose();
+    _companyFocusNode.dispose();
+    _purposeFocusNode.dispose();
+    _emailFocusNode.dispose();
     super.dispose();
   }
 
-  Future<void> _pickDate({
+  Future<void> _pickDateTime({
     required TextEditingController controller,
     required ValueChanged<String> onSelected,
   }) async {
     final now = DateTime.now();
+    final initial = _parseDateTime(controller.text) ?? now;
+
     final picked = await showDatePicker(
       context: context,
-      initialDate: now,
+      initialDate: initial,
       firstDate: now,
       lastDate: DateTime(now.year + 2),
     );
     if (picked == null) return;
 
-    final value = '${picked.year}-${_two(picked.month)}-${_two(picked.day)}';
+    if (!mounted) return;
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(initial),
+    );
+    if (pickedTime == null) return;
+
+    final value =
+        '${picked.year}-${_two(picked.month)}-${_two(picked.day)} '
+        '${_two(pickedTime.hour)}:${_two(pickedTime.minute)}';
     controller.text = value;
     onSelected(value);
     setState(() {});
+  }
+
+  DateTime? _parseDateTime(String value) {
+    final text = value.trim();
+    if (text.isEmpty) return null;
+    final normalized = text.replaceFirst(' ', 'T');
+    return DateTime.tryParse(normalized);
   }
 
   Future<String?> _pickOption({
@@ -84,26 +118,69 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
         formState.visitorType != null;
   }
 
-  bool _validateNonTextFields(InvitationAddState formState) {
-    final missing = <String>[
-      if (formState.entity == null) 'Entity',
-      if (formState.site == null) 'Site',
-      if (formState.department == null) 'Department',
-      if (formState.personToVisit == null) 'Host',
-      if (formState.visitorType == null) 'Visitor Type',
-      if (_dateFromController.text.trim().isEmpty) 'Visit Date From',
-      if (_dateToController.text.trim().isEmpty) 'Visit Date To',
-    ];
-    if (missing.isEmpty) return true;
-    showAppSnackBar(context, '${missing.first} is required.');
-    return false;
+  Future<void> _scrollToField(GlobalKey key) async {
+    final targetContext = key.currentContext;
+    if (targetContext == null) return;
+    await Scrollable.ensureVisible(
+      targetContext,
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOut,
+      alignment: 0.1,
+    );
+  }
+
+  Future<bool> _focusFirstInvalidField(InvitationAddState formState) async {
+    if (formState.entity == null) {
+      await _scrollToField(_entityRowKey);
+      return false;
+    }
+    if (formState.site == null) {
+      await _scrollToField(_siteRowKey);
+      return false;
+    }
+    if (formState.department == null) {
+      await _scrollToField(_departmentRowKey);
+      return false;
+    }
+    if (formState.personToVisit == null) {
+      await _scrollToField(_hostRowKey);
+      return false;
+    }
+    if (formState.visitorType == null) {
+      await _scrollToField(_visitorTypeRowKey);
+      return false;
+    }
+    if (_companyController.text.trim().isEmpty) {
+      await _scrollToField(_companyRowKey);
+      _companyFocusNode.requestFocus();
+      return false;
+    }
+    if (_purposeController.text.trim().isEmpty) {
+      await _scrollToField(_purposeRowKey);
+      _purposeFocusNode.requestFocus();
+      return false;
+    }
+    if (_emailController.text.trim().isEmpty) {
+      await _scrollToField(_emailRowKey);
+      _emailFocusNode.requestFocus();
+      return false;
+    }
+    if (_dateFromController.text.trim().isEmpty) {
+      await _scrollToField(_dateFromRowKey);
+      return false;
+    }
+    if (_dateToController.text.trim().isEmpty) {
+      await _scrollToField(_dateToRowKey);
+      return false;
+    }
+    return true;
   }
 
   Future<void> _submit(InvitationAddState formState) async {
     setState(() => _submitAttempt += 1);
     final validText = _formKey.currentState?.validate() ?? false;
-    final validSelection = _validateNonTextFields(formState);
-    if (!validText || !validSelection) return;
+    final validAll = await _focusFirstInvalidField(formState);
+    if (!validText || !validAll) return;
 
     FocusScope.of(context).unfocus();
     await ref.read(invitationAddControllerProvider.notifier).submitMock();
@@ -207,6 +284,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                     children: [
                       const _ReadOnlyValueRow(label: 'User', value: 'Ryan'),
                       _SelectValueRow(
+                        key: _entityRowKey,
                         label: 'Entity',
                         value: formState.entity,
                         isRequired: true,
@@ -229,6 +307,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                         },
                       ),
                       _SelectValueRow(
+                        key: _siteRowKey,
                         label: 'Site',
                         value: formState.site,
                         placeholder: siteOptionsAsync.isLoading
@@ -256,6 +335,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                         },
                       ),
                       _SelectValueRow(
+                        key: _departmentRowKey,
                         label: 'Department',
                         value: formState.department,
                         placeholder: 'Please select',
@@ -279,6 +359,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                         },
                       ),
                       _SelectValueRow(
+                        key: _hostRowKey,
                         label: 'Host',
                         value: formState.personToVisit,
                         placeholder: 'Please select',
@@ -300,6 +381,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                         },
                       ),
                       _SelectValueRow(
+                        key: _visitorTypeRowKey,
                         label: 'Visitor Type',
                         value: formState.visitorType,
                         placeholder: 'Please select',
@@ -330,9 +412,11 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                     onClear: _clearVisitorInfo,
                     children: [
                       _TextInputRow(
+                        key: _companyRowKey,
                         label: 'Visitor Name',
                         isRequired: true,
                         controller: _companyController,
+                        focusNode: _companyFocusNode,
                         hintText: 'Please input',
                         onChanged: ref
                             .read(invitationAddControllerProvider.notifier)
@@ -341,9 +425,11 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                             _requiredText(value, 'Visitor Name'),
                       ),
                       _TextInputRow(
+                        key: _purposeRowKey,
                         label: 'Invitation Purpose',
                         isRequired: true,
                         controller: _purposeController,
+                        focusNode: _purposeFocusNode,
                         hintText: 'Please input',
                         onChanged: ref
                             .read(invitationAddControllerProvider.notifier)
@@ -359,9 +445,11 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                     onClear: _clearScheduleAndContact,
                     children: [
                       _TextInputRow(
+                        key: _emailRowKey,
                         label: 'Email',
                         isRequired: true,
                         controller: _emailController,
+                        focusNode: _emailFocusNode,
                         keyboardType: TextInputType.emailAddress,
                         hintText: 'Please input',
                         onChanged: ref
@@ -370,6 +458,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                         validator: (value) => _requiredText(value, 'Email'),
                       ),
                       _SelectValueRow(
+                        key: _dateFromRowKey,
                         label: 'Visit Date From',
                         value: _dateFromController.text.isEmpty
                             ? null
@@ -379,7 +468,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                         hasError:
                             _submitAttempt > 0 &&
                             _dateFromController.text.trim().isEmpty,
-                        onTap: () => _pickDate(
+                        onTap: () => _pickDateTime(
                           controller: _dateFromController,
                           onSelected: ref
                               .read(invitationAddControllerProvider.notifier)
@@ -387,6 +476,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                         ),
                       ),
                       _SelectValueRow(
+                        key: _dateToRowKey,
                         label: 'Visit Date To',
                         value: _dateToController.text.isEmpty
                             ? null
@@ -396,7 +486,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                         hasError:
                             _submitAttempt > 0 &&
                             _dateToController.text.trim().isEmpty,
-                        onTap: () => _pickDate(
+                        onTap: () => _pickDateTime(
                           controller: _dateToController,
                           onSelected: ref
                               .read(invitationAddControllerProvider.notifier)
@@ -615,11 +705,13 @@ class _ReadOnlyValueRow extends StatelessWidget {
 
 class _TextInputRow extends StatelessWidget {
   const _TextInputRow({
+    super.key,
     required this.label,
     required this.isRequired,
     required this.controller,
     required this.hintText,
     required this.onChanged,
+    this.focusNode,
     this.keyboardType,
     this.validator,
   });
@@ -629,6 +721,7 @@ class _TextInputRow extends StatelessWidget {
   final TextEditingController controller;
   final String hintText;
   final ValueChanged<String> onChanged;
+  final FocusNode? focusNode;
   final TextInputType? keyboardType;
   final String? Function(String?)? validator;
 
@@ -643,6 +736,7 @@ class _TextInputRow extends StatelessWidget {
         const SizedBox(height: 4),
         TextFormField(
           controller: controller,
+          focusNode: focusNode,
           keyboardType: keyboardType,
           onChanged: onChanged,
           validator: validator,
@@ -664,6 +758,7 @@ class _TextInputRow extends StatelessWidget {
 
 class _SelectValueRow extends StatelessWidget {
   const _SelectValueRow({
+    super.key,
     required this.label,
     required this.placeholder,
     required this.isRequired,

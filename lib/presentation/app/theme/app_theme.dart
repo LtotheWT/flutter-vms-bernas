@@ -74,10 +74,22 @@ class AppTheme {
       useMaterial3: true,
       colorScheme: lightColorScheme,
       scaffoldBackgroundColor: lightColorScheme.surface,
+      appBarTheme: AppBarTheme(
+        color: lightColorScheme.primary,
+        foregroundColor: lightColorScheme.onPrimary,
+      ),
       inputDecorationTheme: const InputDecorationTheme(
         border: OutlineInputBorder(),
       ),
-      tabBarTheme: TabBarThemeData(dividerHeight: 0),
+      tabBarTheme: TabBarThemeData(
+        labelColor: lightColorScheme.primary,
+        unselectedLabelColor: lightColorScheme.onSurfaceVariant,
+        indicatorSize: TabBarIndicatorSize.label,
+        indicator: UnderlineTabIndicator(
+          borderSide: BorderSide(color: lightColorScheme.primary, width: 3),
+        ),
+        dividerHeight: 0,
+      ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: AppColors.neutral50,
       ),

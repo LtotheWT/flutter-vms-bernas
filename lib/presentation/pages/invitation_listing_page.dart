@@ -1,11 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
-import '../widgets/app_dropdown_form_field.dart';
 import '../widgets/app_filled_button.dart';
 import '../widgets/app_outlined_button.dart';
-import '../widgets/app_text_form_field.dart';
 import '../widgets/info_row.dart';
+
+const Map<String, List<String>> _mockEntitySites = {
+  'AGYTEK - Agytek1231': ['FACTORY1 - FACTORY1 T', 'FACTORY2 - FACTORY2 A'],
+  'BERNAS - BERNAS01': ['HQ - BERNAS HQ', 'WAREHOUSE - BERNAS W1'],
+  'SCOPE - SCP100': ['PLANT - SCP P1'],
+};
+
+Future<List<String>> _fetchSitesForEntityMock(String entity) async {
+  await Future<void>.delayed(const Duration(milliseconds: 600));
+  if (entity == 'SCOPE - SCP100') {
+    throw Exception('Mock site API error');
+  }
+  return _mockEntitySites[entity] ?? const [];
+}
 
 class InvitationListingPage extends StatefulWidget {
   const InvitationListingPage({super.key});
@@ -51,22 +63,6 @@ class _InvitationListingPageState extends State<InvitationListingPage> {
     _scrollController.dispose();
     super.dispose();
   }
-
-  Future<void> _pickDate({required TextEditingController controller}) async {
-    final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: now,
-      firstDate: DateTime(now.year - 1),
-      lastDate: DateTime(now.year + 2),
-    );
-    if (picked != null) {
-      controller.text =
-          '${picked.year}-${_two(picked.month)}-${_two(picked.day)}';
-    }
-  }
-
-  String _two(int value) => value.toString().padLeft(2, '0');
 
   void _clearFilters() {
     _invitationIdController.clear();
@@ -233,141 +229,40 @@ class _InvitationListingPageState extends State<InvitationListingPage> {
   }
 
   Future<void> _openFilters() async {
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 12,
-            bottom: 16 + MediaQuery.of(context).viewInsets.bottom,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AppDropdownFormField<String>(
-                  value: _entity,
-                  label: 'Entity *',
-                  items: [
-                    AppDropdownMenuItem(
-                      value: 'AGYTEK - Agytek1231',
-                      label: 'AGYTEK - Agytek1231',
-                    ),
-                  ],
-                  onChanged: (value) => setState(() => _entity = value),
-                ),
-                const SizedBox(height: 12),
-                AppDropdownFormField<String>(
-                  value: _site,
-                  label: 'Site *',
-                  items: [
-                    AppDropdownMenuItem(
-                      value: 'FACTORY1 - FACTORY1 T',
-                      label: 'FACTORY1 - FACTORY1 T',
-                    ),
-                  ],
-                  onChanged: (value) => setState(() => _site = value),
-                ),
-                const SizedBox(height: 12),
-                AppDropdownFormField<String>(
-                  value: _department,
-                  label: 'Department *',
-                  items: [
-                    AppDropdownMenuItem(
-                      value: 'ADMIN CENTER',
-                      label: 'ADMIN CENTER',
-                    ),
-                    AppDropdownMenuItem(
-                      value: 'OPERATIONS',
-                      label: 'OPERATIONS',
-                    ),
-                  ],
-                  onChanged: (value) => setState(() => _department = value),
-                ),
-                const SizedBox(height: 12),
-                AppDropdownFormField<String>(
-                  value: _visitorType,
-                  label: 'Visitor Type',
-                  items: [
-                    AppDropdownMenuItem(value: 'Visitor', label: 'Visitor'),
-                    AppDropdownMenuItem(
-                      value: 'Contractor',
-                      label: 'Contractor',
-                    ),
-                  ],
-                  onChanged: (value) => setState(() => _visitorType = value),
-                ),
-                const SizedBox(height: 12),
-                AppTextFormField(
-                  controller: _invitationIdController,
-                  label: 'Invitation ID',
-                ),
-                const SizedBox(height: 12),
-                AppTextFormField(
-                  controller: _dateFromController,
-                  label: 'Visit Date From',
-                  readOnly: true,
-                  suffixIcon: const Icon(Icons.calendar_today),
-                  onTap: () => _pickDate(controller: _dateFromController),
-                ),
-                const SizedBox(height: 12),
-                AppTextFormField(
-                  controller: _dateToController,
-                  label: 'Visit Date To',
-                  readOnly: true,
-                  suffixIcon: const Icon(Icons.calendar_today),
-                  onTap: () => _pickDate(controller: _dateToController),
-                ),
-                const SizedBox(height: 12),
-                AppDropdownFormField<String>(
-                  value: _status,
-                  label: 'Status',
-                  items: [
-                    AppDropdownMenuItem(value: 'New', label: 'New'),
-                    AppDropdownMenuItem(value: 'Approved', label: 'Approved'),
-                    AppDropdownMenuItem(value: 'Rejected', label: 'Rejected'),
-                  ],
-                  onChanged: (value) => setState(() => _status = value),
-                ),
-                const SizedBox(height: 12),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: _upcomingOnly,
-                  title: const Text('Upcoming Visitor'),
-                  onChanged: (value) => setState(() => _upcomingOnly = value),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: AppFilledButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Search'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: AppOutlinedButton(
-                        onPressed: () {
-                          _clearFilters();
-                          Navigator.of(context).pop();
-                        },
-                        child: const Text('Clear'),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-              ],
-            ),
-          ),
-        );
-      },
+    final result = await Navigator.of(context).push<_InvitationFilterResult>(
+      MaterialPageRoute(
+        builder: (context) => _InvitationFilterPage(
+          initialEntity: _entity,
+          initialSite: _site,
+          initialDepartment: _department,
+          initialVisitorType: _visitorType,
+          initialStatus: _status,
+          initialInvitationId: _invitationIdController.text,
+          initialDateFrom: _dateFromController.text,
+          initialDateTo: _dateToController.text,
+          initialUpcomingOnly: _upcomingOnly,
+        ),
+      ),
     );
+
+    if (!mounted || result == null) return;
+
+    if (result.clearRequested) {
+      _clearFilters();
+      return;
+    }
+
+    setState(() {
+      _entity = result.entity;
+      _site = result.site;
+      _department = result.department;
+      _visitorType = result.visitorType;
+      _status = result.status;
+      _upcomingOnly = result.upcomingOnly;
+      _invitationIdController.text = result.invitationId;
+      _dateFromController.text = result.dateFrom;
+      _dateToController.text = result.dateTo;
+    });
   }
 
   @override
@@ -512,6 +407,597 @@ class _InvitationListingPageState extends State<InvitationListingPage> {
               child: const Icon(Icons.arrow_upward),
             )
           : null,
+    );
+  }
+}
+
+class _InvitationFilterResult {
+  const _InvitationFilterResult({
+    required this.entity,
+    required this.site,
+    required this.department,
+    required this.visitorType,
+    required this.status,
+    required this.invitationId,
+    required this.dateFrom,
+    required this.dateTo,
+    required this.upcomingOnly,
+    this.clearRequested = false,
+  });
+
+  final String? entity;
+  final String? site;
+  final String? department;
+  final String? visitorType;
+  final String? status;
+  final String invitationId;
+  final String dateFrom;
+  final String dateTo;
+  final bool upcomingOnly;
+  final bool clearRequested;
+}
+
+class _InvitationFilterPage extends StatefulWidget {
+  const _InvitationFilterPage({
+    required this.initialEntity,
+    required this.initialSite,
+    required this.initialDepartment,
+    required this.initialVisitorType,
+    required this.initialStatus,
+    required this.initialInvitationId,
+    required this.initialDateFrom,
+    required this.initialDateTo,
+    required this.initialUpcomingOnly,
+  });
+
+  final String? initialEntity;
+  final String? initialSite;
+  final String? initialDepartment;
+  final String? initialVisitorType;
+  final String? initialStatus;
+  final String initialInvitationId;
+  final String initialDateFrom;
+  final String initialDateTo;
+  final bool initialUpcomingOnly;
+
+  @override
+  State<_InvitationFilterPage> createState() => _InvitationFilterPageState();
+}
+
+class _InvitationFilterPageState extends State<_InvitationFilterPage> {
+  late final TextEditingController _invitationIdController;
+  late final TextEditingController _dateFromController;
+  late final TextEditingController _dateToController;
+
+  String? _entity;
+  String? _site;
+  String? _department;
+  String? _visitorType;
+  String? _status;
+  bool _upcomingOnly = false;
+  List<String> _siteOptions = const [];
+  bool _isSiteLoading = false;
+  String? _siteLoadError;
+
+  @override
+  void initState() {
+    super.initState();
+    _entity = widget.initialEntity;
+    _site = widget.initialSite;
+    _department = widget.initialDepartment;
+    _visitorType = widget.initialVisitorType;
+    _status = widget.initialStatus;
+    _upcomingOnly = widget.initialUpcomingOnly;
+    _invitationIdController = TextEditingController(
+      text: widget.initialInvitationId,
+    );
+    _dateFromController = TextEditingController(text: widget.initialDateFrom);
+    _dateToController = TextEditingController(text: widget.initialDateTo);
+    if (_entity != null) {
+      _loadSitesForEntity(_entity!, keepCurrentSite: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _invitationIdController.dispose();
+    _dateFromController.dispose();
+    _dateToController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickDate({required TextEditingController controller}) async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: now,
+      firstDate: DateTime(now.year - 1),
+      lastDate: DateTime(now.year + 2),
+    );
+    if (picked == null) return;
+    controller.text =
+        '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+    setState(() {});
+  }
+
+  Future<String?> _pickFilterOption({
+    required String title,
+    required List<String> options,
+    String? currentValue,
+  }) {
+    return showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => _ListingSearchableOptionSheet(
+        title: title,
+        options: options,
+        currentValue: currentValue,
+      ),
+    );
+  }
+
+  Future<void> _loadSitesForEntity(
+    String entity, {
+    required bool keepCurrentSite,
+  }) async {
+    setState(() {
+      if (!keepCurrentSite) {
+        _site = null;
+      }
+      _siteOptions = const [];
+      _isSiteLoading = true;
+      _siteLoadError = null;
+    });
+    try {
+      final sites = await _fetchSitesForEntityMock(entity);
+      if (!mounted) return;
+      setState(() {
+        _siteOptions = sites;
+        _isSiteLoading = false;
+        if (_site != null && !_siteOptions.contains(_site)) {
+          _site = null;
+        }
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _siteOptions = const [];
+        _isSiteLoading = false;
+        _siteLoadError = 'Failed to load sites. Tap Site to retry.';
+      });
+    }
+  }
+
+  void _apply() {
+    Navigator.of(context).pop(
+      _InvitationFilterResult(
+        entity: _entity,
+        site: _site,
+        department: _department,
+        visitorType: _visitorType,
+        status: _status,
+        invitationId: _invitationIdController.text,
+        dateFrom: _dateFromController.text,
+        dateTo: _dateToController.text,
+        upcomingOnly: _upcomingOnly,
+      ),
+    );
+  }
+
+  void _clearAll() {
+    Navigator.of(context).pop(
+      const _InvitationFilterResult(
+        entity: null,
+        site: null,
+        department: null,
+        visitorType: null,
+        status: null,
+        invitationId: '',
+        dateFrom: '',
+        dateTo: '',
+        upcomingOnly: false,
+        clearRequested: true,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Filters'),
+        actions: [TextButton(onPressed: _clearAll, child: const Text('Clear'))],
+      ),
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        child: AppFilledButton(onPressed: _apply, child: const Text('Apply')),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
+        children: [
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: Column(
+                children: [
+                  _FilterSelectRow(
+                    label: 'Entity',
+                    isRequired: true,
+                    value: _entity,
+                    placeholder: 'Please select',
+                    onTap: () async {
+                      final selected = await _pickFilterOption(
+                        title: 'Entity',
+                        options: _mockEntitySites.keys.toList(growable: false),
+                        currentValue: _entity,
+                      );
+                      if (!mounted || selected == null) return;
+                      setState(() => _entity = selected);
+                      await _loadSitesForEntity(
+                        selected,
+                        keepCurrentSite: false,
+                      );
+                    },
+                  ),
+                  _FilterSelectRow(
+                    label: 'Site',
+                    isRequired: true,
+                    value: _site,
+                    placeholder: _entity == null
+                        ? 'Select entity first'
+                        : _isSiteLoading
+                        ? 'Loading...'
+                        : _siteLoadError != null
+                        ? _siteLoadError!
+                        : 'Please select',
+                    enabled: _entity != null && !_isSiteLoading,
+                    onTap: () async {
+                      if (_entity == null) return;
+                      if (_siteLoadError != null) {
+                        await _loadSitesForEntity(
+                          _entity!,
+                          keepCurrentSite: false,
+                        );
+                        return;
+                      }
+                      final selected = await _pickFilterOption(
+                        title: 'Site',
+                        options: _siteOptions,
+                        currentValue: _site,
+                      );
+                      if (!mounted || selected == null) return;
+                      setState(() => _site = selected);
+                    },
+                  ),
+                  _FilterSelectRow(
+                    label: 'Department',
+                    isRequired: true,
+                    value: _department,
+                    placeholder: 'Please select',
+                    onTap: () async {
+                      final selected = await _pickFilterOption(
+                        title: 'Department',
+                        options: const ['ADMIN CENTER', 'OPERATIONS'],
+                        currentValue: _department,
+                      );
+                      if (!mounted || selected == null) return;
+                      setState(() => _department = selected);
+                    },
+                  ),
+                  _FilterSelectRow(
+                    label: 'Visitor Type',
+                    value: _visitorType,
+                    placeholder: 'Please select',
+                    onTap: () async {
+                      final selected = await _pickFilterOption(
+                        title: 'Visitor Type',
+                        options: const ['Visitor', 'Contractor'],
+                        currentValue: _visitorType,
+                      );
+                      if (!mounted || selected == null) return;
+                      setState(() => _visitorType = selected);
+                    },
+                  ),
+                  _FilterTextInputRow(
+                    label: 'Invitation ID',
+                    controller: _invitationIdController,
+                  ),
+                  _FilterSelectRow(
+                    label: 'Visit Date From',
+                    value: _dateFromController.text.isEmpty
+                        ? null
+                        : _dateFromController.text,
+                    placeholder: 'Please select',
+                    onTap: () => _pickDate(controller: _dateFromController),
+                  ),
+                  _FilterSelectRow(
+                    label: 'Visit Date To',
+                    value: _dateToController.text.isEmpty
+                        ? null
+                        : _dateToController.text,
+                    placeholder: 'Please select',
+                    onTap: () => _pickDate(controller: _dateToController),
+                  ),
+                  _FilterSelectRow(
+                    label: 'Status',
+                    value: _status,
+                    placeholder: 'Please select',
+                    onTap: () async {
+                      final selected = await _pickFilterOption(
+                        title: 'Status',
+                        options: const ['New', 'Approved', 'Rejected'],
+                        currentValue: _status,
+                      );
+                      if (!mounted || selected == null) return;
+                      setState(() => _status = selected);
+                    },
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: _upcomingOnly,
+                    title: const Text('Upcoming Visitor'),
+                    onChanged: (value) => setState(() => _upcomingOnly = value),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ListingSearchableOptionSheet extends StatefulWidget {
+  const _ListingSearchableOptionSheet({
+    required this.title,
+    required this.options,
+    this.currentValue,
+  });
+
+  final String title;
+  final List<String> options;
+  final String? currentValue;
+
+  @override
+  State<_ListingSearchableOptionSheet> createState() =>
+      _ListingSearchableOptionSheetState();
+}
+
+class _ListingSearchableOptionSheetState
+    extends State<_ListingSearchableOptionSheet> {
+  late final TextEditingController _searchController;
+  late List<String> _filteredOptions;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+    _filteredOptions = List<String>.from(widget.options);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String query) {
+    final q = query.trim().toLowerCase();
+    setState(() {
+      _filteredOptions = q.isEmpty
+          ? List<String>.from(widget.options)
+          : widget.options
+                .where((item) => item.toLowerCase().contains(q))
+                .toList(growable: false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 8,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 12,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+              ],
+            ),
+            TextField(
+              controller: _searchController,
+              onChanged: _onSearchChanged,
+              autofocus: true,
+              decoration: const InputDecoration(
+                hintText: 'Search...',
+                prefixIcon: Icon(Icons.search),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 320,
+              child: _filteredOptions.isEmpty
+                  ? const Center(child: Text('No results'))
+                  : ListView.separated(
+                      itemCount: _filteredOptions.length,
+                      separatorBuilder: (_, _) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final option = _filteredOptions[index];
+                        final selected = option == widget.currentValue;
+                        return ListTile(
+                          dense: true,
+                          title: Text(option),
+                          trailing: selected
+                              ? Icon(
+                                  Icons.check,
+                                  size: 18,
+                                  color: Theme.of(context).colorScheme.primary,
+                                )
+                              : null,
+                          onTap: () => Navigator.of(context).pop(option),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterFieldLabel extends StatelessWidget {
+  const _FilterFieldLabel({required this.label, this.isRequired = false});
+
+  final String label;
+  final bool isRequired;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return RichText(
+      text: TextSpan(
+        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+          fontWeight: FontWeight.w600,
+          color: colorScheme.onSurfaceVariant,
+        ),
+        children: [
+          TextSpan(text: label),
+          if (isRequired)
+            TextSpan(
+              text: ' *',
+              style: TextStyle(color: colorScheme.error),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FilterTextInputRow extends StatelessWidget {
+  const _FilterTextInputRow({required this.label, required this.controller});
+
+  final String label;
+  final TextEditingController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _FilterFieldLabel(label: label),
+        const SizedBox(height: 4),
+        TextFormField(
+          controller: controller,
+          decoration: InputDecoration(
+            hintText: 'Please input',
+            border: InputBorder.none,
+            isCollapsed: true,
+            contentPadding: EdgeInsets.zero,
+            hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+          ),
+        ),
+        const SizedBox(height: 6),
+        const _FilterRowDivider(),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+}
+
+class _FilterSelectRow extends StatelessWidget {
+  const _FilterSelectRow({
+    required this.label,
+    required this.placeholder,
+    required this.onTap,
+    this.value,
+    this.isRequired = false,
+    this.enabled = true,
+  });
+
+  final String label;
+  final String placeholder;
+  final VoidCallback onTap;
+  final String? value;
+  final bool isRequired;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final displayText = value ?? placeholder;
+    final displayColor = value == null
+        ? colorScheme.onSurfaceVariant
+        : colorScheme.onSurface;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _FilterFieldLabel(label: label, isRequired: isRequired),
+        const SizedBox(height: 4),
+        InkWell(
+          onTap: enabled ? onTap : null,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    displayText,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: enabled ? displayColor : colorScheme.outline,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  size: 18,
+                  color: enabled
+                      ? colorScheme.onSurfaceVariant
+                      : colorScheme.outline,
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        const _FilterRowDivider(),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+}
+
+class _FilterRowDivider extends StatelessWidget {
+  const _FilterRowDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Divider(
+      height: 1,
+      thickness: 0.6,
+      color: colorScheme.outline.withOpacity(0.25),
     );
   }
 }
