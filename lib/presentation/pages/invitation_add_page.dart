@@ -185,6 +185,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
           ),
           body: SafeArea(
             child: Stepper(
+              type: StepperType.horizontal,
               currentStep: _currentStep,
               onStepContinue: () {
                 if (_currentStep == 0) {
@@ -235,7 +236,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
               },
               steps: [
                 Step(
-                  title: const Text('Visitor & Host'),
+                  title: Text('Step 1'),
                   isActive: _currentStep == 0,
                   content: Form(
                     key: _stepOneFormKey,
@@ -414,7 +415,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                   ),
                 ),
                 Step(
-                  title: const Text('Invitation Details'),
+                  title: const Text('Step 2'),
                   isActive: _currentStep == 1,
                   content: Form(
                     key: _stepTwoFormKey,

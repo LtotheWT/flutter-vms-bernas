@@ -77,6 +77,7 @@ class AppTheme {
       inputDecorationTheme: const InputDecorationTheme(
         border: OutlineInputBorder(),
       ),
+      tabBarTheme: TabBarThemeData(dividerHeight: 0),
       extensions: const [
         AppSemanticColors(
           success: AppColors.success500,
