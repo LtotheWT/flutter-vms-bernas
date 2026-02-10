@@ -84,6 +84,89 @@ AppDropdownFormField<String>(
 ```
 - Example (from repo):
 ```dart
+final entityOptions = ref.watch(entityOptionsProvider);
+final siteOptionsAsync = ref.watch(siteOptionsProvider(formState.entity));
+final bool hasEntity = formState.entity != null;
+final bool siteLoading = siteOptionsAsync.isLoading;
+final bool siteEnabled = hasEntity && !siteLoading && !siteOptionsAsync.hasError;
+final String? siteHelperText =
+    !hasEntity ? 'Select entity first' : siteLoading ? 'Loading sites...' : null;
+final List<String> siteOptions = siteOptionsAsync.maybeWhen(
+  data: (data) => data,
+  orElse: () => const [],
+);
+```
+- Example (from repo):
+```dart
+AppDropdownMenuFormField<String>(
+  key: const ValueKey('Entity'),
+  controller: _entityController,
+  initialSelection: formState.entity,
+  hintText: 'Entity *',
+  helperText: 'Entity *',
+  autovalidateMode: AutovalidateMode.onUserInteraction,
+  entries: [
+    for (final entity in entityOptions)
+      AppDropdownMenuEntry(
+        value: entity,
+        label: entity,
+      ),
+  ],
+  onSelected: (value) {
+    ref.read(invitationAddControllerProvider.notifier).updateEntity(value);
+    ref.read(invitationAddControllerProvider.notifier).updateSite(null);
+    _siteController.clear();
+  },
+  validator: (value) => value == null ? 'Entity is required.' : null,
+),
+```
+- Example (from repo):
+```dart
+AppDropdownMenuFormField<String>(
+  key: const ValueKey('Site'),
+  controller: _siteController,
+  initialSelection: formState.site,
+  hintText: 'Site *',
+  helperText: siteHelperText ?? 'Site *',
+  autovalidateMode: AutovalidateMode.onUserInteraction,
+  enabled: siteEnabled,
+  entries: [
+    for (final site in siteOptions)
+      AppDropdownMenuEntry(value: site, label: site),
+  ],
+  onSelected: (value) {
+    _siteTouched = true;
+    ref.read(invitationAddControllerProvider.notifier).updateSite(value);
+  },
+  validator: (value) {
+    if (!siteEnabled) return null;
+    if (!_siteTouched) return null;
+    return value == null ? 'Site is required.' : null;
+  },
+),
+```
+- Example (from repo):
+```dart
+void _clearForm() {
+  _stepOneFormKey.currentState?.reset();
+  _stepOneFormKey = GlobalKey<FormState>();
+  _stepTwoFormKey.currentState?.reset();
+  _companyController.clear();
+  _purposeController.clear();
+  _emailController.clear();
+  _dateFromController.clear();
+  _dateToController.clear();
+  _entityController.clear();
+  _siteController.clear();
+  _departmentController.clear();
+  _personToVisitController.clear();
+  _visitorTypeController.clear();
+  _siteTouched = false;
+  ref.read(invitationAddControllerProvider.notifier).clear();
+}
+```
+- Example (from repo):
+```dart
 bool _validateStepForm(int step) {
   if (step == 0) {
     return _stepOneFormKey.currentState?.validate() ?? false;

@@ -176,6 +176,113 @@ description: "Workflows and UI patterns for the vms_bernas Flutter app: GoRouter
 - Must NOT:
   - Perform async submit without validating all required inputs.
 
+## Skill: dependent_async_dropdowns
+**Title:** Dependent Async Dropdowns (Entity → Site → Department)
+
+- Purpose:
+  Model dependent dropdowns with async option loading and deterministic reset behavior.
+
+- Inputs:
+  - Parent selection value
+  - Async loader (Provider/UseCase)
+  - Child field controller + form field key
+
+- Outputs:
+  - Child options updated after parent change
+  - Child selection reset and disabled while loading
+  - Loading/error helper text
+
+- Preconditions:
+  - Parent field has a stable value (nullable until selected).
+  - Child field uses controllers for text + selection state.
+
+- Steps:
+  1. Expose a `FutureProvider.family` (or UseCase) keyed by parent value.
+  2. On parent change: clear child controller, reset child form field, clear child state.
+  3. While loading: disable child field and show helper text.
+  4. On error: keep child disabled and show error hint; avoid validation errors.
+  5. Re-enable child when options are loaded.
+
+- Examples: See `references/examples.md` for repo-based snippets.
+- Constraints / Failures:
+  - Avoid firing child validation when parent changes.
+  - Do not keep stale child selections after parent change.
+
+- Must NOT:
+  - Load child options without a parent selection.
+  - Leave child enabled while async load is in-flight.
+
+## Skill: searchable_dropdown_menu_anchor
+**Title:** Searchable Dropdown (MenuAnchor + TextField)
+
+- Purpose:
+  Provide searchable dropdowns that avoid keyboard overlap and support custom menu layout.
+
+- Inputs:
+  - `entries` list
+  - `menuHeight`, `menuItemHeight`
+  - `openUpwards` flag
+  - `TextEditingController`
+
+- Outputs:
+  - MenuAnchor-based dropdown with search
+  - Width matched to anchor
+  - Scroll-to-selected on open
+  - Selected row highlight
+
+- Preconditions:
+  - Use when built-in DropdownMenu is insufficient.
+  - Keep a single reusable widget for consistency.
+
+- Steps:
+  1. Use `MenuAnchor` with a `TextFormField` anchor.
+  2. Filter entries on text input; show “No results” when empty.
+  3. Size menu to `menuHeight` and match anchor width.
+  4. Position above anchor when keyboard is present.
+  5. Sync invalid input back to last valid selection.
+
+- Examples: See `references/examples.md` for repo-based snippets.
+- Constraints / Failures:
+  - Avoid layout drift from custom offsets.
+  - Keep filtering case-insensitive.
+
+- Must NOT:
+  - Allow arbitrary text that isn’t in entries.
+  - Duplicate menu logic per page.
+
+## Skill: form_reset_with_controllers
+**Title:** Form Reset with Controllers
+
+- Purpose:
+  Reset form state consistently when fields are controller-backed.
+
+- Inputs:
+  - Form keys
+  - TextEditingControllers
+  - Dependent dropdown controllers
+
+- Outputs:
+  - Clean form + selection state
+  - Cleared controller text
+  - Reset validation state
+
+- Preconditions:
+  - Use when forms have multiple controllers and dependent fields.
+
+- Steps:
+  1. Call `FormState.reset()` on active form keys.
+  2. Clear all controllers (including dropdown controllers).
+  3. Reset dependent field keys (if needed) and touched flags.
+  4. Clear provider state via controller notifier.
+
+- Examples: See `references/examples.md` for repo-based snippets.
+- Constraints / Failures:
+  - Resetting only form state does not clear controller text.
+
+- Must NOT:
+  - Leave controller text after reset.
+  - Forget to clear dependent fields.
+
 ## Skill: selection_bulk_actions
 **Title:** Selection + Bulk Actions Pattern
 

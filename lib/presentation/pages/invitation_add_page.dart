@@ -31,7 +31,9 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
   final _departmentController = TextEditingController();
   final _personToVisitController = TextEditingController();
   final _visitorTypeController = TextEditingController();
+  final _siteFieldKey = GlobalKey<FormFieldState<String>>();
   int _currentStep = 0;
+  bool _siteTouched = false;
 
   @override
   void dispose() {
@@ -78,6 +80,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
     _departmentController.clear();
     _personToVisitController.clear();
     _visitorTypeController.clear();
+    _siteTouched = false;
     ref.read(invitationAddControllerProvider.notifier).clear();
   }
 
@@ -153,9 +156,13 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
     final siteOptionsAsync = ref.watch(siteOptionsProvider(formState.entity));
     final bool hasEntity = formState.entity != null;
     final bool siteLoading = siteOptionsAsync.isLoading;
-    final bool siteEnabled = hasEntity && !siteLoading && !siteOptionsAsync.hasError;
-    final String? siteHelperText =
-        !hasEntity ? 'Select entity first' : siteLoading ? 'Loading sites...' : null;
+    final bool siteEnabled =
+        hasEntity && !siteLoading && !siteOptionsAsync.hasError;
+    final String? siteHelperText = !hasEntity
+        ? 'Select entity first'
+        : siteLoading
+        ? 'Loading sites...'
+        : null;
     final List<String> siteOptions = siteOptionsAsync.maybeWhen(
       data: (data) => data,
       orElse: () => const [],
@@ -266,28 +273,38 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                                 .read(invitationAddControllerProvider.notifier)
                                 .updateSite(null);
                             _siteController.clear();
+                            _siteFieldKey.currentState?.reset();
+                            setState(() {
+                              _siteTouched = false;
+                            });
                           },
                           validator: (value) =>
                               value == null ? 'Entity is required.' : null,
                         ),
                         const SizedBox(height: 12),
                         AppDropdownMenuFormField<String>(
-                          key: const ValueKey('Site'),
+                          key: _siteFieldKey,
                           controller: _siteController,
                           initialSelection: formState.site,
                           hintText: 'Site *',
                           helperText: siteHelperText ?? 'Site *',
-                          autovalidateMode: AutovalidateMode.onUserInteraction,
+                          autovalidateMode: _siteTouched
+                              ? AutovalidateMode.onUserInteraction
+                              : AutovalidateMode.disabled,
                           enabled: siteEnabled,
                           entries: [
                             for (final site in siteOptions)
                               AppDropdownMenuEntry(value: site, label: site),
                           ],
-                          onSelected: ref
-                              .read(invitationAddControllerProvider.notifier)
-                              .updateSite,
+                          onSelected: (value) {
+                            _siteTouched = true;
+                            ref
+                                .read(invitationAddControllerProvider.notifier)
+                                .updateSite(value);
+                          },
                           validator: (value) {
                             if (!siteEnabled) return null;
+                            if (!_siteTouched) return null;
                             return value == null ? 'Site is required.' : null;
                           },
                         ),

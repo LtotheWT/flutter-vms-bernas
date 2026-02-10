@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'presentation/app/theme/app_theme.dart';
 import 'presentation/app/router.dart';
 
 void main() {
@@ -15,14 +16,7 @@ class MyApp extends StatelessWidget {
     return ProviderScope(
       child: MaterialApp.router(
         title: 'VMS Bernas',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-          useMaterial3: true,
-          filledButtonTheme: FilledButtonThemeData(),
-          inputDecorationTheme: const InputDecorationTheme(
-            border: OutlineInputBorder(),
-          ),
-        ),
+        theme: AppTheme.light,
         routerConfig: appRouter,
         builder: (context, child) {
           return GestureDetector(
