@@ -6,7 +6,7 @@ class GetEntitiesUseCase {
 
   final ReferenceRepository _repository;
 
-  Future<List<RefEntityEntity>> call({required String accessToken}) {
-    return _repository.getEntities(accessToken: accessToken);
+  Future<List<RefEntityEntity>> call() {
+    return _repository.getEntities();
   }
 }

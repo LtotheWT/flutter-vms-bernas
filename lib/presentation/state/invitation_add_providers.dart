@@ -4,9 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/datasources/reference_remote_data_source.dart';
 import '../../data/repositories/reference_repository_impl.dart';
 import '../../domain/repositories/reference_repository.dart';
+import '../../domain/usecases/get_departments_usecase.dart';
 import '../../domain/usecases/get_entities_usecase.dart';
 import 'auth_session_providers.dart';
+import 'department_option.dart';
 import 'entity_option.dart';
+
+const Object _unset = Object();
 
 const Map<String, List<String>> _mockEntitySites = {
   'AGYTEK': ['FACTORY1 T', 'FACTORY2 T'],
@@ -23,7 +27,8 @@ final referenceRemoteDataSourceProvider = Provider<ReferenceRemoteDataSource>((
 
 final referenceRepositoryProvider = Provider<ReferenceRepository>((ref) {
   final remoteDataSource = ref.read(referenceRemoteDataSourceProvider);
-  return ReferenceRepositoryImpl(remoteDataSource);
+  final localDataSource = ref.read(authLocalDataSourceProvider);
+  return ReferenceRepositoryImpl(remoteDataSource, localDataSource);
 });
 
 final getEntitiesUseCaseProvider = Provider<GetEntitiesUseCase>((ref) {
@@ -31,24 +36,41 @@ final getEntitiesUseCaseProvider = Provider<GetEntitiesUseCase>((ref) {
   return GetEntitiesUseCase(repository);
 });
 
+final getDepartmentsUseCaseProvider = Provider<GetDepartmentsUseCase>((ref) {
+  final repository = ref.read(referenceRepositoryProvider);
+  return GetDepartmentsUseCase(repository);
+});
+
 final entityOptionsProvider = FutureProvider.autoDispose<List<EntityOption>>((
   ref,
 ) async {
-  final getSession = ref.read(getPersistedSessionUseCaseProvider);
-  final session = await getSession();
-  final accessToken = session?.accessToken.trim() ?? '';
-
-  if (accessToken.isEmpty) {
-    throw Exception('Please login again to load entities.');
-  }
-
   final useCase = ref.read(getEntitiesUseCaseProvider);
-  final entities = await useCase(accessToken: accessToken);
+  final entities = await useCase();
 
   return entities
       .map((entity) => EntityOption(value: entity.code, label: entity.name))
       .toList(growable: false);
 });
+
+final departmentOptionsProvider = FutureProvider.autoDispose
+    .family<List<DepartmentOption>, String?>((ref, entity) async {
+      final entityCode = entity?.trim() ?? '';
+      if (entityCode.isEmpty) {
+        return const <DepartmentOption>[];
+      }
+
+      final useCase = ref.read(getDepartmentsUseCaseProvider);
+      final departments = await useCase(entity: entityCode);
+
+      return departments
+          .map(
+            (department) => DepartmentOption(
+              value: department.code,
+              label: department.description,
+            ),
+          )
+          .toList(growable: false);
+    });
 
 Future<List<String>> _fetchSitesForEntity(String? entity) async {
   if (entity == null) return const [];
@@ -90,11 +112,11 @@ class InvitationAddState {
   final bool isSubmitting;
 
   InvitationAddState copyWith({
-    String? entity,
-    String? site,
-    String? department,
-    String? personToVisit,
-    String? visitorType,
+    Object? entity = _unset,
+    Object? site = _unset,
+    Object? department = _unset,
+    Object? personToVisit = _unset,
+    Object? visitorType = _unset,
     String? companyName,
     String? purpose,
     String? email,
@@ -103,11 +125,17 @@ class InvitationAddState {
     bool? isSubmitting,
   }) {
     return InvitationAddState(
-      entity: entity ?? this.entity,
-      site: site ?? this.site,
-      department: department ?? this.department,
-      personToVisit: personToVisit ?? this.personToVisit,
-      visitorType: visitorType ?? this.visitorType,
+      entity: entity == _unset ? this.entity : entity as String?,
+      site: site == _unset ? this.site : site as String?,
+      department: department == _unset
+          ? this.department
+          : department as String?,
+      personToVisit: personToVisit == _unset
+          ? this.personToVisit
+          : personToVisit as String?,
+      visitorType: visitorType == _unset
+          ? this.visitorType
+          : visitorType as String?,
       companyName: companyName ?? this.companyName,
       purpose: purpose ?? this.purpose,
       email: email ?? this.email,

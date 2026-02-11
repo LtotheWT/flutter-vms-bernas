@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../state/department_option.dart';
 import '../state/entity_option.dart';
 import '../state/invitation_add_providers.dart';
 import '../widgets/app_filled_button.dart';
@@ -110,6 +111,10 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
     return option.label.trim().isEmpty ? '(Blank)' : option.label;
   }
 
+  String _departmentOptionLabel(DepartmentOption option) {
+    return option.label.trim().isEmpty ? '(Blank)' : option.label;
+  }
+
   String? _selectedEntityLabel({
     required List<EntityOption> options,
     required String? selectedCode,
@@ -123,12 +128,25 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
     return selectedCode;
   }
 
-  String _toDisplayError(Object error) {
+  String? _selectedDepartmentLabel({
+    required List<DepartmentOption> options,
+    required String? selectedCode,
+  }) {
+    if (selectedCode == null) return null;
+    for (final option in options) {
+      if (option.value == selectedCode) {
+        return _departmentOptionLabel(option);
+      }
+    }
+    return selectedCode;
+  }
+
+  String _toDisplayError(Object error, {required String fallback}) {
     final text = error.toString().trim();
     if (text.startsWith('Exception:')) {
       return text.replaceFirst('Exception:', '').trim();
     }
-    return text.isEmpty ? 'Failed to load entities. Tap to retry.' : text;
+    return text.isEmpty ? fallback : text;
   }
 
   bool _hasUnsavedChanges(InvitationAddState formState) {
@@ -276,7 +294,27 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
       selectedCode: formState.entity,
     );
     final entityLoadError = entityOptionsAsync.whenOrNull(
-      error: (error, _) => _toDisplayError(error),
+      error: (error, _) => _toDisplayError(
+        error,
+        fallback: 'Failed to load entities. Tap to retry.',
+      ),
+    );
+    final departmentOptionsAsync = ref.watch(
+      departmentOptionsProvider(formState.entity),
+    );
+    final departmentOptions = departmentOptionsAsync.maybeWhen(
+      data: (data) => data,
+      orElse: () => const <DepartmentOption>[],
+    );
+    final departmentDisplayValue = _selectedDepartmentLabel(
+      options: departmentOptions,
+      selectedCode: formState.department,
+    );
+    final departmentLoadError = departmentOptionsAsync.whenOrNull(
+      error: (error, _) => _toDisplayError(
+        error,
+        fallback: 'Failed to load departments. Tap to retry.',
+      ),
     );
     final siteOptionsAsync = ref.watch(siteOptionsProvider(formState.entity));
     final siteOptions = siteOptionsAsync.maybeWhen(
@@ -287,6 +325,14 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
         formState.entity != null &&
         !siteOptionsAsync.isLoading &&
         !siteOptionsAsync.hasError;
+    final canRetryDepartment =
+        formState.entity != null && departmentOptionsAsync.hasError;
+    final canPickDepartment =
+        formState.entity != null &&
+        !departmentOptionsAsync.isLoading &&
+        !departmentOptionsAsync.hasError;
+    final enableDepartmentField =
+        formState.entity != null && !departmentOptionsAsync.isLoading;
 
     return DoubleBackExitScope(
       hasUnsavedChanges: _hasUnsavedChanges(formState),
@@ -368,6 +414,9 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                           ref
                               .read(invitationAddControllerProvider.notifier)
                               .updateSite(null);
+                          ref
+                              .read(invitationAddControllerProvider.notifier)
+                              .updateDepartment(null);
                         },
                       ),
                       _SelectValueRow(
@@ -401,25 +450,55 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                       _SelectValueRow(
                         key: _departmentRowKey,
                         label: 'Department',
-                        value: formState.department,
-                        placeholder: 'Please select',
+                        value: departmentDisplayValue,
+                        placeholder: departmentOptionsAsync.isLoading
+                            ? 'Loading...'
+                            : formState.entity == null
+                            ? 'Select entity first'
+                            : 'Please select',
+                        helperText: departmentLoadError,
                         isRequired: true,
                         hasError:
-                            _submitAttempt > 0 && formState.department == null,
+                            _submitAttempt > 0 &&
+                            canPickDepartment &&
+                            formState.department == null &&
+                            departmentLoadError == null,
+                        enabled: enableDepartmentField,
                         onTap: () async {
-                          final options = List.generate(
-                            20,
-                            (i) => 'Administration $i',
-                          );
+                          if (canRetryDepartment) {
+                            ref.invalidate(
+                              departmentOptionsProvider(formState.entity),
+                            );
+                            return;
+                          }
+                          if (!canPickDepartment || departmentOptions.isEmpty) {
+                            return;
+                          }
+
                           final selected = await _pickOption(
                             title: 'Department',
-                            options: options,
-                            currentValue: formState.department,
+                            options: departmentOptions
+                                .map(_departmentOptionLabel)
+                                .toList(growable: false),
+                            currentValue: departmentDisplayValue,
                           );
                           if (!mounted || selected == null) return;
+
+                          final pickedOption = departmentOptions.firstWhere(
+                            (option) =>
+                                _departmentOptionLabel(option) == selected,
+                            orElse: () =>
+                                const DepartmentOption(value: '', label: ''),
+                          );
+
+                          final selectedValue =
+                              pickedOption.value.trim().isEmpty
+                              ? null
+                              : pickedOption.value;
+
                           ref
                               .read(invitationAddControllerProvider.notifier)
-                              .updateDepartment(selected);
+                              .updateDepartment(selectedValue);
                         },
                       ),
                       _SelectValueRow(
