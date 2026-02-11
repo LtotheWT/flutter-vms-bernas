@@ -15,7 +15,10 @@ class VisitorCheckInPage extends StatefulWidget {
 
 class _VisitorCheckInPageState extends State<VisitorCheckInPage> {
   final _scanController = TextEditingController();
+  final _physicalScanController = TextEditingController();
   final Set<int> _selectedIndexes = <int>{};
+  bool _hasScanResult = false;
+  int _resultTabIndex = 0;
   final List<_VisitorRow> _visitors = [
     const _VisitorRow(
       name: 'AAAA',
@@ -54,7 +57,25 @@ class _VisitorCheckInPageState extends State<VisitorCheckInPage> {
   @override
   void dispose() {
     _scanController.dispose();
+    _physicalScanController.dispose();
     super.dispose();
+  }
+
+  void _onScanSuccess() {
+    setState(() {
+      _hasScanResult = true;
+      _resultTabIndex = 0;
+    });
+  }
+
+  void _onClearScan() {
+    setState(() {
+      _scanController.clear();
+      _physicalScanController.clear();
+      _hasScanResult = false;
+      _resultTabIndex = 0;
+      _selectedIndexes.clear();
+    });
   }
 
   @override
@@ -67,160 +88,235 @@ class _VisitorCheckInPageState extends State<VisitorCheckInPage> {
           widget.isCheckIn ? 'Visitor Check-In' : 'Visitor Check-Out',
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-        children: [
-          Card(
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Scan',
-                    style: textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  _FlatInputField(
-                    controller: _scanController,
-                    label: 'Scan QR Code',
-                    hintText: 'Please input',
-                    trailingIcon: Icons.qr_code_scanner,
-                    onTrailingTap: () {},
-                  ),
-                  const SizedBox(height: 8),
-                  _FlatInputField(
-                    label: 'Scan Physical Tag',
-                    hintText: 'Please input',
-                    trailingIcon: Icons.nfc,
-                    onTrailingTap: () {},
-                  ),
-                  const SizedBox(height: 12),
-                  // Buttons removed; scan actions are via field suffix icons.
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Visitor Summary',
-                    style: textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const InfoRow(label: 'Invitation ID', value: 'IV20251200074'),
-                  const InfoRow(label: 'Department', value: 'Admin Center'),
-                  const InfoRow(label: 'Purpose', value: 'Meeting'),
-                  const InfoRow(label: 'Site', value: 'FACTORY1 T'),
-                  const InfoRow(label: 'Company', value: 'JOHNHANSON LIMITED'),
-                  const InfoRow(label: 'Contact', value: '012-3456789'),
-                  const Divider(height: 24),
-                  const InfoRow(label: 'Visitor Type', value: 'Visitor'),
-                  const InfoRow(label: 'Invite By', value: 'Suraya'),
-                  const InfoRow(label: 'Work Level', value: 'Low'),
-                  const InfoRow(label: 'Vehicle Plate', value: 'WSD 011234'),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Visitor List',
-            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: CheckboxListTile(
-                  value:
-                      _selectedIndexes.length == _visitors.length &&
-                      _visitors.isNotEmpty,
-                  onChanged: _visitors.isEmpty
-                      ? null
-                      : (checked) {
-                          setState(() {
-                            if (checked == true) {
-                              _selectedIndexes
-                                ..clear()
-                                ..addAll(
-                                  List<int>.generate(
-                                    _visitors.length,
-                                    (index) => index,
-                                  ),
-                                );
-                            } else {
-                              _selectedIndexes.clear();
-                            }
-                          });
-                        },
-                  title: Text(
-                    'Select all (${_selectedIndexes.length}/${_visitors.length})',
-                  ),
-                  controlAffinity: ListTileControlAffinity.leading,
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          for (var i = 0; i < _visitors.length; i++)
-            _VisitorCard(
-              visitor: _visitors[i],
-              selected: _selectedIndexes.contains(i),
-              onSelected: (checked) {
-                setState(() {
-                  if (checked == true) {
-                    _selectedIndexes.add(i);
-                  } else {
-                    _selectedIndexes.remove(i);
-                  }
-                });
-              },
-            ),
-          const SizedBox(height: 12),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Take Photo',
-                    style: textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  AppOutlinedButtonIcon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.camera_alt_outlined),
-                    label: const Text('Camera'),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: const [
-                      _PhotoThumb(hasPhoto: true),
-                      _PhotoThumb(hasPhoto: false),
-                      _PhotoThumb(hasPhoto: true),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Scan',
+                        style: textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _FlatInputField(
+                        controller: _scanController,
+                        label: 'Scan QR Code',
+                        hintText: 'Please input',
+                        trailingIcon: Icons.qr_code_scanner,
+                        onTrailingTap: _onScanSuccess,
+                      ),
+                      const SizedBox(height: 8),
+                      _FlatInputField(
+                        controller: _physicalScanController,
+                        label: 'Scan Physical Tag',
+                        hintText: 'Please input',
+                        trailingIcon: Icons.nfc,
+                        onTrailingTap: _onScanSuccess,
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: AppFilledButton(
+                              onPressed: _onScanSuccess,
+                              child: const Text('Simulate Scan Success'),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          AppOutlinedButton(
+                            onPressed: _onClearScan,
+                            child: const Text('Clear'),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
-          const SizedBox(height: 80),
+          if (_hasScanResult)
+            const SliverToBoxAdapter(child: SizedBox(height: 12)),
+          if (_hasScanResult)
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _StickySegmentHeaderDelegate(
+                backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                  child: _ResultTabBar(
+                    selectedIndex: _resultTabIndex,
+                    visitorCount: _visitors.length,
+                    onChanged: (index) =>
+                        setState(() => _resultTabIndex = index),
+                  ),
+                ),
+                height: 56,
+              ),
+            ),
+          if (_hasScanResult)
+            SliverToBoxAdapter(child: const SizedBox(height: 12)),
+          if (_hasScanResult && _resultTabIndex == 0)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          'Visitor Summary',
+                          style: textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const InfoRow(
+                          label: 'Invitation ID',
+                          value: 'IV20251200074',
+                        ),
+                        const InfoRow(
+                          label: 'Department',
+                          value: 'Admin Center',
+                        ),
+                        const InfoRow(label: 'Purpose', value: 'Meeting'),
+                        const InfoRow(label: 'Site', value: 'FACTORY1 T'),
+                        const InfoRow(
+                          label: 'Company',
+                          value: 'JOHNHANSON LIMITED',
+                        ),
+                        const InfoRow(label: 'Contact', value: '012-3456789'),
+                        const Divider(height: 24),
+                        const InfoRow(label: 'Visitor Type', value: 'Visitor'),
+                        const InfoRow(label: 'Invite By', value: 'Suraya'),
+                        const InfoRow(label: 'Work Level', value: 'Low'),
+                        const InfoRow(
+                          label: 'Vehicle Plate',
+                          value: 'WSD 011234',
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          if (_hasScanResult && _resultTabIndex == 1)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Visitor List',
+                      style: textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    CheckboxListTile(
+                      value:
+                          _selectedIndexes.length == _visitors.length &&
+                          _visitors.isNotEmpty,
+                      onChanged: _visitors.isEmpty
+                          ? null
+                          : (checked) {
+                              setState(() {
+                                if (checked == true) {
+                                  _selectedIndexes
+                                    ..clear()
+                                    ..addAll(
+                                      List<int>.generate(
+                                        _visitors.length,
+                                        (index) => index,
+                                      ),
+                                    );
+                                } else {
+                                  _selectedIndexes.clear();
+                                }
+                              });
+                            },
+                      title: Text(
+                        'Select all (${_selectedIndexes.length}/${_visitors.length})',
+                      ),
+                      controlAffinity: ListTileControlAffinity.leading,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ),
+              ),
+            ),
+          if (_hasScanResult && _resultTabIndex == 1)
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate((context, i) {
+                  return _VisitorCard(
+                    visitor: _visitors[i],
+                    selected: _selectedIndexes.contains(i),
+                    onSelected: (checked) {
+                      setState(() {
+                        if (checked == true) {
+                          _selectedIndexes.add(i);
+                        } else {
+                          _selectedIndexes.remove(i);
+                        }
+                      });
+                    },
+                  );
+                }, childCount: _visitors.length),
+              ),
+            ),
+          if (_hasScanResult)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          'Take Photo',
+                          style: textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        AppOutlinedButtonIcon(
+                          onPressed: () {},
+                          icon: const Icon(Icons.camera_alt_outlined),
+                          label: const Text('Camera'),
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: const [
+                            _PhotoThumb(hasPhoto: true),
+                            _PhotoThumb(hasPhoto: false),
+                            _PhotoThumb(hasPhoto: true),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          const SliverToBoxAdapter(child: SizedBox(height: 80)),
         ],
       ),
       bottomNavigationBar: SafeArea(
@@ -329,6 +425,123 @@ class _VisitorRow {
   final String checkInDate;
   final String checkOutDate;
   final bool hasPhoto;
+}
+
+class _ResultTabBar extends StatelessWidget {
+  const _ResultTabBar({
+    required this.selectedIndex,
+    required this.visitorCount,
+    required this.onChanged,
+  });
+
+  final int selectedIndex;
+  final int visitorCount;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withOpacity(0.45),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(4),
+        child: Row(
+          children: [
+            Expanded(
+              child: _ResultTabChip(
+                label: 'Summary',
+                selected: selectedIndex == 0,
+                onTap: () => onChanged(0),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: _ResultTabChip(
+                label: 'Visitor List ($visitorCount)',
+                selected: selectedIndex == 1,
+                onTap: () => onChanged(1),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StickySegmentHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _StickySegmentHeaderDelegate({
+    required this.child,
+    required this.backgroundColor,
+    required this.height,
+  });
+
+  final Widget child;
+  final Color backgroundColor;
+  final double height;
+
+  @override
+  double get minExtent => height;
+
+  @override
+  double get maxExtent => height;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return SizedBox.expand(
+      child: ColoredBox(color: backgroundColor, child: child),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _StickySegmentHeaderDelegate oldDelegate) {
+    return oldDelegate.child != child ||
+        oldDelegate.backgroundColor != backgroundColor ||
+        oldDelegate.height != height;
+  }
+}
+
+class _ResultTabChip extends StatelessWidget {
+  const _ResultTabChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Material(
+      color: selected ? colorScheme.primary : Colors.transparent,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: selected ? colorScheme.onPrimary : colorScheme.onSurface,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _Chip extends StatelessWidget {
