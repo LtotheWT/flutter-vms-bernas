@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../state/entity_option.dart';
 import '../state/invitation_add_providers.dart';
 import '../widgets/app_filled_button.dart';
 import '../widgets/app_snackbar.dart';
@@ -105,6 +106,31 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
 
   String _two(int value) => value.toString().padLeft(2, '0');
 
+  String _entityOptionLabel(EntityOption option) {
+    return option.label.trim().isEmpty ? '(Blank)' : option.label;
+  }
+
+  String? _selectedEntityLabel({
+    required List<EntityOption> options,
+    required String? selectedCode,
+  }) {
+    if (selectedCode == null) return null;
+    for (final option in options) {
+      if (option.value == selectedCode) {
+        return _entityOptionLabel(option);
+      }
+    }
+    return selectedCode;
+  }
+
+  String _toDisplayError(Object error) {
+    final text = error.toString().trim();
+    if (text.startsWith('Exception:')) {
+      return text.replaceFirst('Exception:', '').trim();
+    }
+    return text.isEmpty ? 'Failed to load entities. Tap to retry.' : text;
+  }
+
   bool _hasUnsavedChanges(InvitationAddState formState) {
     return _companyController.text.trim().isNotEmpty ||
         _purposeController.text.trim().isNotEmpty ||
@@ -181,6 +207,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
     final validText = _formKey.currentState?.validate() ?? false;
     final validAll = await _focusFirstInvalidField(formState);
     if (!validText || !validAll) return;
+    if (!mounted) return;
 
     FocusScope.of(context).unfocus();
     await ref.read(invitationAddControllerProvider.notifier).submitMock();
@@ -239,7 +266,18 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final formState = ref.watch(invitationAddControllerProvider);
-    final entityOptions = ref.watch(entityOptionsProvider);
+    final entityOptionsAsync = ref.watch(entityOptionsProvider);
+    final entityOptions = entityOptionsAsync.maybeWhen(
+      data: (data) => data,
+      orElse: () => const <EntityOption>[],
+    );
+    final entityDisplayValue = _selectedEntityLabel(
+      options: entityOptions,
+      selectedCode: formState.entity,
+    );
+    final entityLoadError = entityOptionsAsync.whenOrNull(
+      error: (error, _) => _toDisplayError(error),
+    );
     final siteOptionsAsync = ref.watch(siteOptionsProvider(formState.entity));
     final siteOptions = siteOptionsAsync.maybeWhen(
       data: (data) => data,
@@ -286,21 +324,47 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                       _SelectValueRow(
                         key: _entityRowKey,
                         label: 'Entity',
-                        value: formState.entity,
+                        value: entityDisplayValue,
                         isRequired: true,
-                        placeholder: 'Please select',
+                        placeholder: entityOptionsAsync.isLoading
+                            ? 'Loading...'
+                            : 'Please select',
+                        helperText: entityLoadError,
                         hasError:
-                            _submitAttempt > 0 && formState.entity == null,
+                            _submitAttempt > 0 &&
+                            formState.entity == null &&
+                            entityLoadError == null,
+                        enabled: !entityOptionsAsync.isLoading,
                         onTap: () async {
+                          if (entityOptionsAsync.hasError) {
+                            ref.invalidate(entityOptionsProvider);
+                            return;
+                          }
+                          if (entityOptions.isEmpty) return;
+
                           final selected = await _pickOption(
                             title: 'Entity',
-                            options: entityOptions,
-                            currentValue: formState.entity,
+                            options: entityOptions
+                                .map(_entityOptionLabel)
+                                .toList(growable: false),
+                            currentValue: entityDisplayValue,
                           );
                           if (!mounted || selected == null) return;
+
+                          final pickedOption = entityOptions.firstWhere(
+                            (option) => _entityOptionLabel(option) == selected,
+                            orElse: () =>
+                                const EntityOption(value: '', label: ''),
+                          );
+
+                          final selectedValue =
+                              pickedOption.value.trim().isEmpty
+                              ? null
+                              : pickedOption.value;
+
                           ref
                               .read(invitationAddControllerProvider.notifier)
-                              .updateEntity(selected);
+                              .updateEntity(selectedValue);
                           ref
                               .read(invitationAddControllerProvider.notifier)
                               .updateSite(null);
@@ -766,6 +830,7 @@ class _SelectValueRow extends StatelessWidget {
     this.value,
     this.enabled = true,
     this.hasError = false,
+    this.helperText,
   });
 
   final String label;
@@ -774,6 +839,7 @@ class _SelectValueRow extends StatelessWidget {
   final String? value;
   final bool enabled;
   final bool hasError;
+  final String? helperText;
   final VoidCallback onTap;
 
   @override
@@ -819,7 +885,15 @@ class _SelectValueRow extends StatelessWidget {
             ),
           ),
         ),
-        if (hasError)
+        if (helperText != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(
+              helperText!,
+              style: textTheme.bodySmall?.copyWith(color: colorScheme.error),
+            ),
+          )
+        else if (hasError)
           Padding(
             padding: const EdgeInsets.only(top: 2),
             child: Text(
