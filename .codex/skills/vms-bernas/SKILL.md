@@ -190,7 +190,7 @@ description: "Workflows and UI patterns for the vms_bernas Flutter app: GoRouter
 - Outputs:
   - Child options updated after parent change
   - Child selection reset and disabled while loading
-  - Loading/error helper text
+  - Loading/error helper text with retry behavior on error
 
 - Preconditions:
   - Parent field has a stable value (nullable until selected).
@@ -200,17 +200,20 @@ description: "Workflows and UI patterns for the vms_bernas Flutter app: GoRouter
   1. Expose a `FutureProvider.family` (or UseCase) keyed by parent value.
   2. On parent change: clear child controller, reset child form field, clear child state.
   3. While loading: disable child field and show helper text.
-  4. On error: keep child disabled and show error hint; avoid validation errors.
-  5. Re-enable child when options are loaded.
+  4. On error: show an error hint and allow tap-to-retry (invalidate/reload provider); avoid validation errors.
+  5. Re-enable normal selection when options are loaded.
+  6. If backend returns blank child options, keep them visible only when needed and map blank selection to null for required validation.
 
 - Examples: See `references/examples.md` for repo-based snippets.
 - Constraints / Failures:
   - Avoid firing child validation when parent changes.
   - Do not keep stale child selections after parent change.
+  - If retry is supported, child field must remain tappable on error state.
 
 - Must NOT:
   - Load child options without a parent selection.
   - Leave child enabled while async load is in-flight.
+  - Treat blank API options as valid required selections unless explicitly intended.
 
 ## Skill: searchable_dropdown_menu_anchor
 **Title:** Searchable Dropdown (MenuAnchor + TextField)
