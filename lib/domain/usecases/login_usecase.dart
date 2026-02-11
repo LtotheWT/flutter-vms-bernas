@@ -1,3 +1,4 @@
+import '../entities/auth_session_entity.dart';
 import '../repositories/auth_repository.dart';
 import '../value_objects/password.dart';
 import '../value_objects/user_id.dart';
@@ -7,7 +8,7 @@ class LoginUseCase {
 
   final AuthRepository _repository;
 
-  Future<void> call({
+  Future<AuthSessionEntity> call({
     required UserId userId,
     required Password password,
   }) {

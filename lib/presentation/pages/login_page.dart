@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../domain/entities/auth_session_entity.dart';
 import '../app/router.dart';
 import '../state/login_providers.dart';
 import '../widgets/app_filled_button.dart';
@@ -32,8 +33,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final colorScheme = Theme.of(context).colorScheme;
     final loginState = ref.watch(loginControllerProvider);
 
-    ref.listen<AsyncValue<void>>(loginControllerProvider, (previous, next) {
-      if (_submitted && next is AsyncData<void>) {
+    ref.listen<AsyncValue<AuthSessionEntity?>>(loginControllerProvider, (
+      previous,
+      next,
+    ) {
+      final session = switch (next) {
+        AsyncData<AuthSessionEntity?>(:final value) => value,
+        _ => null,
+      };
+      if (_submitted && session != null) {
         context.go(homeRoutePath);
       }
     });
@@ -114,7 +122,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     data: (_) => const SizedBox.shrink(),
                     loading: () => const SizedBox.shrink(),
                     error: (error, _) => Text(
-                      error.toString(),
+                      _toDisplayError(error),
                       textAlign: TextAlign.center,
                       style: TextStyle(color: colorScheme.error),
                     ),
@@ -126,5 +134,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         ),
       ),
     );
+  }
+
+  String _toDisplayError(Object error) {
+    final text = error.toString().trim();
+    if (text.isEmpty) {
+      return 'Login failed. Please try again.';
+    }
+    return text;
   }
 }

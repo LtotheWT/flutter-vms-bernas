@@ -1,4 +1,6 @@
-class Password {
+import 'package:equatable/equatable.dart';
+
+class Password extends Equatable {
   const Password._(this.value);
 
   final String value;
@@ -9,4 +11,7 @@ class Password {
     }
     return Password._(value);
   }
+
+  @override
+  List<Object?> get props => [value];
 }

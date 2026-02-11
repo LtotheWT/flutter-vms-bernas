@@ -1,4 +1,6 @@
-class UserId {
+import 'package:equatable/equatable.dart';
+
+class UserId extends Equatable {
   const UserId._(this.value);
 
   final String value;
@@ -9,4 +11,7 @@ class UserId {
     }
     return UserId._(value);
   }
+
+  @override
+  List<Object?> get props => [value];
 }
