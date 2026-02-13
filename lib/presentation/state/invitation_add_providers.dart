@@ -6,17 +6,13 @@ import '../../data/repositories/reference_repository_impl.dart';
 import '../../domain/repositories/reference_repository.dart';
 import '../../domain/usecases/get_departments_usecase.dart';
 import '../../domain/usecases/get_entities_usecase.dart';
+import '../../domain/usecases/get_locations_usecase.dart';
 import 'auth_session_providers.dart';
 import 'department_option.dart';
 import 'entity_option.dart';
+import 'site_option.dart';
 
 const Object _unset = Object();
-
-const Map<String, List<String>> _mockEntitySites = {
-  'AGYTEK': ['FACTORY1 T', 'FACTORY2 T'],
-  'Agytek2': ['SITE 1', 'SITE 2'],
-  'Entity1': ['SITE 3'],
-};
 
 final referenceRemoteDataSourceProvider = Provider<ReferenceRemoteDataSource>((
   ref,
@@ -41,6 +37,11 @@ final getDepartmentsUseCaseProvider = Provider<GetDepartmentsUseCase>((ref) {
   return GetDepartmentsUseCase(repository);
 });
 
+final getLocationsUseCaseProvider = Provider<GetLocationsUseCase>((ref) {
+  final repository = ref.read(referenceRepositoryProvider);
+  return GetLocationsUseCase(repository);
+});
+
 final entityOptionsProvider = FutureProvider.autoDispose<List<EntityOption>>((
   ref,
 ) async {
@@ -50,7 +51,7 @@ final entityOptionsProvider = FutureProvider.autoDispose<List<EntityOption>>((
   return entities
       .map((entity) => EntityOption(value: entity.code, label: entity.name))
       .toList(growable: false);
-});
+}, retry: (_, __) => null);
 
 final departmentOptionsProvider = FutureProvider.autoDispose
     .family<List<DepartmentOption>, String?>((ref, entity) async {
@@ -72,16 +73,25 @@ final departmentOptionsProvider = FutureProvider.autoDispose
           .toList(growable: false);
     }, retry: (_, __) => null);
 
-Future<List<String>> _fetchSitesForEntity(String? entity) async {
-  if (entity == null) return const [];
-  await Future<void>.delayed(const Duration(milliseconds: 500));
-  return _mockEntitySites[entity] ?? const ['FACTORY1 T'];
-}
-
 final siteOptionsProvider = FutureProvider.autoDispose
-    .family<List<String>, String?>(
-      (ref, entity) => _fetchSitesForEntity(entity),
-    );
+    .family<List<SiteOption>, String?>((ref, entity) async {
+      final entityCode = entity?.trim() ?? '';
+      if (entityCode.isEmpty) {
+        return const <SiteOption>[];
+      }
+
+      final useCase = ref.read(getLocationsUseCaseProvider);
+      final locations = await useCase(entity: entityCode);
+
+      return locations
+          .map(
+            (location) => SiteOption(
+              value: location.site,
+              label: location.siteDescription,
+            ),
+          )
+          .toList(growable: false);
+    }, retry: (_, __) => null);
 
 @immutable
 class InvitationAddState {

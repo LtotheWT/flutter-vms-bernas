@@ -32,4 +32,10 @@ class AuthLocalDataSource {
       accessToken: accessToken,
     );
   }
+
+  Future<void> clearSession() async {
+    await _storage.delete(key: _tokenKey);
+    await _storage.delete(key: _usernameKey);
+    await _storage.delete(key: _fullnameKey);
+  }
 }

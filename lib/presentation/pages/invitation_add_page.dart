@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../state/department_option.dart';
 import '../state/entity_option.dart';
 import '../state/invitation_add_providers.dart';
+import '../state/site_option.dart';
 import '../widgets/app_filled_button.dart';
 import '../widgets/app_snackbar.dart';
 import '../widgets/double_back_exit_scope.dart';
@@ -115,6 +116,14 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
     return option.label.trim().isEmpty ? '(Blank)' : option.label;
   }
 
+  String _siteOptionLabel(SiteOption option) {
+    final label = option.label.trim();
+    if (label.isNotEmpty) {
+      return label;
+    }
+    return option.value.trim().isEmpty ? '(Blank)' : option.value;
+  }
+
   String? _selectedEntityLabel({
     required List<EntityOption> options,
     required String? selectedCode,
@@ -136,6 +145,19 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
     for (final option in options) {
       if (option.value == selectedCode) {
         return _departmentOptionLabel(option);
+      }
+    }
+    return selectedCode;
+  }
+
+  String? _selectedSiteLabel({
+    required List<SiteOption> options,
+    required String? selectedCode,
+  }) {
+    if (selectedCode == null) return null;
+    for (final option in options) {
+      if (option.value == selectedCode) {
+        return _siteOptionLabel(option);
       }
     }
     return selectedCode;
@@ -319,12 +341,25 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
     final siteOptionsAsync = ref.watch(siteOptionsProvider(formState.entity));
     final siteOptions = siteOptionsAsync.maybeWhen(
       data: (data) => data,
-      orElse: () => const <String>[],
+      orElse: () => const <SiteOption>[],
     );
+    final siteDisplayValue = _selectedSiteLabel(
+      options: siteOptions,
+      selectedCode: formState.site,
+    );
+    final siteLoadError = siteOptionsAsync.whenOrNull(
+      error: (error, _) => _toDisplayError(
+        error,
+        fallback: 'Failed to load sites. Tap to retry.',
+      ),
+    );
+    final canRetrySite = formState.entity != null && siteOptionsAsync.hasError;
     final canPickSite =
         formState.entity != null &&
         !siteOptionsAsync.isLoading &&
         !siteOptionsAsync.hasError;
+    final enableSiteField =
+        formState.entity != null && !siteOptionsAsync.isLoading;
     final canRetryDepartment =
         formState.entity != null && departmentOptionsAsync.hasError;
     final canPickDepartment =
@@ -422,29 +457,51 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                       _SelectValueRow(
                         key: _siteRowKey,
                         label: 'Site',
-                        value: formState.site,
+                        value: siteDisplayValue,
                         placeholder: siteOptionsAsync.isLoading
                             ? 'Loading...'
                             : formState.entity == null
                             ? 'Select entity first'
                             : 'Please select',
+                        helperText: siteLoadError,
                         isRequired: true,
-                        enabled: canPickSite,
+                        enabled: enableSiteField,
                         hasError:
                             _submitAttempt > 0 &&
                             canPickSite &&
-                            formState.site == null,
+                            formState.site == null &&
+                            siteLoadError == null,
                         onTap: () async {
-                          if (!canPickSite) return;
+                          if (canRetrySite) {
+                            ref.invalidate(
+                              siteOptionsProvider(formState.entity),
+                            );
+                            return;
+                          }
+                          if (!canPickSite || siteOptions.isEmpty) return;
                           final selected = await _pickOption(
                             title: 'Site',
-                            options: siteOptions,
-                            currentValue: formState.site,
+                            options: siteOptions
+                                .map(_siteOptionLabel)
+                                .toList(growable: false),
+                            currentValue: siteDisplayValue,
                           );
                           if (!mounted || selected == null) return;
+
+                          final pickedOption = siteOptions.firstWhere(
+                            (option) => _siteOptionLabel(option) == selected,
+                            orElse: () =>
+                                const SiteOption(value: '', label: ''),
+                          );
+
+                          final selectedValue =
+                              pickedOption.value.trim().isEmpty
+                              ? null
+                              : pickedOption.value;
+
                           ref
                               .read(invitationAddControllerProvider.notifier)
-                              .updateSite(selected);
+                              .updateSite(selectedValue);
                         },
                       ),
                       _SelectValueRow(

@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../app/app_shell.dart';
@@ -15,6 +16,7 @@ import '../pages/employee_log_page.dart';
 import '../pages/permanent_contractor_log_page.dart';
 import '../pages/report_dashboard_page.dart';
 import '../pages/report_dashboard_list_page.dart';
+import '../state/auth_session_providers.dart';
 
 const String loginRouteName = 'login';
 const String loginRoutePath = '/login';
@@ -48,104 +50,126 @@ const String visitorCheckOutRoutePath = '/visitor/check-out';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
-final GoRouter appRouter = GoRouter(
-  navigatorKey: _rootNavigatorKey,
-  initialLocation: splashRoutePath,
-  routes: [
-    GoRoute(
-      name: splashRouteName,
-      path: splashRoutePath,
-      builder: (context, state) => const SplashPage(),
-    ),
-    GoRoute(
-      name: loginRouteName,
-      path: loginRoutePath,
-      builder: (context, state) => const LoginPage(),
-    ),
-    GoRoute(
-      name: invitationAddRouteName,
-      path: invitationAddRoutePath,
-      builder: (context, state) => const InvitationAddPage(),
-    ),
-    GoRoute(
-      name: invitationListingRouteName,
-      path: invitationListingRoutePath,
-      builder: (context, state) => const InvitationListingPage(),
-    ),
-    GoRoute(
-      name: visitorWalkInRouteName,
-      path: visitorWalkInRoutePath,
-      builder: (context, state) => const VisitorWalkInPage(),
-    ),
-    GoRoute(
-      name: visitorCheckInRouteName,
-      path: visitorCheckInRoutePath,
-      builder: (context, state) => const VisitorCheckInPage(isCheckIn: true),
-    ),
-    GoRoute(
-      name: visitorCheckOutRouteName,
-      path: visitorCheckOutRoutePath,
-      builder: (context, state) => const VisitorCheckInPage(isCheckIn: false),
-    ),
-    StatefulShellRoute.indexedStack(
-      builder: (context, state, navigationShell) =>
-          AppShell(navigationShell: navigationShell),
-      branches: [
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              name: homeRouteName,
-              path: homeRoutePath,
-              builder: (context, state) => const HomePage(),
-            ),
-          ],
-        ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              name: reportRouteName,
-              path: reportRoutePath,
-              builder: (context, state) => const ReportPage(),
-              routes: [
-                GoRoute(
-                  name: visitorLogRouteName,
-                  path: 'visitor-log',
-                  parentNavigatorKey: _rootNavigatorKey,
-                  builder: (context, state) => const VisitorLogPage(),
-                ),
-                GoRoute(
-                  name: employeeLogRouteName,
-                  path: 'employee-log',
-                  parentNavigatorKey: _rootNavigatorKey,
-                  builder: (context, state) => const EmployeeLogPage(),
-                ),
-                GoRoute(
-                  name: permanentContractorLogRouteName,
-                  path: 'permanent-contractor-log',
-                  parentNavigatorKey: _rootNavigatorKey,
-                  builder: (context, state) =>
-                      const PermanentContractorLogPage(),
-                ),
-                GoRoute(
-                  name: reportDashboardRouteName,
-                  path: 'dashboard',
-                  parentNavigatorKey: _rootNavigatorKey,
-                  builder: (context, state) => const ReportDashboardPage(),
-                ),
-                GoRoute(
-                  name: reportDashboardListRouteName,
-                  path: 'dashboard/list',
-                  parentNavigatorKey: _rootNavigatorKey,
-                  builder: (context, state) {
-                    final filter = state.extra as ReportDashboardListFilter?;
-                    return ReportDashboardListPage(filter: filter);
-                  },
-                ),
-              ],
-            ),
-          ],
-        ),
-      ],
-    ),
-  ],
-);
+final goRouterProvider = Provider<GoRouter>((ref) {
+  final authRouteNotifier = ref.read(authRouteNotifierProvider);
+
+  final router = GoRouter(
+    navigatorKey: _rootNavigatorKey,
+    initialLocation: splashRoutePath,
+    refreshListenable: authRouteNotifier,
+    redirect: (context, state) {
+      final location = state.matchedLocation;
+      final isAtSplash = location == splashRoutePath;
+      final isAtLogin = location == loginRoutePath;
+
+      if (authRouteNotifier.isUnauthenticated && !isAtLogin && !isAtSplash) {
+        return loginRoutePath;
+      }
+
+      if (authRouteNotifier.isAuthenticated && isAtLogin) {
+        return homeRoutePath;
+      }
+
+      return null;
+    },
+    routes: [
+      GoRoute(
+        name: splashRouteName,
+        path: splashRoutePath,
+        builder: (context, state) => const SplashPage(),
+      ),
+      GoRoute(
+        name: loginRouteName,
+        path: loginRoutePath,
+        builder: (context, state) => const LoginPage(),
+      ),
+      GoRoute(
+        name: invitationAddRouteName,
+        path: invitationAddRoutePath,
+        builder: (context, state) => const InvitationAddPage(),
+      ),
+      GoRoute(
+        name: invitationListingRouteName,
+        path: invitationListingRoutePath,
+        builder: (context, state) => const InvitationListingPage(),
+      ),
+      GoRoute(
+        name: visitorWalkInRouteName,
+        path: visitorWalkInRoutePath,
+        builder: (context, state) => const VisitorWalkInPage(),
+      ),
+      GoRoute(
+        name: visitorCheckInRouteName,
+        path: visitorCheckInRoutePath,
+        builder: (context, state) => const VisitorCheckInPage(isCheckIn: true),
+      ),
+      GoRoute(
+        name: visitorCheckOutRouteName,
+        path: visitorCheckOutRoutePath,
+        builder: (context, state) => const VisitorCheckInPage(isCheckIn: false),
+      ),
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) =>
+            AppShell(navigationShell: navigationShell),
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                name: homeRouteName,
+                path: homeRoutePath,
+                builder: (context, state) => const HomePage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                name: reportRouteName,
+                path: reportRoutePath,
+                builder: (context, state) => const ReportPage(),
+                routes: [
+                  GoRoute(
+                    name: visitorLogRouteName,
+                    path: 'visitor-log',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    builder: (context, state) => const VisitorLogPage(),
+                  ),
+                  GoRoute(
+                    name: employeeLogRouteName,
+                    path: 'employee-log',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    builder: (context, state) => const EmployeeLogPage(),
+                  ),
+                  GoRoute(
+                    name: permanentContractorLogRouteName,
+                    path: 'permanent-contractor-log',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    builder: (context, state) =>
+                        const PermanentContractorLogPage(),
+                  ),
+                  GoRoute(
+                    name: reportDashboardRouteName,
+                    path: 'dashboard',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    builder: (context, state) => const ReportDashboardPage(),
+                  ),
+                  GoRoute(
+                    name: reportDashboardListRouteName,
+                    path: 'dashboard/list',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    builder: (context, state) {
+                      final filter = state.extra as ReportDashboardListFilter?;
+                      return ReportDashboardListPage(filter: filter);
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    ],
+  );
+  ref.onDispose(router.dispose);
+  return router;
+});

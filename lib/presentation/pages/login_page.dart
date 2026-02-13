@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../domain/entities/auth_session_entity.dart';
 import '../app/router.dart';
+import '../state/auth_session_providers.dart';
 import '../state/login_providers.dart';
 import '../widgets/app_filled_button.dart';
 import '../widgets/app_text_form_field.dart';
@@ -42,6 +43,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         _ => null,
       };
       if (_submitted && session != null) {
+        ref.read(authSessionControllerProvider).markAuthenticated();
         context.go(homeRoutePath);
       }
     });

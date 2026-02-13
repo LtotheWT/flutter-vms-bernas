@@ -13,20 +13,29 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ProviderScope(
-      child: MaterialApp.router(
-        title: 'VMS Bernas',
-        theme: AppTheme.light,
-        routerConfig: appRouter,
-        builder: (context, child) {
-          return GestureDetector(
-            onTap: () {
-              FocusManager.instance.primaryFocus?.unfocus();
-            },
-            child: child!,
-          );
-        },
-      ),
+    return const ProviderScope(child: _AppView());
+  }
+}
+
+class _AppView extends ConsumerWidget {
+  const _AppView();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(goRouterProvider);
+
+    return MaterialApp.router(
+      title: 'VMS Bernas',
+      theme: AppTheme.light,
+      routerConfig: router,
+      builder: (context, child) {
+        return GestureDetector(
+          onTap: () {
+            FocusManager.instance.primaryFocus?.unfocus();
+          },
+          child: child!,
+        );
+      },
     );
   }
 }

@@ -25,14 +25,21 @@ class _SplashPageState extends ConsumerState<SplashPage> {
 
   Future<void> _resolveNextRoute() async {
     final useCase = ref.read(getPersistedSessionUseCaseProvider);
+    final sessionController = ref.read(authSessionControllerProvider);
 
     try {
       final session = await useCase();
+      if (session == null) {
+        sessionController.markUnauthenticated();
+      } else {
+        sessionController.markAuthenticated();
+      }
       if (!mounted) {
         return;
       }
       context.go(session == null ? loginRoutePath : homeRoutePath);
     } catch (_) {
+      sessionController.markUnauthenticated();
       if (!mounted) {
         return;
       }
@@ -53,10 +60,7 @@ class _SplashPageState extends ConsumerState<SplashPage> {
     return Scaffold(
       body: SafeArea(
         child: Center(
-          child: Text(
-            'VMS Bernas',
-            style: textTheme.headlineSmall,
-          ),
+          child: Text('VMS Bernas', style: textTheme.headlineSmall),
         ),
       ),
     );
