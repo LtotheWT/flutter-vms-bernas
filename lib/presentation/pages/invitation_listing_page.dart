@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 import '../widgets/app_filled_button.dart';
+import '../widgets/labeled_form_rows.dart';
 import '../widgets/app_outlined_button.dart';
 import '../widgets/info_row.dart';
+import '../widgets/searchable_option_sheet.dart';
 
 const Map<String, List<String>> _mockEntitySites = {
   'AGYTEK - Agytek1231': ['FACTORY1 - FACTORY1 T', 'FACTORY2 - FACTORY2 A'],
@@ -525,15 +527,11 @@ class _InvitationFilterPageState extends State<_InvitationFilterPage> {
     required List<String> options,
     String? currentValue,
   }) {
-    return showModalBottomSheet<String>(
+    return showSearchableOptionSheet(
       context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (context) => _ListingSearchableOptionSheet(
-        title: title,
-        options: options,
-        currentValue: currentValue,
-      ),
+      title: title,
+      options: options,
+      currentValue: currentValue,
     );
   }
 
@@ -621,7 +619,7 @@ class _InvitationFilterPageState extends State<_InvitationFilterPage> {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               child: Column(
                 children: [
-                  _FilterSelectRow(
+                  LabeledSelectRow(
                     label: 'Entity',
                     isRequired: true,
                     value: _entity,
@@ -640,7 +638,7 @@ class _InvitationFilterPageState extends State<_InvitationFilterPage> {
                       );
                     },
                   ),
-                  _FilterSelectRow(
+                  LabeledSelectRow(
                     label: 'Site',
                     isRequired: true,
                     value: _site,
@@ -670,7 +668,7 @@ class _InvitationFilterPageState extends State<_InvitationFilterPage> {
                       setState(() => _site = selected);
                     },
                   ),
-                  _FilterSelectRow(
+                  LabeledSelectRow(
                     label: 'Department',
                     isRequired: true,
                     value: _department,
@@ -685,7 +683,7 @@ class _InvitationFilterPageState extends State<_InvitationFilterPage> {
                       setState(() => _department = selected);
                     },
                   ),
-                  _FilterSelectRow(
+                  LabeledSelectRow(
                     label: 'Visitor Type',
                     value: _visitorType,
                     placeholder: 'Please select',
@@ -699,11 +697,11 @@ class _InvitationFilterPageState extends State<_InvitationFilterPage> {
                       setState(() => _visitorType = selected);
                     },
                   ),
-                  _FilterTextInputRow(
+                  LabeledTextInputRow(
                     label: 'Invitation ID',
                     controller: _invitationIdController,
                   ),
-                  _FilterSelectRow(
+                  LabeledSelectRow(
                     label: 'Visit Date From',
                     value: _dateFromController.text.isEmpty
                         ? null
@@ -711,7 +709,7 @@ class _InvitationFilterPageState extends State<_InvitationFilterPage> {
                     placeholder: 'Please select',
                     onTap: () => _pickDate(controller: _dateFromController),
                   ),
-                  _FilterSelectRow(
+                  LabeledSelectRow(
                     label: 'Visit Date To',
                     value: _dateToController.text.isEmpty
                         ? null
@@ -719,7 +717,7 @@ class _InvitationFilterPageState extends State<_InvitationFilterPage> {
                     placeholder: 'Please select',
                     onTap: () => _pickDate(controller: _dateToController),
                   ),
-                  _FilterSelectRow(
+                  LabeledSelectRow(
                     label: 'Status',
                     value: _status,
                     placeholder: 'Please select',
@@ -745,259 +743,6 @@ class _InvitationFilterPageState extends State<_InvitationFilterPage> {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _ListingSearchableOptionSheet extends StatefulWidget {
-  const _ListingSearchableOptionSheet({
-    required this.title,
-    required this.options,
-    this.currentValue,
-  });
-
-  final String title;
-  final List<String> options;
-  final String? currentValue;
-
-  @override
-  State<_ListingSearchableOptionSheet> createState() =>
-      _ListingSearchableOptionSheetState();
-}
-
-class _ListingSearchableOptionSheetState
-    extends State<_ListingSearchableOptionSheet> {
-  late final TextEditingController _searchController;
-  late List<String> _filteredOptions;
-
-  @override
-  void initState() {
-    super.initState();
-    _searchController = TextEditingController();
-    _filteredOptions = List<String>.from(widget.options);
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  void _onSearchChanged(String query) {
-    final q = query.trim().toLowerCase();
-    setState(() {
-      _filteredOptions = q.isEmpty
-          ? List<String>.from(widget.options)
-          : widget.options
-                .where((item) => item.toLowerCase().contains(q))
-                .toList(growable: false);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 8,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 12,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    widget.title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
-                ),
-              ],
-            ),
-            TextField(
-              controller: _searchController,
-              onChanged: _onSearchChanged,
-              autofocus: true,
-              decoration: const InputDecoration(
-                hintText: 'Search...',
-                prefixIcon: Icon(Icons.search),
-              ),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 320,
-              child: _filteredOptions.isEmpty
-                  ? const Center(child: Text('No results'))
-                  : ListView.separated(
-                      itemCount: _filteredOptions.length,
-                      separatorBuilder: (_, _) => const Divider(height: 1),
-                      itemBuilder: (context, index) {
-                        final option = _filteredOptions[index];
-                        final selected = option == widget.currentValue;
-                        return ListTile(
-                          dense: true,
-                          title: Text(option),
-                          trailing: selected
-                              ? Icon(
-                                  Icons.check,
-                                  size: 18,
-                                  color: Theme.of(context).colorScheme.primary,
-                                )
-                              : null,
-                          onTap: () => Navigator.of(context).pop(option),
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _FilterFieldLabel extends StatelessWidget {
-  const _FilterFieldLabel({required this.label, this.isRequired = false});
-
-  final String label;
-  final bool isRequired;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return RichText(
-      text: TextSpan(
-        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-          fontWeight: FontWeight.w600,
-          color: colorScheme.onSurfaceVariant,
-        ),
-        children: [
-          TextSpan(text: label),
-          if (isRequired)
-            TextSpan(
-              text: ' *',
-              style: TextStyle(color: colorScheme.error),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FilterTextInputRow extends StatelessWidget {
-  const _FilterTextInputRow({required this.label, required this.controller});
-
-  final String label;
-  final TextEditingController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _FilterFieldLabel(label: label),
-        const SizedBox(height: 4),
-        TextFormField(
-          controller: controller,
-          decoration: InputDecoration(
-            hintText: 'Please input',
-            border: InputBorder.none,
-            isCollapsed: true,
-            contentPadding: EdgeInsets.zero,
-            hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
-          ),
-        ),
-        const SizedBox(height: 6),
-        const _FilterRowDivider(),
-        const SizedBox(height: 8),
-      ],
-    );
-  }
-}
-
-class _FilterSelectRow extends StatelessWidget {
-  const _FilterSelectRow({
-    required this.label,
-    required this.placeholder,
-    required this.onTap,
-    this.value,
-    this.isRequired = false,
-    this.enabled = true,
-  });
-
-  final String label;
-  final String placeholder;
-  final VoidCallback onTap;
-  final String? value;
-  final bool isRequired;
-  final bool enabled;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final displayText = value ?? placeholder;
-    final displayColor = value == null
-        ? colorScheme.onSurfaceVariant
-        : colorScheme.onSurface;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _FilterFieldLabel(label: label, isRequired: isRequired),
-        const SizedBox(height: 4),
-        InkWell(
-          onTap: enabled ? onTap : null,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 2),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    displayText,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: enabled ? displayColor : colorScheme.outline,
-                    ),
-                  ),
-                ),
-                Icon(
-                  Icons.chevron_right,
-                  size: 18,
-                  color: enabled
-                      ? colorScheme.onSurfaceVariant
-                      : colorScheme.outline,
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 6),
-        const _FilterRowDivider(),
-        const SizedBox(height: 8),
-      ],
-    );
-  }
-}
-
-class _FilterRowDivider extends StatelessWidget {
-  const _FilterRowDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Divider(
-      height: 1,
-      thickness: 0.6,
-      color: colorScheme.outline.withOpacity(0.25),
     );
   }
 }

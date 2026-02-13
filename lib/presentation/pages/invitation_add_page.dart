@@ -8,6 +8,8 @@ import '../state/invitation_add_providers.dart';
 import '../state/site_option.dart';
 import '../state/visitor_type_option.dart';
 import '../widgets/app_filled_button.dart';
+import '../widgets/labeled_form_rows.dart';
+import '../widgets/searchable_option_sheet.dart';
 import '../widgets/app_snackbar.dart';
 import '../widgets/double_back_exit_scope.dart';
 import '../widgets/loading_overlay.dart';
@@ -96,15 +98,11 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
     required List<String> options,
     String? currentValue,
   }) async {
-    return showModalBottomSheet<String>(
+    return showSearchableOptionSheet(
       context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (context) => _SearchableOptionSheet(
-        title: title,
-        options: options,
-        currentValue: currentValue,
-      ),
+      title: title,
+      options: options,
+      currentValue: currentValue,
     );
   }
 
@@ -504,7 +502,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                     onClear: _clearBasicInfo,
                     children: [
                       const _ReadOnlyValueRow(label: 'User', value: 'Ryan'),
-                      _SelectValueRow(
+                      LabeledSelectRow(
                         key: _entityRowKey,
                         label: 'Entity',
                         value: entityDisplayValue,
@@ -559,7 +557,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                               .updatePersonToVisit(null);
                         },
                       ),
-                      _SelectValueRow(
+                      LabeledSelectRow(
                         key: _siteRowKey,
                         label: 'Site',
                         value: siteDisplayValue,
@@ -612,7 +610,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                               .updatePersonToVisit(null);
                         },
                       ),
-                      _SelectValueRow(
+                      LabeledSelectRow(
                         key: _departmentRowKey,
                         label: 'Department',
                         value: departmentDisplayValue,
@@ -669,7 +667,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                               .updatePersonToVisit(null);
                         },
                       ),
-                      _SelectValueRow(
+                      LabeledSelectRow(
                         key: _hostRowKey,
                         label: 'Host',
                         value: hostDisplayValue,
@@ -717,7 +715,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                               .updatePersonToVisit(selectedValue);
                         },
                       ),
-                      _SelectValueRow(
+                      LabeledSelectRow(
                         key: _visitorTypeRowKey,
                         label: 'Visitor Type',
                         value: visitorTypeDisplayValue,
@@ -772,7 +770,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                     title: 'Visitor Info',
                     onClear: _clearVisitorInfo,
                     children: [
-                      _TextInputRow(
+                      LabeledTextInputRow(
                         key: _companyRowKey,
                         label: 'Visitor Name',
                         isRequired: true,
@@ -785,7 +783,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                         validator: (value) =>
                             _requiredText(value, 'Visitor Name'),
                       ),
-                      _TextInputRow(
+                      LabeledTextInputRow(
                         key: _purposeRowKey,
                         label: 'Invitation Purpose',
                         isRequired: true,
@@ -805,7 +803,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                     title: 'Schedule',
                     onClear: _clearScheduleAndContact,
                     children: [
-                      _TextInputRow(
+                      LabeledTextInputRow(
                         key: _emailRowKey,
                         label: 'Email',
                         isRequired: true,
@@ -818,7 +816,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                             .updateEmail,
                         validator: (value) => _requiredText(value, 'Email'),
                       ),
-                      _SelectValueRow(
+                      LabeledSelectRow(
                         key: _dateFromRowKey,
                         label: 'Visit Date From',
                         value: _dateFromController.text.isEmpty
@@ -836,7 +834,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                               .updateDateFrom,
                         ),
                       ),
-                      _SelectValueRow(
+                      LabeledSelectRow(
                         key: _dateToRowKey,
                         label: 'Visit Date To',
                         value: _dateToController.text.isEmpty
@@ -867,120 +865,6 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SearchableOptionSheet extends StatefulWidget {
-  const _SearchableOptionSheet({
-    required this.title,
-    required this.options,
-    this.currentValue,
-  });
-
-  final String title;
-  final List<String> options;
-  final String? currentValue;
-
-  @override
-  State<_SearchableOptionSheet> createState() => _SearchableOptionSheetState();
-}
-
-class _SearchableOptionSheetState extends State<_SearchableOptionSheet> {
-  late final TextEditingController _searchController;
-  late List<String> _filteredOptions;
-
-  @override
-  void initState() {
-    super.initState();
-    _searchController = TextEditingController();
-    _filteredOptions = List<String>.from(widget.options);
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  void _onSearchChanged(String query) {
-    final q = query.trim().toLowerCase();
-    setState(() {
-      _filteredOptions = q.isEmpty
-          ? List<String>.from(widget.options)
-          : widget.options
-                .where((item) => item.toLowerCase().contains(q))
-                .toList(growable: false);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 8,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 12,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    widget.title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
-                ),
-              ],
-            ),
-            TextField(
-              controller: _searchController,
-              onChanged: _onSearchChanged,
-              autofocus: true,
-              decoration: const InputDecoration(
-                hintText: 'Search...',
-                prefixIcon: Icon(Icons.search),
-              ),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 320,
-              child: _filteredOptions.isEmpty
-                  ? const Center(child: Text('No results'))
-                  : ListView.separated(
-                      itemCount: _filteredOptions.length,
-                      separatorBuilder: (_, _) => const _RowDivider(),
-                      itemBuilder: (context, index) {
-                        final option = _filteredOptions[index];
-                        final selected = option == widget.currentValue;
-                        return ListTile(
-                          dense: true,
-                          title: Text(option),
-                          trailing: selected
-                              ? Icon(
-                                  Icons.check,
-                                  size: 18,
-                                  color: Theme.of(context).colorScheme.primary,
-                                )
-                              : null,
-                          onTap: () => Navigator.of(context).pop(option),
-                        );
-                      },
-                    ),
-            ),
-          ],
         ),
       ),
     );
@@ -1024,7 +908,7 @@ class _FormSectionCard extends StatelessWidget {
                 ),
               ],
             ),
-            const _RowDivider(),
+            const FormRowDivider(),
             const SizedBox(height: 4),
             ...children,
           ],
@@ -1048,7 +932,7 @@ class _ReadOnlyValueRow extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _FieldLabel(label: label, isRequired: false),
+        LabeledFieldLabel(label: label, isRequired: false),
         const SizedBox(height: 4),
         Text(
           value,
@@ -1057,190 +941,9 @@ class _ReadOnlyValueRow extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        const _RowDivider(),
+        const FormRowDivider(),
         const SizedBox(height: 8),
       ],
     );
-  }
-}
-
-class _TextInputRow extends StatelessWidget {
-  const _TextInputRow({
-    super.key,
-    required this.label,
-    required this.isRequired,
-    required this.controller,
-    required this.hintText,
-    required this.onChanged,
-    this.focusNode,
-    this.keyboardType,
-    this.validator,
-  });
-
-  final String label;
-  final bool isRequired;
-  final TextEditingController controller;
-  final String hintText;
-  final ValueChanged<String> onChanged;
-  final FocusNode? focusNode;
-  final TextInputType? keyboardType;
-  final String? Function(String?)? validator;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _FieldLabel(label: label, isRequired: isRequired),
-        const SizedBox(height: 4),
-        TextFormField(
-          controller: controller,
-          focusNode: focusNode,
-          keyboardType: keyboardType,
-          onChanged: onChanged,
-          validator: validator,
-          decoration: InputDecoration(
-            hintText: hintText,
-            border: InputBorder.none,
-            isCollapsed: true,
-            contentPadding: EdgeInsets.zero,
-            hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
-          ),
-        ),
-        const SizedBox(height: 6),
-        const _RowDivider(),
-        const SizedBox(height: 8),
-      ],
-    );
-  }
-}
-
-class _SelectValueRow extends StatelessWidget {
-  const _SelectValueRow({
-    super.key,
-    required this.label,
-    required this.placeholder,
-    required this.isRequired,
-    required this.onTap,
-    this.value,
-    this.enabled = true,
-    this.hasError = false,
-    this.helperText,
-  });
-
-  final String label;
-  final String placeholder;
-  final bool isRequired;
-  final String? value;
-  final bool enabled;
-  final bool hasError;
-  final String? helperText;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
-    final displayText = value ?? placeholder;
-    final displayColor = value == null
-        ? colorScheme.onSurfaceVariant
-        : colorScheme.onSurface;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _FieldLabel(label: label, isRequired: isRequired),
-        const SizedBox(height: 4),
-        InkWell(
-          onTap: enabled ? onTap : null,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 2),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    displayText,
-                    overflow: TextOverflow.ellipsis,
-                    style: textTheme.titleMedium?.copyWith(
-                      color: enabled
-                          ? displayColor
-                          : colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Icon(
-                  Icons.chevron_right,
-                  size: 18,
-                  color: enabled
-                      ? colorScheme.onSurfaceVariant
-                      : colorScheme.outline,
-                ),
-              ],
-            ),
-          ),
-        ),
-        if (helperText != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Text(
-              helperText!,
-              style: textTheme.bodySmall?.copyWith(color: colorScheme.error),
-            ),
-          )
-        else if (hasError)
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Text(
-              '$label is required.',
-              style: textTheme.bodySmall?.copyWith(color: colorScheme.error),
-            ),
-          ),
-        const SizedBox(height: 6),
-        const _RowDivider(),
-        const SizedBox(height: 8),
-      ],
-    );
-  }
-}
-
-class _FieldLabel extends StatelessWidget {
-  const _FieldLabel({required this.label, required this.isRequired});
-
-  final String label;
-  final bool isRequired;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
-    return RichText(
-      text: TextSpan(
-        style: textTheme.titleSmall?.copyWith(
-          fontWeight: FontWeight.w600,
-          color: colorScheme.onSurfaceVariant,
-        ),
-        children: [
-          TextSpan(text: label),
-          if (isRequired)
-            TextSpan(
-              text: ' *',
-              style: TextStyle(color: colorScheme.error),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RowDivider extends StatelessWidget {
-  const _RowDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Divider(height: 1, thickness: 1, color: colorScheme.surface);
   }
 }
