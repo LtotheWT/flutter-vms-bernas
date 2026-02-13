@@ -70,7 +70,7 @@ final departmentOptionsProvider = FutureProvider.autoDispose
             ),
           )
           .toList(growable: false);
-    });
+    }, retry: (_, __) => null);
 
 Future<List<String>> _fetchSitesForEntity(String? entity) async {
   if (entity == null) return const [];
