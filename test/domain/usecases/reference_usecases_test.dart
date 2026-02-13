@@ -2,14 +2,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vms_bernas/domain/entities/ref_department_entity.dart';
 import 'package:vms_bernas/domain/entities/ref_entity_entity.dart';
 import 'package:vms_bernas/domain/entities/ref_location_entity.dart';
+import 'package:vms_bernas/domain/entities/ref_personel_entity.dart';
 import 'package:vms_bernas/domain/repositories/reference_repository.dart';
 import 'package:vms_bernas/domain/usecases/get_departments_usecase.dart';
 import 'package:vms_bernas/domain/usecases/get_entities_usecase.dart';
 import 'package:vms_bernas/domain/usecases/get_locations_usecase.dart';
+import 'package:vms_bernas/domain/usecases/get_personels_usecase.dart';
 
 class _FakeReferenceRepository implements ReferenceRepository {
   String? capturedEntity;
   String? capturedLocationEntity;
+  String? capturedPersonelEntity;
+  String? capturedPersonelSite;
+  String? capturedPersonelDepartment;
 
   @override
   Future<List<RefEntityEntity>> getEntities() async {
@@ -33,6 +38,25 @@ class _FakeReferenceRepository implements ReferenceRepository {
       RefLocationEntity(
         site: 'FACTORY1',
         siteDescription: 'FACTORY1 - FACTORY1 T',
+      ),
+    ];
+  }
+
+  @override
+  Future<List<RefPersonelEntity>> getPersonels({
+    required String entity,
+    required String site,
+    required String department,
+  }) async {
+    capturedPersonelEntity = entity;
+    capturedPersonelSite = site;
+    capturedPersonelDepartment = department;
+    return const [
+      RefPersonelEntity(
+        employeeId: 'EMP0001',
+        employeeName: 'Suraya',
+        department: 'ADC',
+        entity: 'AGYTEK',
       ),
     ];
   }
@@ -72,5 +96,22 @@ void main() {
     expect(repository.capturedLocationEntity, 'AGYTEK');
     expect(result, hasLength(1));
     expect(result.first.site, 'FACTORY1');
+  });
+
+  test('GetPersonelsUseCase forwards filters and returns hosts', () async {
+    final repository = _FakeReferenceRepository();
+    final useCase = GetPersonelsUseCase(repository);
+
+    final result = await useCase(
+      entity: 'AGYTEK',
+      site: 'FACTORY1',
+      department: 'ADC',
+    );
+
+    expect(repository.capturedPersonelEntity, 'AGYTEK');
+    expect(repository.capturedPersonelSite, 'FACTORY1');
+    expect(repository.capturedPersonelDepartment, 'ADC');
+    expect(result, hasLength(1));
+    expect(result.first.employeeId, 'EMP0001');
   });
 }

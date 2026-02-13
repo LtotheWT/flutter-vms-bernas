@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../state/department_option.dart';
 import '../state/entity_option.dart';
+import '../state/host_option.dart';
 import '../state/invitation_add_providers.dart';
 import '../state/site_option.dart';
 import '../widgets/app_filled_button.dart';
@@ -124,6 +125,18 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
     return option.value.trim().isEmpty ? '(Blank)' : option.value;
   }
 
+  String _hostOptionLabel(HostOption option) {
+    final employeeId = option.value.trim();
+    final employeeName = option.label.trim();
+    if (employeeName.isNotEmpty && employeeId.isNotEmpty) {
+      return '$employeeName ($employeeId)';
+    }
+    if (employeeName.isNotEmpty) {
+      return employeeName;
+    }
+    return employeeId.isEmpty ? '(Blank)' : employeeId;
+  }
+
   String? _selectedEntityLabel({
     required List<EntityOption> options,
     required String? selectedCode,
@@ -158,6 +171,19 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
     for (final option in options) {
       if (option.value == selectedCode) {
         return _siteOptionLabel(option);
+      }
+    }
+    return selectedCode;
+  }
+
+  String? _selectedHostLabel({
+    required List<HostOption> options,
+    required String? selectedCode,
+  }) {
+    if (selectedCode == null) return null;
+    for (final option in options) {
+      if (option.value == selectedCode) {
+        return _hostOptionLabel(option);
       }
     }
     return selectedCode;
@@ -353,6 +379,26 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
         fallback: 'Failed to load sites. Tap to retry.',
       ),
     );
+    final hostLookupParams = HostLookupParams(
+      entity: formState.entity,
+      site: formState.site,
+      department: formState.department,
+    );
+    final hostOptionsAsync = ref.watch(hostOptionsProvider(hostLookupParams));
+    final hostOptions = hostOptionsAsync.maybeWhen(
+      data: (data) => data,
+      orElse: () => const <HostOption>[],
+    );
+    final hostDisplayValue = _selectedHostLabel(
+      options: hostOptions,
+      selectedCode: formState.personToVisit,
+    );
+    final hostLoadError = hostOptionsAsync.whenOrNull(
+      error: (error, _) => _toDisplayError(
+        error,
+        fallback: 'Failed to load hosts. Tap to retry.',
+      ),
+    );
     final canRetrySite = formState.entity != null && siteOptionsAsync.hasError;
     final canPickSite =
         formState.entity != null &&
@@ -368,6 +414,17 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
         !departmentOptionsAsync.hasError;
     final enableDepartmentField =
         formState.entity != null && !departmentOptionsAsync.isLoading;
+    final isHostDependencyReady =
+        formState.entity != null &&
+        formState.site != null &&
+        formState.department != null;
+    final canRetryHost = isHostDependencyReady && hostOptionsAsync.hasError;
+    final canPickHost =
+        isHostDependencyReady &&
+        !hostOptionsAsync.isLoading &&
+        !hostOptionsAsync.hasError;
+    final enableHostField =
+        isHostDependencyReady && !hostOptionsAsync.isLoading;
 
     return DoubleBackExitScope(
       hasUnsavedChanges: _hasUnsavedChanges(formState),
@@ -452,6 +509,9 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                           ref
                               .read(invitationAddControllerProvider.notifier)
                               .updateDepartment(null);
+                          ref
+                              .read(invitationAddControllerProvider.notifier)
+                              .updatePersonToVisit(null);
                         },
                       ),
                       _SelectValueRow(
@@ -502,6 +562,9 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                           ref
                               .read(invitationAddControllerProvider.notifier)
                               .updateSite(selectedValue);
+                          ref
+                              .read(invitationAddControllerProvider.notifier)
+                              .updatePersonToVisit(null);
                         },
                       ),
                       _SelectValueRow(
@@ -556,28 +619,57 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                           ref
                               .read(invitationAddControllerProvider.notifier)
                               .updateDepartment(selectedValue);
+                          ref
+                              .read(invitationAddControllerProvider.notifier)
+                              .updatePersonToVisit(null);
                         },
                       ),
                       _SelectValueRow(
                         key: _hostRowKey,
                         label: 'Host',
-                        value: formState.personToVisit,
-                        placeholder: 'Please select',
+                        value: hostDisplayValue,
+                        placeholder: hostOptionsAsync.isLoading
+                            ? 'Loading...'
+                            : !isHostDependencyReady
+                            ? 'Select entity, site and department first'
+                            : 'Please select',
+                        helperText: hostLoadError,
                         isRequired: true,
+                        enabled: enableHostField,
                         hasError:
                             _submitAttempt > 0 &&
-                            formState.personToVisit == null,
+                            canPickHost &&
+                            formState.personToVisit == null &&
+                            hostLoadError == null,
                         onTap: () async {
-                          final options = List.generate(20, (i) => 'Ryan $i');
+                          if (canRetryHost) {
+                            ref.invalidate(
+                              hostOptionsProvider(hostLookupParams),
+                            );
+                            return;
+                          }
+                          if (!canPickHost || hostOptions.isEmpty) return;
                           final selected = await _pickOption(
                             title: 'Host',
-                            options: options,
-                            currentValue: formState.personToVisit,
+                            options: hostOptions
+                                .map(_hostOptionLabel)
+                                .toList(growable: false),
+                            currentValue: hostDisplayValue,
                           );
                           if (!mounted || selected == null) return;
+
+                          final pickedOption = hostOptions.firstWhere(
+                            (option) => _hostOptionLabel(option) == selected,
+                            orElse: () =>
+                                const HostOption(value: '', label: ''),
+                          );
+                          final selectedValue =
+                              pickedOption.value.trim().isEmpty
+                              ? null
+                              : pickedOption.value;
                           ref
                               .read(invitationAddControllerProvider.notifier)
-                              .updatePersonToVisit(selected);
+                              .updatePersonToVisit(selectedValue);
                         },
                       ),
                       _SelectValueRow(

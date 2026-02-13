@@ -1,6 +1,7 @@
 import '../../domain/entities/ref_department_entity.dart';
 import '../../domain/entities/ref_entity_entity.dart';
 import '../../domain/entities/ref_location_entity.dart';
+import '../../domain/entities/ref_personel_entity.dart';
 import '../../domain/repositories/reference_repository.dart';
 import '../datasources/auth_local_data_source.dart';
 import '../datasources/reference_remote_data_source.dart';
@@ -42,6 +43,24 @@ class ReferenceRepositoryImpl implements ReferenceRepository {
     final items = await _remoteDataSource.getLocations(
       accessToken: accessToken,
       entity: entity,
+    );
+    return items.map((item) => item.toEntity()).toList(growable: false);
+  }
+
+  @override
+  Future<List<RefPersonelEntity>> getPersonels({
+    required String entity,
+    required String site,
+    required String department,
+  }) async {
+    final accessToken = await _getAccessTokenOrThrow(
+      missingMessage: 'Please login again to load hosts.',
+    );
+    final items = await _remoteDataSource.getPersonels(
+      accessToken: accessToken,
+      entity: entity,
+      site: site,
+      department: department,
     );
     return items.map((item) => item.toEntity()).toList(growable: false);
   }

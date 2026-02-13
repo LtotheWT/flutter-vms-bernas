@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:equatable/equatable.dart';
 
 import '../../data/datasources/reference_remote_data_source.dart';
 import '../../data/repositories/reference_repository_impl.dart';
@@ -7,9 +8,11 @@ import '../../domain/repositories/reference_repository.dart';
 import '../../domain/usecases/get_departments_usecase.dart';
 import '../../domain/usecases/get_entities_usecase.dart';
 import '../../domain/usecases/get_locations_usecase.dart';
+import '../../domain/usecases/get_personels_usecase.dart';
 import 'auth_session_providers.dart';
 import 'department_option.dart';
 import 'entity_option.dart';
+import 'host_option.dart';
 import 'site_option.dart';
 
 const Object _unset = Object();
@@ -40,6 +43,11 @@ final getDepartmentsUseCaseProvider = Provider<GetDepartmentsUseCase>((ref) {
 final getLocationsUseCaseProvider = Provider<GetLocationsUseCase>((ref) {
   final repository = ref.read(referenceRepositoryProvider);
   return GetLocationsUseCase(repository);
+});
+
+final getPersonelsUseCaseProvider = Provider<GetPersonelsUseCase>((ref) {
+  final repository = ref.read(referenceRepositoryProvider);
+  return GetPersonelsUseCase(repository);
 });
 
 final entityOptionsProvider = FutureProvider.autoDispose<List<EntityOption>>((
@@ -88,6 +96,48 @@ final siteOptionsProvider = FutureProvider.autoDispose
             (location) => SiteOption(
               value: location.site,
               label: location.siteDescription,
+            ),
+          )
+          .toList(growable: false);
+    }, retry: (_, __) => null);
+
+@immutable
+class HostLookupParams extends Equatable {
+  const HostLookupParams({
+    required this.entity,
+    required this.site,
+    required this.department,
+  });
+
+  final String? entity;
+  final String? site;
+  final String? department;
+
+  @override
+  List<Object?> get props => [entity, site, department];
+}
+
+final hostOptionsProvider = FutureProvider.autoDispose
+    .family<List<HostOption>, HostLookupParams>((ref, params) async {
+      final entityCode = params.entity?.trim() ?? '';
+      final siteCode = params.site?.trim() ?? '';
+      final departmentCode = params.department?.trim() ?? '';
+      if (entityCode.isEmpty || siteCode.isEmpty || departmentCode.isEmpty) {
+        return const <HostOption>[];
+      }
+
+      final useCase = ref.read(getPersonelsUseCaseProvider);
+      final personels = await useCase(
+        entity: entityCode,
+        site: siteCode,
+        department: departmentCode,
+      );
+
+      return personels
+          .map(
+            (personel) => HostOption(
+              value: personel.employeeId,
+              label: personel.employeeName,
             ),
           )
           .toList(growable: false);

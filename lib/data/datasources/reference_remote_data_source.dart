@@ -4,6 +4,7 @@ import 'network/remote_parsers.dart';
 import '../models/ref_department_dto.dart';
 import '../models/ref_entity_dto.dart';
 import '../models/ref_location_dto.dart';
+import '../models/ref_personel_dto.dart';
 
 class ReferenceRemoteDataSource {
   ReferenceRemoteDataSource(this._dio);
@@ -104,6 +105,41 @@ class ReferenceRemoteDataSource {
       throw ReferenceException('Failed to load locations. Please try again.');
     } on FormatException {
       throw ReferenceException('Failed to load locations. Please try again.');
+    }
+  }
+
+  Future<List<RefPersonelDto>> getPersonels({
+    required String accessToken,
+    required String entity,
+    required String site,
+    required String department,
+  }) async {
+    try {
+      final response = await _dio.get<dynamic>(
+        '/wmsws/Ref/personel',
+        queryParameters: {'entity': entity, 'site': site, 'dept': department},
+        options: Options(
+          headers: {'Authorization': 'Bearer $accessToken', 'accept': '*/*'},
+        ),
+      );
+
+      final list = parseJsonList(response.data);
+      return list
+          .map((item) => RefPersonelDto.fromJson(parseJsonMap(item)))
+          .toList(growable: false);
+    } on DioException catch (error) {
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 401 || statusCode == 403) {
+        throw ReferenceException('Please login again to load hosts.');
+      }
+
+      if (isConnectivityIssue(error)) {
+        throw ReferenceException('Unable to load hosts. Please try again.');
+      }
+
+      throw ReferenceException('Failed to load hosts. Please try again.');
+    } on FormatException {
+      throw ReferenceException('Failed to load hosts. Please try again.');
     }
   }
 }
