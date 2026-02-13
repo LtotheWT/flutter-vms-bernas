@@ -3,11 +3,13 @@ import 'package:vms_bernas/domain/entities/ref_department_entity.dart';
 import 'package:vms_bernas/domain/entities/ref_entity_entity.dart';
 import 'package:vms_bernas/domain/entities/ref_location_entity.dart';
 import 'package:vms_bernas/domain/entities/ref_personel_entity.dart';
+import 'package:vms_bernas/domain/entities/ref_visitor_type_entity.dart';
 import 'package:vms_bernas/domain/repositories/reference_repository.dart';
 import 'package:vms_bernas/domain/usecases/get_departments_usecase.dart';
 import 'package:vms_bernas/domain/usecases/get_entities_usecase.dart';
 import 'package:vms_bernas/domain/usecases/get_locations_usecase.dart';
 import 'package:vms_bernas/domain/usecases/get_personels_usecase.dart';
+import 'package:vms_bernas/domain/usecases/get_visitor_types_usecase.dart';
 
 class _FakeReferenceRepository implements ReferenceRepository {
   String? capturedEntity;
@@ -57,6 +59,16 @@ class _FakeReferenceRepository implements ReferenceRepository {
         employeeName: 'Suraya',
         department: 'ADC',
         entity: 'AGYTEK',
+      ),
+    ];
+  }
+
+  @override
+  Future<List<RefVisitorTypeEntity>> getVisitorTypes() async {
+    return const [
+      RefVisitorTypeEntity(
+        visitorType: '1_Visitor',
+        typeDescription: 'Visitor/Vendor/Forwarder',
       ),
     ];
   }
@@ -113,5 +125,15 @@ void main() {
     expect(repository.capturedPersonelDepartment, 'ADC');
     expect(result, hasLength(1));
     expect(result.first.employeeId, 'EMP0001');
+  });
+
+  test('GetVisitorTypesUseCase returns visitor types', () async {
+    final repository = _FakeReferenceRepository();
+    final useCase = GetVisitorTypesUseCase(repository);
+
+    final result = await useCase();
+
+    expect(result, hasLength(1));
+    expect(result.first.visitorType, '1_Visitor');
   });
 }

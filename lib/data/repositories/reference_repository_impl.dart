@@ -2,6 +2,7 @@ import '../../domain/entities/ref_department_entity.dart';
 import '../../domain/entities/ref_entity_entity.dart';
 import '../../domain/entities/ref_location_entity.dart';
 import '../../domain/entities/ref_personel_entity.dart';
+import '../../domain/entities/ref_visitor_type_entity.dart';
 import '../../domain/repositories/reference_repository.dart';
 import '../datasources/auth_local_data_source.dart';
 import '../datasources/reference_remote_data_source.dart';
@@ -61,6 +62,17 @@ class ReferenceRepositoryImpl implements ReferenceRepository {
       entity: entity,
       site: site,
       department: department,
+    );
+    return items.map((item) => item.toEntity()).toList(growable: false);
+  }
+
+  @override
+  Future<List<RefVisitorTypeEntity>> getVisitorTypes() async {
+    final accessToken = await _getAccessTokenOrThrow(
+      missingMessage: 'Please login again to load visitor types.',
+    );
+    final items = await _remoteDataSource.getVisitorTypes(
+      accessToken: accessToken,
     );
     return items.map((item) => item.toEntity()).toList(growable: false);
   }

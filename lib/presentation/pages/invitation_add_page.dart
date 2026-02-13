@@ -6,6 +6,7 @@ import '../state/entity_option.dart';
 import '../state/host_option.dart';
 import '../state/invitation_add_providers.dart';
 import '../state/site_option.dart';
+import '../state/visitor_type_option.dart';
 import '../widgets/app_filled_button.dart';
 import '../widgets/app_snackbar.dart';
 import '../widgets/double_back_exit_scope.dart';
@@ -137,6 +138,15 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
     return employeeId.isEmpty ? '(Blank)' : employeeId;
   }
 
+  String _visitorTypeOptionLabel(VisitorTypeOption option) {
+    final typeDesc = option.label.trim();
+    if (typeDesc.isNotEmpty) {
+      return typeDesc;
+    }
+    final visitorType = option.value.trim();
+    return visitorType.isEmpty ? '(Blank)' : visitorType;
+  }
+
   String? _selectedEntityLabel({
     required List<EntityOption> options,
     required String? selectedCode,
@@ -184,6 +194,19 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
     for (final option in options) {
       if (option.value == selectedCode) {
         return _hostOptionLabel(option);
+      }
+    }
+    return selectedCode;
+  }
+
+  String? _selectedVisitorTypeLabel({
+    required List<VisitorTypeOption> options,
+    required String? selectedCode,
+  }) {
+    if (selectedCode == null) return null;
+    for (final option in options) {
+      if (option.value == selectedCode) {
+        return _visitorTypeOptionLabel(option);
       }
     }
     return selectedCode;
@@ -399,6 +422,21 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
         fallback: 'Failed to load hosts. Tap to retry.',
       ),
     );
+    final visitorTypeOptionsAsync = ref.watch(visitorTypeOptionsProvider);
+    final visitorTypeOptions = visitorTypeOptionsAsync.maybeWhen(
+      data: (data) => data,
+      orElse: () => const <VisitorTypeOption>[],
+    );
+    final visitorTypeDisplayValue = _selectedVisitorTypeLabel(
+      options: visitorTypeOptions,
+      selectedCode: formState.visitorType,
+    );
+    final visitorTypeLoadError = visitorTypeOptionsAsync.whenOrNull(
+      error: (error, _) => _toDisplayError(
+        error,
+        fallback: 'Failed to load visitor types. Tap to retry.',
+      ),
+    );
     final canRetrySite = formState.entity != null && siteOptionsAsync.hasError;
     final canPickSite =
         formState.entity != null &&
@@ -425,6 +463,8 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
         !hostOptionsAsync.hasError;
     final enableHostField =
         isHostDependencyReady && !hostOptionsAsync.isLoading;
+    final canPickVisitorType =
+        !visitorTypeOptionsAsync.isLoading && !visitorTypeOptionsAsync.hasError;
 
     return DoubleBackExitScope(
       hasUnsavedChanges: _hasUnsavedChanges(formState),
@@ -675,25 +715,49 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                       _SelectValueRow(
                         key: _visitorTypeRowKey,
                         label: 'Visitor Type',
-                        value: formState.visitorType,
-                        placeholder: 'Please select',
+                        value: visitorTypeDisplayValue,
+                        placeholder: visitorTypeOptionsAsync.isLoading
+                            ? 'Loading...'
+                            : 'Please select',
+                        helperText: visitorTypeLoadError,
                         isRequired: true,
+                        enabled: !visitorTypeOptionsAsync.isLoading,
                         hasError:
-                            _submitAttempt > 0 && formState.visitorType == null,
+                            _submitAttempt > 0 &&
+                            canPickVisitorType &&
+                            formState.visitorType == null &&
+                            visitorTypeLoadError == null,
                         onTap: () async {
-                          final options = List.generate(
-                            20,
-                            (i) => 'Visitor $i',
-                          );
+                          if (visitorTypeOptionsAsync.hasError) {
+                            ref.invalidate(visitorTypeOptionsProvider);
+                            return;
+                          }
+                          if (!canPickVisitorType ||
+                              visitorTypeOptions.isEmpty) {
+                            return;
+                          }
                           final selected = await _pickOption(
                             title: 'Visitor Type',
-                            options: options,
-                            currentValue: formState.visitorType,
+                            options: visitorTypeOptions
+                                .map(_visitorTypeOptionLabel)
+                                .toList(growable: false),
+                            currentValue: visitorTypeDisplayValue,
                           );
                           if (!mounted || selected == null) return;
+
+                          final pickedOption = visitorTypeOptions.firstWhere(
+                            (option) =>
+                                _visitorTypeOptionLabel(option) == selected,
+                            orElse: () =>
+                                const VisitorTypeOption(value: '', label: ''),
+                          );
+                          final selectedValue =
+                              pickedOption.value.trim().isEmpty
+                              ? null
+                              : pickedOption.value;
                           ref
                               .read(invitationAddControllerProvider.notifier)
-                              .updateVisitorType(selected);
+                              .updateVisitorType(selectedValue);
                         },
                       ),
                     ],

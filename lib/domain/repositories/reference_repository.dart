@@ -2,6 +2,7 @@ import '../entities/ref_entity_entity.dart';
 import '../entities/ref_department_entity.dart';
 import '../entities/ref_location_entity.dart';
 import '../entities/ref_personel_entity.dart';
+import '../entities/ref_visitor_type_entity.dart';
 
 abstract class ReferenceRepository {
   Future<List<RefEntityEntity>> getEntities();
@@ -15,4 +16,6 @@ abstract class ReferenceRepository {
     required String site,
     required String department,
   });
+
+  Future<List<RefVisitorTypeEntity>> getVisitorTypes();
 }

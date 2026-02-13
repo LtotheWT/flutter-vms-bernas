@@ -5,6 +5,7 @@ import '../models/ref_department_dto.dart';
 import '../models/ref_entity_dto.dart';
 import '../models/ref_location_dto.dart';
 import '../models/ref_personel_dto.dart';
+import '../models/ref_visitor_type_dto.dart';
 
 class ReferenceRemoteDataSource {
   ReferenceRemoteDataSource(this._dio);
@@ -140,6 +141,43 @@ class ReferenceRemoteDataSource {
       throw ReferenceException('Failed to load hosts. Please try again.');
     } on FormatException {
       throw ReferenceException('Failed to load hosts. Please try again.');
+    }
+  }
+
+  Future<List<RefVisitorTypeDto>> getVisitorTypes({
+    required String accessToken,
+  }) async {
+    try {
+      final response = await _dio.get<dynamic>(
+        '/wmsws/Ref/visitor-type',
+        options: Options(
+          headers: {'Authorization': 'Bearer $accessToken', 'accept': '*/*'},
+        ),
+      );
+
+      final list = parseJsonList(response.data);
+      return list
+          .map((item) => RefVisitorTypeDto.fromJson(parseJsonMap(item)))
+          .toList(growable: false);
+    } on DioException catch (error) {
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 401 || statusCode == 403) {
+        throw ReferenceException('Please login again to load visitor types.');
+      }
+
+      if (isConnectivityIssue(error)) {
+        throw ReferenceException(
+          'Unable to load visitor types. Please try again.',
+        );
+      }
+
+      throw ReferenceException(
+        'Failed to load visitor types. Please try again.',
+      );
+    } on FormatException {
+      throw ReferenceException(
+        'Failed to load visitor types. Please try again.',
+      );
     }
   }
 }

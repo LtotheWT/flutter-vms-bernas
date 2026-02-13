@@ -9,11 +9,13 @@ import '../../domain/usecases/get_departments_usecase.dart';
 import '../../domain/usecases/get_entities_usecase.dart';
 import '../../domain/usecases/get_locations_usecase.dart';
 import '../../domain/usecases/get_personels_usecase.dart';
+import '../../domain/usecases/get_visitor_types_usecase.dart';
 import 'auth_session_providers.dart';
 import 'department_option.dart';
 import 'entity_option.dart';
 import 'host_option.dart';
 import 'site_option.dart';
+import 'visitor_type_option.dart';
 
 const Object _unset = Object();
 
@@ -48,6 +50,11 @@ final getLocationsUseCaseProvider = Provider<GetLocationsUseCase>((ref) {
 final getPersonelsUseCaseProvider = Provider<GetPersonelsUseCase>((ref) {
   final repository = ref.read(referenceRepositoryProvider);
   return GetPersonelsUseCase(repository);
+});
+
+final getVisitorTypesUseCaseProvider = Provider<GetVisitorTypesUseCase>((ref) {
+  final repository = ref.read(referenceRepositoryProvider);
+  return GetVisitorTypesUseCase(repository);
 });
 
 final entityOptionsProvider = FutureProvider.autoDispose<List<EntityOption>>((
@@ -138,6 +145,21 @@ final hostOptionsProvider = FutureProvider.autoDispose
             (personel) => HostOption(
               value: personel.employeeId,
               label: personel.employeeName,
+            ),
+          )
+          .toList(growable: false);
+    }, retry: (_, __) => null);
+
+final visitorTypeOptionsProvider =
+    FutureProvider.autoDispose<List<VisitorTypeOption>>((ref) async {
+      final useCase = ref.read(getVisitorTypesUseCaseProvider);
+      final visitorTypes = await useCase();
+
+      return visitorTypes
+          .map(
+            (visitorType) => VisitorTypeOption(
+              value: visitorType.visitorType,
+              label: visitorType.typeDescription,
             ),
           )
           .toList(growable: false);
