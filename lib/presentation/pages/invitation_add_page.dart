@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../state/department_option.dart';
 import '../state/entity_option.dart';
 import '../state/host_option.dart';
+import '../state/async_option_helpers.dart';
 import '../state/invitation_add_providers.dart';
+import '../state/option_label_formatters.dart';
 import '../state/reference_providers.dart';
 import '../state/site_option.dart';
 import '../state/visitor_type_option.dart';
@@ -109,109 +111,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
 
   String _two(int value) => value.toString().padLeft(2, '0');
 
-  String _entityOptionLabel(EntityOption option) {
-    return option.label.trim().isEmpty ? '(Blank)' : option.label;
-  }
-
-  String _departmentOptionLabel(DepartmentOption option) {
-    return option.label.trim().isEmpty ? '(Blank)' : option.label;
-  }
-
-  String _siteOptionLabel(SiteOption option) {
-    final label = option.label.trim();
-    if (label.isNotEmpty) {
-      return label;
-    }
-    return option.value.trim().isEmpty ? '(Blank)' : option.value;
-  }
-
-  String _hostOptionLabel(HostOption option) {
-    final employeeId = option.value.trim();
-    final employeeName = option.label.trim();
-    if (employeeName.isNotEmpty && employeeId.isNotEmpty) {
-      return '$employeeName ($employeeId)';
-    }
-    if (employeeName.isNotEmpty) {
-      return employeeName;
-    }
-    return employeeId.isEmpty ? '(Blank)' : employeeId;
-  }
-
-  String _visitorTypeOptionLabel(VisitorTypeOption option) {
-    final typeDesc = option.label.trim();
-    if (typeDesc.isNotEmpty) {
-      return typeDesc;
-    }
-    final visitorType = option.value.trim();
-    return visitorType.isEmpty ? '(Blank)' : visitorType;
-  }
-
-  String? _selectedEntityLabel({
-    required List<EntityOption> options,
-    required String? selectedCode,
-  }) {
-    if (selectedCode == null) return null;
-    for (final option in options) {
-      if (option.value == selectedCode) {
-        return _entityOptionLabel(option);
-      }
-    }
-    return selectedCode;
-  }
-
-  String? _selectedDepartmentLabel({
-    required List<DepartmentOption> options,
-    required String? selectedCode,
-  }) {
-    if (selectedCode == null) return null;
-    for (final option in options) {
-      if (option.value == selectedCode) {
-        return _departmentOptionLabel(option);
-      }
-    }
-    return selectedCode;
-  }
-
-  String? _selectedSiteLabel({
-    required List<SiteOption> options,
-    required String? selectedCode,
-  }) {
-    if (selectedCode == null) return null;
-    for (final option in options) {
-      if (option.value == selectedCode) {
-        return _siteOptionLabel(option);
-      }
-    }
-    return selectedCode;
-  }
-
-  String? _selectedHostLabel({
-    required List<HostOption> options,
-    required String? selectedCode,
-  }) {
-    if (selectedCode == null) return null;
-    for (final option in options) {
-      if (option.value == selectedCode) {
-        return _hostOptionLabel(option);
-      }
-    }
-    return selectedCode;
-  }
-
-  String? _selectedVisitorTypeLabel({
-    required List<VisitorTypeOption> options,
-    required String? selectedCode,
-  }) {
-    if (selectedCode == null) return null;
-    for (final option in options) {
-      if (option.value == selectedCode) {
-        return _visitorTypeOptionLabel(option);
-      }
-    }
-    return selectedCode;
-  }
-
-  String _toDisplayError(Object error, {required String fallback}) {
+  String _toDisplayError(Object error, String fallback) {
     final text = error.toString().trim();
     if (text.startsWith('Exception:')) {
       return text.replaceFirst('Exception:', '').trim();
@@ -360,51 +260,47 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
     final colorScheme = Theme.of(context).colorScheme;
     final formState = ref.watch(invitationAddControllerProvider);
     final entityOptionsAsync = ref.watch(entityOptionsProvider);
-    final entityOptions = entityOptionsAsync.maybeWhen(
-      data: (data) => data,
-      orElse: () => const <EntityOption>[],
-    );
-    final entityDisplayValue = _selectedEntityLabel(
+    final entityOptions = extractOptions<EntityOption>(entityOptionsAsync);
+    final entityDisplayValue = findDisplayLabel<EntityOption>(
       options: entityOptions,
       selectedCode: formState.entity,
+      valueOf: (option) => option.value,
+      labelOf: (option) => labelOrBlank(option.label),
     );
-    final entityLoadError = entityOptionsAsync.whenOrNull(
-      error: (error, _) => _toDisplayError(
-        error,
-        fallback: 'Failed to load entities. Tap to retry.',
-      ),
+    final entityLoadError = extractErrorText(
+      entityOptionsAsync,
+      fallback: 'Failed to load entities. Tap to retry.',
+      errorToText: _toDisplayError,
     );
     final departmentOptionsAsync = ref.watch(
       departmentOptionsProvider(formState.entity),
     );
-    final departmentOptions = departmentOptionsAsync.maybeWhen(
-      data: (data) => data,
-      orElse: () => const <DepartmentOption>[],
+    final departmentOptions = extractOptions<DepartmentOption>(
+      departmentOptionsAsync,
     );
-    final departmentDisplayValue = _selectedDepartmentLabel(
+    final departmentDisplayValue = findDisplayLabel<DepartmentOption>(
       options: departmentOptions,
       selectedCode: formState.department,
+      valueOf: (option) => option.value,
+      labelOf: (option) => labelOrBlank(option.label),
     );
-    final departmentLoadError = departmentOptionsAsync.whenOrNull(
-      error: (error, _) => _toDisplayError(
-        error,
-        fallback: 'Failed to load departments. Tap to retry.',
-      ),
+    final departmentLoadError = extractErrorText(
+      departmentOptionsAsync,
+      fallback: 'Failed to load departments. Tap to retry.',
+      errorToText: _toDisplayError,
     );
     final siteOptionsAsync = ref.watch(siteOptionsProvider(formState.entity));
-    final siteOptions = siteOptionsAsync.maybeWhen(
-      data: (data) => data,
-      orElse: () => const <SiteOption>[],
-    );
-    final siteDisplayValue = _selectedSiteLabel(
+    final siteOptions = extractOptions<SiteOption>(siteOptionsAsync);
+    final siteDisplayValue = findDisplayLabel<SiteOption>(
       options: siteOptions,
       selectedCode: formState.site,
+      valueOf: (option) => option.value,
+      labelOf: (option) => siteLabel(value: option.value, label: option.label),
     );
-    final siteLoadError = siteOptionsAsync.whenOrNull(
-      error: (error, _) => _toDisplayError(
-        error,
-        fallback: 'Failed to load sites. Tap to retry.',
-      ),
+    final siteLoadError = extractErrorText(
+      siteOptionsAsync,
+      fallback: 'Failed to load sites. Tap to retry.',
+      errorToText: _toDisplayError,
     );
     final hostLookupParams = HostLookupParams(
       entity: formState.entity,
@@ -412,63 +308,64 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
       department: formState.department,
     );
     final hostOptionsAsync = ref.watch(hostOptionsProvider(hostLookupParams));
-    final hostOptions = hostOptionsAsync.maybeWhen(
-      data: (data) => data,
-      orElse: () => const <HostOption>[],
-    );
-    final hostDisplayValue = _selectedHostLabel(
+    final hostOptions = extractOptions<HostOption>(hostOptionsAsync);
+    final hostDisplayValue = findDisplayLabel<HostOption>(
       options: hostOptions,
       selectedCode: formState.personToVisit,
+      valueOf: (option) => option.value,
+      labelOf: (option) =>
+          hostLabel(employeeId: option.value, employeeName: option.label),
     );
-    final hostLoadError = hostOptionsAsync.whenOrNull(
-      error: (error, _) => _toDisplayError(
-        error,
-        fallback: 'Failed to load hosts. Tap to retry.',
-      ),
+    final hostLoadError = extractErrorText(
+      hostOptionsAsync,
+      fallback: 'Failed to load hosts. Tap to retry.',
+      errorToText: _toDisplayError,
     );
     final visitorTypeOptionsAsync = ref.watch(visitorTypeOptionsProvider);
-    final visitorTypeOptions = visitorTypeOptionsAsync.maybeWhen(
-      data: (data) => data,
-      orElse: () => const <VisitorTypeOption>[],
+    final visitorTypeOptions = extractOptions<VisitorTypeOption>(
+      visitorTypeOptionsAsync,
     );
-    final visitorTypeDisplayValue = _selectedVisitorTypeLabel(
+    final visitorTypeDisplayValue = findDisplayLabel<VisitorTypeOption>(
       options: visitorTypeOptions,
       selectedCode: formState.visitorType,
+      valueOf: (option) => option.value,
+      labelOf: (option) =>
+          visitorTypeLabel(value: option.value, label: option.label),
     );
-    final visitorTypeLoadError = visitorTypeOptionsAsync.whenOrNull(
-      error: (error, _) => _toDisplayError(
-        error,
-        fallback: 'Failed to load visitor types. Tap to retry.',
-      ),
+    final visitorTypeLoadError = extractErrorText(
+      visitorTypeOptionsAsync,
+      fallback: 'Failed to load visitor types. Tap to retry.',
+      errorToText: _toDisplayError,
     );
-    final canRetrySite = formState.entity != null && siteOptionsAsync.hasError;
-    final canPickSite =
-        formState.entity != null &&
-        !siteOptionsAsync.isLoading &&
-        !siteOptionsAsync.hasError;
-    final enableSiteField =
-        formState.entity != null && !siteOptionsAsync.isLoading;
-    final canRetryDepartment =
-        formState.entity != null && departmentOptionsAsync.hasError;
-    final canPickDepartment =
-        formState.entity != null &&
-        !departmentOptionsAsync.isLoading &&
-        !departmentOptionsAsync.hasError;
-    final enableDepartmentField =
-        formState.entity != null && !departmentOptionsAsync.isLoading;
+    final sitePickState = pickState(
+      hasParent: formState.entity != null,
+      asyncValue: siteOptionsAsync,
+    );
+    final canRetrySite = sitePickState.canRetry;
+    final canPickSite = sitePickState.canPick;
+    final enableSiteField = sitePickState.enabled;
+    final departmentPickState = pickState(
+      hasParent: formState.entity != null,
+      asyncValue: departmentOptionsAsync,
+    );
+    final canRetryDepartment = departmentPickState.canRetry;
+    final canPickDepartment = departmentPickState.canPick;
+    final enableDepartmentField = departmentPickState.enabled;
     final isHostDependencyReady =
         formState.entity != null &&
         formState.site != null &&
         formState.department != null;
-    final canRetryHost = isHostDependencyReady && hostOptionsAsync.hasError;
-    final canPickHost =
-        isHostDependencyReady &&
-        !hostOptionsAsync.isLoading &&
-        !hostOptionsAsync.hasError;
-    final enableHostField =
-        isHostDependencyReady && !hostOptionsAsync.isLoading;
-    final canPickVisitorType =
-        !visitorTypeOptionsAsync.isLoading && !visitorTypeOptionsAsync.hasError;
+    final hostPickState = pickState(
+      hasParent: isHostDependencyReady,
+      asyncValue: hostOptionsAsync,
+    );
+    final canRetryHost = hostPickState.canRetry;
+    final canPickHost = hostPickState.canPick;
+    final enableHostField = hostPickState.enabled;
+    final canPickVisitorType = pickState(
+      hasParent: true,
+      asyncValue: visitorTypeOptionsAsync,
+    ).canPick;
 
     return DoubleBackExitScope(
       hasUnsavedChanges: _hasUnsavedChanges(formState),
@@ -527,14 +424,14 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                           final selected = await _pickOption(
                             title: 'Entity',
                             options: entityOptions
-                                .map(_entityOptionLabel)
+                                .map((option) => labelOrBlank(option.label))
                                 .toList(growable: false),
                             currentValue: entityDisplayValue,
                           );
                           if (!mounted || selected == null) return;
 
                           final pickedOption = entityOptions.firstWhere(
-                            (option) => _entityOptionLabel(option) == selected,
+                            (option) => labelOrBlank(option.label) == selected,
                             orElse: () =>
                                 const EntityOption(value: '', label: ''),
                           );
@@ -586,14 +483,24 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                           final selected = await _pickOption(
                             title: 'Site',
                             options: siteOptions
-                                .map(_siteOptionLabel)
+                                .map(
+                                  (option) => siteLabel(
+                                    value: option.value,
+                                    label: option.label,
+                                  ),
+                                )
                                 .toList(growable: false),
                             currentValue: siteDisplayValue,
                           );
                           if (!mounted || selected == null) return;
 
                           final pickedOption = siteOptions.firstWhere(
-                            (option) => _siteOptionLabel(option) == selected,
+                            (option) =>
+                                siteLabel(
+                                  value: option.value,
+                                  label: option.label,
+                                ) ==
+                                selected,
                             orElse: () =>
                                 const SiteOption(value: '', label: ''),
                           );
@@ -642,15 +549,14 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                           final selected = await _pickOption(
                             title: 'Department',
                             options: departmentOptions
-                                .map(_departmentOptionLabel)
+                                .map((option) => labelOrBlank(option.label))
                                 .toList(growable: false),
                             currentValue: departmentDisplayValue,
                           );
                           if (!mounted || selected == null) return;
 
                           final pickedOption = departmentOptions.firstWhere(
-                            (option) =>
-                                _departmentOptionLabel(option) == selected,
+                            (option) => labelOrBlank(option.label) == selected,
                             orElse: () =>
                                 const DepartmentOption(value: '', label: ''),
                           );
@@ -696,14 +602,24 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                           final selected = await _pickOption(
                             title: 'Host',
                             options: hostOptions
-                                .map(_hostOptionLabel)
+                                .map(
+                                  (option) => hostLabel(
+                                    employeeId: option.value,
+                                    employeeName: option.label,
+                                  ),
+                                )
                                 .toList(growable: false),
                             currentValue: hostDisplayValue,
                           );
                           if (!mounted || selected == null) return;
 
                           final pickedOption = hostOptions.firstWhere(
-                            (option) => _hostOptionLabel(option) == selected,
+                            (option) =>
+                                hostLabel(
+                                  employeeId: option.value,
+                                  employeeName: option.label,
+                                ) ==
+                                selected,
                             orElse: () =>
                                 const HostOption(value: '', label: ''),
                           );
@@ -743,7 +659,12 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                           final selected = await _pickOption(
                             title: 'Visitor Type',
                             options: visitorTypeOptions
-                                .map(_visitorTypeOptionLabel)
+                                .map(
+                                  (option) => visitorTypeLabel(
+                                    value: option.value,
+                                    label: option.label,
+                                  ),
+                                )
                                 .toList(growable: false),
                             currentValue: visitorTypeDisplayValue,
                           );
@@ -751,7 +672,11 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
 
                           final pickedOption = visitorTypeOptions.firstWhere(
                             (option) =>
-                                _visitorTypeOptionLabel(option) == selected,
+                                visitorTypeLabel(
+                                  value: option.value,
+                                  label: option.label,
+                                ) ==
+                                selected,
                             orElse: () =>
                                 const VisitorTypeOption(value: '', label: ''),
                           );
