@@ -1,15 +1,20 @@
+import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:equatable/equatable.dart';
+import 'package:uuid/uuid.dart';
 
+import '../../data/datasources/invitation_remote_data_source.dart';
 import '../../data/datasources/reference_remote_data_source.dart';
+import '../../data/repositories/invitation_repository_impl.dart';
 import '../../data/repositories/reference_repository_impl.dart';
+import '../../domain/repositories/invitation_repository.dart';
 import '../../domain/repositories/reference_repository.dart';
 import '../../domain/usecases/get_departments_usecase.dart';
 import '../../domain/usecases/get_entities_usecase.dart';
 import '../../domain/usecases/get_locations_usecase.dart';
 import '../../domain/usecases/get_personels_usecase.dart';
 import '../../domain/usecases/get_visitor_types_usecase.dart';
+import '../../domain/usecases/submit_invitation_usecase.dart';
 import 'auth_session_providers.dart';
 import 'department_option.dart';
 import 'entity_option.dart';
@@ -26,10 +31,23 @@ final referenceRemoteDataSourceProvider = Provider<ReferenceRemoteDataSource>((
   return ReferenceRemoteDataSource(dio);
 });
 
+final invitationRemoteDataSourceProvider = Provider<InvitationRemoteDataSource>(
+  (ref) {
+    final dio = ref.read(dioClientProvider);
+    return InvitationRemoteDataSource(dio);
+  },
+);
+
 final referenceRepositoryProvider = Provider<ReferenceRepository>((ref) {
   final remoteDataSource = ref.read(referenceRemoteDataSourceProvider);
   final localDataSource = ref.read(authLocalDataSourceProvider);
   return ReferenceRepositoryImpl(remoteDataSource, localDataSource);
+});
+
+final invitationRepositoryProvider = Provider<InvitationRepository>((ref) {
+  final remoteDataSource = ref.read(invitationRemoteDataSourceProvider);
+  final localDataSource = ref.read(authLocalDataSourceProvider);
+  return InvitationRepositoryImpl(remoteDataSource, localDataSource);
 });
 
 final getEntitiesUseCaseProvider = Provider<GetEntitiesUseCase>((ref) {
@@ -55,6 +73,13 @@ final getPersonelsUseCaseProvider = Provider<GetPersonelsUseCase>((ref) {
 final getVisitorTypesUseCaseProvider = Provider<GetVisitorTypesUseCase>((ref) {
   final repository = ref.read(referenceRepositoryProvider);
   return GetVisitorTypesUseCase(repository);
+});
+
+final submitInvitationUseCaseProvider = Provider<SubmitInvitationUseCase>((
+  ref,
+) {
+  final repository = ref.read(invitationRepositoryProvider);
+  return SubmitInvitationUseCase(repository);
 });
 
 final entityOptionsProvider = FutureProvider.autoDispose<List<EntityOption>>((
@@ -178,6 +203,7 @@ class InvitationAddState {
     this.email = '',
     this.dateFrom = '',
     this.dateTo = '',
+    this.idempotencyKey,
     this.isSubmitting = false,
   });
 
@@ -191,6 +217,7 @@ class InvitationAddState {
   final String email;
   final String dateFrom;
   final String dateTo;
+  final String? idempotencyKey;
   final bool isSubmitting;
 
   InvitationAddState copyWith({
@@ -204,6 +231,7 @@ class InvitationAddState {
     String? email,
     String? dateFrom,
     String? dateTo,
+    Object? idempotencyKey = _unset,
     bool? isSubmitting,
   }) {
     return InvitationAddState(
@@ -223,70 +251,135 @@ class InvitationAddState {
       email: email ?? this.email,
       dateFrom: dateFrom ?? this.dateFrom,
       dateTo: dateTo ?? this.dateTo,
+      idempotencyKey: idempotencyKey == _unset
+          ? this.idempotencyKey
+          : idempotencyKey as String?,
       isSubmitting: isSubmitting ?? this.isSubmitting,
     );
   }
 }
 
+@immutable
+class InvitationSubmitResult {
+  const InvitationSubmitResult({required this.success, required this.message});
+
+  final bool success;
+  final String message;
+}
+
 final invitationAddControllerProvider =
-    NotifierProvider<InvitationAddController, InvitationAddState>(
+    NotifierProvider.autoDispose<InvitationAddController, InvitationAddState>(
       InvitationAddController.new,
     );
 
 class InvitationAddController extends Notifier<InvitationAddState> {
+  static const Uuid _uuid = Uuid();
+
   @override
   InvitationAddState build() => const InvitationAddState();
 
   void updateEntity(String? value) {
-    state = state.copyWith(entity: value);
+    if (state.entity == value) return;
+    state = state.copyWith(entity: value, idempotencyKey: null);
   }
 
   void updateSite(String? value) {
-    state = state.copyWith(site: value);
+    if (state.site == value) return;
+    state = state.copyWith(site: value, idempotencyKey: null);
   }
 
   void updateDepartment(String? value) {
-    state = state.copyWith(department: value);
+    if (state.department == value) return;
+    state = state.copyWith(department: value, idempotencyKey: null);
   }
 
   void updatePersonToVisit(String? value) {
-    state = state.copyWith(personToVisit: value);
+    if (state.personToVisit == value) return;
+    state = state.copyWith(personToVisit: value, idempotencyKey: null);
   }
 
   void updateVisitorType(String? value) {
-    state = state.copyWith(visitorType: value);
+    if (state.visitorType == value) return;
+    state = state.copyWith(visitorType: value, idempotencyKey: null);
   }
 
   void updateCompanyName(String value) {
-    state = state.copyWith(companyName: value);
+    if (state.companyName == value) return;
+    state = state.copyWith(companyName: value, idempotencyKey: null);
   }
 
   void updatePurpose(String value) {
-    state = state.copyWith(purpose: value);
+    if (state.purpose == value) return;
+    state = state.copyWith(purpose: value, idempotencyKey: null);
   }
 
   void updateEmail(String value) {
-    state = state.copyWith(email: value);
+    if (state.email == value) return;
+    state = state.copyWith(email: value, idempotencyKey: null);
   }
 
   void updateDateFrom(String value) {
-    state = state.copyWith(dateFrom: value);
+    if (state.dateFrom == value) return;
+    state = state.copyWith(dateFrom: value, idempotencyKey: null);
   }
 
   void updateDateTo(String value) {
-    state = state.copyWith(dateTo: value);
+    if (state.dateTo == value) return;
+    state = state.copyWith(dateTo: value, idempotencyKey: null);
   }
 
   void clear() {
     state = const InvitationAddState();
   }
 
-  Future<void> submitMock() async {
+  Future<InvitationSubmitResult> submit() async {
     if (state.isSubmitting) {
-      return;
+      return const InvitationSubmitResult(
+        success: false,
+        message: 'Invitation is currently submitting.',
+      );
     }
-    state = state.copyWith(isSubmitting: true);
-    await Future<void>.delayed(const Duration(milliseconds: 900));
-    state = state.copyWith(isSubmitting: false);
+
+    final idempotencyKey = state.idempotencyKey ?? _uuid.v4();
+    state = state.copyWith(isSubmitting: true, idempotencyKey: idempotencyKey);
+
+    try {
+      final useCase = ref.read(submitInvitationUseCaseProvider);
+      final response = await useCase(
+        idempotencyKey: idempotencyKey,
+        entity: state.entity?.trim() ?? '',
+        site: state.site?.trim() ?? '',
+        department: state.department?.trim() ?? '',
+        employeeId: state.personToVisit?.trim() ?? '',
+        visitorType: state.visitorType?.trim() ?? '',
+        visitorName: state.companyName.trim(),
+        purpose: state.purpose.trim(),
+        email: state.email.trim(),
+        visitFrom: state.dateFrom.trim(),
+        visitTo: state.dateTo.trim(),
+      );
+
+      if (response.status) {
+        return InvitationSubmitResult(
+          success: true,
+          message: response.message ?? 'Invitation submitted.',
+        );
+      }
+
+      return InvitationSubmitResult(
+        success: false,
+        message: response.message ?? 'Failed to submit invitation.',
+      );
+    } catch (error) {
+      final text = error.toString().trim();
+      return InvitationSubmitResult(
+        success: false,
+        message: text.startsWith('Exception:')
+            ? text.replaceFirst('Exception:', '').trim()
+            : (text.isEmpty ? 'Failed to submit invitation.' : text),
+      );
+    } finally {
+      state = state.copyWith(isSubmitting: false);
+    }
   }
 }

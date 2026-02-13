@@ -299,9 +299,14 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
     if (!mounted) return;
 
     FocusScope.of(context).unfocus();
-    await ref.read(invitationAddControllerProvider.notifier).submitMock();
+    final result = await ref
+        .read(invitationAddControllerProvider.notifier)
+        .submit();
     if (!mounted) return;
-    showAppSnackBar(context, 'Invitation submitted.');
+    showAppSnackBar(context, result.message);
+    if (result.success) {
+      _clearAll();
+    }
   }
 
   void _clearAll() {
