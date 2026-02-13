@@ -1,25 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../state/department_option.dart';
+import '../state/entity_option.dart';
+import '../state/reference_providers.dart';
+import '../state/site_option.dart';
+import '../state/visitor_type_option.dart';
 import '../widgets/app_filled_button.dart';
 import '../widgets/labeled_form_rows.dart';
 import '../widgets/app_outlined_button.dart';
 import '../widgets/info_row.dart';
 import '../widgets/searchable_option_sheet.dart';
-
-const Map<String, List<String>> _mockEntitySites = {
-  'AGYTEK - Agytek1231': ['FACTORY1 - FACTORY1 T', 'FACTORY2 - FACTORY2 A'],
-  'BERNAS - BERNAS01': ['HQ - BERNAS HQ', 'WAREHOUSE - BERNAS W1'],
-  'SCOPE - SCP100': ['PLANT - SCP P1'],
-};
-
-Future<List<String>> _fetchSitesForEntityMock(String entity) async {
-  await Future<void>.delayed(const Duration(milliseconds: 600));
-  if (entity == 'SCOPE - SCP100') {
-    throw Exception('Mock site API error');
-  }
-  return _mockEntitySites[entity] ?? const [];
-}
 
 class InvitationListingPage extends StatefulWidget {
   const InvitationListingPage({super.key});
@@ -439,7 +431,7 @@ class _InvitationFilterResult {
   final bool clearRequested;
 }
 
-class _InvitationFilterPage extends StatefulWidget {
+class _InvitationFilterPage extends ConsumerStatefulWidget {
   const _InvitationFilterPage({
     required this.initialEntity,
     required this.initialSite,
@@ -463,10 +455,11 @@ class _InvitationFilterPage extends StatefulWidget {
   final bool initialUpcomingOnly;
 
   @override
-  State<_InvitationFilterPage> createState() => _InvitationFilterPageState();
+  ConsumerState<_InvitationFilterPage> createState() =>
+      _InvitationFilterPageState();
 }
 
-class _InvitationFilterPageState extends State<_InvitationFilterPage> {
+class _InvitationFilterPageState extends ConsumerState<_InvitationFilterPage> {
   late final TextEditingController _invitationIdController;
   late final TextEditingController _dateFromController;
   late final TextEditingController _dateToController;
@@ -477,9 +470,6 @@ class _InvitationFilterPageState extends State<_InvitationFilterPage> {
   String? _visitorType;
   String? _status;
   bool _upcomingOnly = false;
-  List<String> _siteOptions = const [];
-  bool _isSiteLoading = false;
-  String? _siteLoadError;
 
   @override
   void initState() {
@@ -495,9 +485,6 @@ class _InvitationFilterPageState extends State<_InvitationFilterPage> {
     );
     _dateFromController = TextEditingController(text: widget.initialDateFrom);
     _dateToController = TextEditingController(text: widget.initialDateTo);
-    if (_entity != null) {
-      _loadSitesForEntity(_entity!, keepCurrentSite: true);
-    }
   }
 
   @override
@@ -535,38 +522,6 @@ class _InvitationFilterPageState extends State<_InvitationFilterPage> {
     );
   }
 
-  Future<void> _loadSitesForEntity(
-    String entity, {
-    required bool keepCurrentSite,
-  }) async {
-    setState(() {
-      if (!keepCurrentSite) {
-        _site = null;
-      }
-      _siteOptions = const [];
-      _isSiteLoading = true;
-      _siteLoadError = null;
-    });
-    try {
-      final sites = await _fetchSitesForEntityMock(entity);
-      if (!mounted) return;
-      setState(() {
-        _siteOptions = sites;
-        _isSiteLoading = false;
-        if (_site != null && !_siteOptions.contains(_site)) {
-          _site = null;
-        }
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _siteOptions = const [];
-        _isSiteLoading = false;
-        _siteLoadError = 'Failed to load sites. Tap Site to retry.';
-      });
-    }
-  }
-
   void _apply() {
     Navigator.of(context).pop(
       _InvitationFilterResult(
@@ -600,8 +555,218 @@ class _InvitationFilterPageState extends State<_InvitationFilterPage> {
     );
   }
 
+  String _toDisplayError(Object error, {required String fallback}) {
+    final text = error.toString().trim();
+    if (text.startsWith('Exception:')) {
+      return text.replaceFirst('Exception:', '').trim();
+    }
+    return text.isEmpty ? fallback : text;
+  }
+
+  String _entityOptionLabel(EntityOption option) {
+    return option.label.trim().isEmpty ? '(Blank)' : option.label;
+  }
+
+  String _siteOptionLabel(SiteOption option) {
+    final label = option.label.trim();
+    if (label.isNotEmpty) {
+      return label;
+    }
+    return option.value.trim().isEmpty ? '(Blank)' : option.value;
+  }
+
+  String _departmentOptionLabel(DepartmentOption option) {
+    return option.label.trim().isEmpty ? '(Blank)' : option.label;
+  }
+
+  String _visitorTypeOptionLabel(VisitorTypeOption option) {
+    final label = option.label.trim();
+    if (label.isNotEmpty) {
+      return label;
+    }
+    return option.value.trim().isEmpty ? '(Blank)' : option.value;
+  }
+
+  String? _selectedEntityLabel({
+    required List<EntityOption> options,
+    required String? selectedCode,
+  }) {
+    if (selectedCode == null) return null;
+    for (final option in options) {
+      if (option.value == selectedCode) {
+        return _entityOptionLabel(option);
+      }
+    }
+    return selectedCode;
+  }
+
+  String? _selectedSiteLabel({
+    required List<SiteOption> options,
+    required String? selectedCode,
+  }) {
+    if (selectedCode == null) return null;
+    for (final option in options) {
+      if (option.value == selectedCode) {
+        return _siteOptionLabel(option);
+      }
+    }
+    return selectedCode;
+  }
+
+  String? _selectedDepartmentLabel({
+    required List<DepartmentOption> options,
+    required String? selectedCode,
+  }) {
+    if (selectedCode == null) return null;
+    for (final option in options) {
+      if (option.value == selectedCode) {
+        return _departmentOptionLabel(option);
+      }
+    }
+    return selectedCode;
+  }
+
+  String? _selectedVisitorTypeLabel({
+    required List<VisitorTypeOption> options,
+    required String? selectedCode,
+  }) {
+    if (selectedCode == null) return null;
+    for (final option in options) {
+      if (option.value == selectedCode) {
+        return _visitorTypeOptionLabel(option);
+      }
+    }
+    return selectedCode;
+  }
+
+  void _syncSelectionWithOptions({
+    required bool optionsReady,
+    required bool enabled,
+    required String? selectedValue,
+    required bool Function(String value) containsValue,
+    required VoidCallback clearSelection,
+  }) {
+    if (!mounted || !optionsReady || !enabled || selectedValue == null) {
+      return;
+    }
+    if (containsValue(selectedValue)) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(clearSelection);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final entityOptionsAsync = ref.watch(entityOptionsProvider);
+    final entityOptions = entityOptionsAsync.maybeWhen(
+      data: (data) => data,
+      orElse: () => const <EntityOption>[],
+    );
+    final entityDisplayValue = _selectedEntityLabel(
+      options: entityOptions,
+      selectedCode: _entity,
+    );
+    final entityLoadError = entityOptionsAsync.whenOrNull(
+      error: (error, _) => _toDisplayError(
+        error,
+        fallback: 'Failed to load entities. Tap to retry.',
+      ),
+    );
+
+    final siteOptionsAsync = ref.watch(siteOptionsProvider(_entity));
+    final siteOptions = siteOptionsAsync.maybeWhen(
+      data: (data) => data,
+      orElse: () => const <SiteOption>[],
+    );
+    final siteDisplayValue = _selectedSiteLabel(
+      options: siteOptions,
+      selectedCode: _site,
+    );
+    final siteLoadError = siteOptionsAsync.whenOrNull(
+      error: (error, _) => _toDisplayError(
+        error,
+        fallback: 'Failed to load sites. Tap to retry.',
+      ),
+    );
+    final canRetrySite = _entity != null && siteOptionsAsync.hasError;
+    final canPickSite =
+        _entity != null &&
+        !siteOptionsAsync.isLoading &&
+        !siteOptionsAsync.hasError;
+    final enableSiteField = _entity != null && !siteOptionsAsync.isLoading;
+
+    final departmentOptionsAsync = ref.watch(
+      departmentOptionsProvider(_entity),
+    );
+    final departmentOptions = departmentOptionsAsync.maybeWhen(
+      data: (data) => data,
+      orElse: () => const <DepartmentOption>[],
+    );
+    final departmentDisplayValue = _selectedDepartmentLabel(
+      options: departmentOptions,
+      selectedCode: _department,
+    );
+    final departmentLoadError = departmentOptionsAsync.whenOrNull(
+      error: (error, _) => _toDisplayError(
+        error,
+        fallback: 'Failed to load departments. Tap to retry.',
+      ),
+    );
+    final canRetryDepartment =
+        _entity != null && departmentOptionsAsync.hasError;
+    final canPickDepartment =
+        _entity != null &&
+        !departmentOptionsAsync.isLoading &&
+        !departmentOptionsAsync.hasError;
+    final enableDepartmentField =
+        _entity != null && !departmentOptionsAsync.isLoading;
+
+    final visitorTypeOptionsAsync = ref.watch(visitorTypeOptionsProvider);
+    final visitorTypeOptions = visitorTypeOptionsAsync.maybeWhen(
+      data: (data) => data,
+      orElse: () => const <VisitorTypeOption>[],
+    );
+    final visitorTypeDisplayValue = _selectedVisitorTypeLabel(
+      options: visitorTypeOptions,
+      selectedCode: _visitorType,
+    );
+    final visitorTypeLoadError = visitorTypeOptionsAsync.whenOrNull(
+      error: (error, _) => _toDisplayError(
+        error,
+        fallback: 'Failed to load visitor types. Tap to retry.',
+      ),
+    );
+    final canPickVisitorType =
+        !visitorTypeOptionsAsync.isLoading && !visitorTypeOptionsAsync.hasError;
+
+    _syncSelectionWithOptions(
+      optionsReady: siteOptionsAsync.hasValue,
+      enabled: _entity != null,
+      selectedValue: _site,
+      containsValue: (value) =>
+          siteOptions.any((option) => option.value == value),
+      clearSelection: () => _site = null,
+    );
+    _syncSelectionWithOptions(
+      optionsReady: departmentOptionsAsync.hasValue,
+      enabled: _entity != null,
+      selectedValue: _department,
+      containsValue: (value) =>
+          departmentOptions.any((option) => option.value == value),
+      clearSelection: () => _department = null,
+    );
+    _syncSelectionWithOptions(
+      optionsReady: visitorTypeOptionsAsync.hasValue,
+      enabled: true,
+      selectedValue: _visitorType,
+      containsValue: (value) =>
+          visitorTypeOptions.any((option) => option.value == value),
+      clearSelection: () => _visitorType = null,
+    );
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Filters'),
@@ -622,79 +787,158 @@ class _InvitationFilterPageState extends State<_InvitationFilterPage> {
                   LabeledSelectRow(
                     label: 'Entity',
                     isRequired: true,
-                    value: _entity,
-                    placeholder: 'Please select',
+                    value: entityDisplayValue,
+                    placeholder: entityOptionsAsync.isLoading
+                        ? 'Loading...'
+                        : 'Please select',
+                    helperText: entityLoadError,
+                    enabled: !entityOptionsAsync.isLoading,
                     onTap: () async {
+                      if (entityOptionsAsync.hasError) {
+                        ref.invalidate(entityOptionsProvider);
+                        return;
+                      }
+                      if (entityOptions.isEmpty) return;
                       final selected = await _pickFilterOption(
                         title: 'Entity',
-                        options: _mockEntitySites.keys.toList(growable: false),
-                        currentValue: _entity,
+                        options: entityOptions
+                            .map(_entityOptionLabel)
+                            .toList(growable: false),
+                        currentValue: entityDisplayValue,
                       );
                       if (!mounted || selected == null) return;
-                      setState(() => _entity = selected);
-                      await _loadSitesForEntity(
-                        selected,
-                        keepCurrentSite: false,
+
+                      final pickedOption = entityOptions.firstWhere(
+                        (option) => _entityOptionLabel(option) == selected,
+                        orElse: () => const EntityOption(value: '', label: ''),
                       );
+                      final selectedValue = pickedOption.value.trim().isEmpty
+                          ? null
+                          : pickedOption.value;
+
+                      setState(() {
+                        _entity = selectedValue;
+                        _site = null;
+                        _department = null;
+                      });
                     },
                   ),
                   LabeledSelectRow(
                     label: 'Site',
                     isRequired: true,
-                    value: _site,
-                    placeholder: _entity == null
-                        ? 'Select entity first'
-                        : _isSiteLoading
+                    value: siteDisplayValue,
+                    placeholder: siteOptionsAsync.isLoading
                         ? 'Loading...'
-                        : _siteLoadError != null
-                        ? _siteLoadError!
+                        : _entity == null
+                        ? 'Select entity first'
                         : 'Please select',
-                    enabled: _entity != null && !_isSiteLoading,
+                    helperText: siteLoadError,
+                    enabled: enableSiteField,
                     onTap: () async {
                       if (_entity == null) return;
-                      if (_siteLoadError != null) {
-                        await _loadSitesForEntity(
-                          _entity!,
-                          keepCurrentSite: false,
-                        );
+                      if (canRetrySite) {
+                        ref.invalidate(siteOptionsProvider(_entity));
                         return;
                       }
+                      if (!canPickSite || siteOptions.isEmpty) return;
+
                       final selected = await _pickFilterOption(
                         title: 'Site',
-                        options: _siteOptions,
-                        currentValue: _site,
+                        options: siteOptions
+                            .map(_siteOptionLabel)
+                            .toList(growable: false),
+                        currentValue: siteDisplayValue,
                       );
                       if (!mounted || selected == null) return;
-                      setState(() => _site = selected);
+
+                      final pickedOption = siteOptions.firstWhere(
+                        (option) => _siteOptionLabel(option) == selected,
+                        orElse: () => const SiteOption(value: '', label: ''),
+                      );
+                      final selectedValue = pickedOption.value.trim().isEmpty
+                          ? null
+                          : pickedOption.value;
+
+                      setState(() => _site = selectedValue);
                     },
                   ),
                   LabeledSelectRow(
                     label: 'Department',
                     isRequired: true,
-                    value: _department,
-                    placeholder: 'Please select',
+                    value: departmentDisplayValue,
+                    placeholder: departmentOptionsAsync.isLoading
+                        ? 'Loading...'
+                        : _entity == null
+                        ? 'Select entity first'
+                        : 'Please select',
+                    helperText: departmentLoadError,
+                    enabled: enableDepartmentField,
                     onTap: () async {
+                      if (canRetryDepartment) {
+                        ref.invalidate(departmentOptionsProvider(_entity));
+                        return;
+                      }
+                      if (!canPickDepartment || departmentOptions.isEmpty) {
+                        return;
+                      }
+
                       final selected = await _pickFilterOption(
                         title: 'Department',
-                        options: const ['ADMIN CENTER', 'OPERATIONS'],
-                        currentValue: _department,
+                        options: departmentOptions
+                            .map(_departmentOptionLabel)
+                            .toList(growable: false),
+                        currentValue: departmentDisplayValue,
                       );
                       if (!mounted || selected == null) return;
-                      setState(() => _department = selected);
+
+                      final pickedOption = departmentOptions.firstWhere(
+                        (option) => _departmentOptionLabel(option) == selected,
+                        orElse: () =>
+                            const DepartmentOption(value: '', label: ''),
+                      );
+                      final selectedValue = pickedOption.value.trim().isEmpty
+                          ? null
+                          : pickedOption.value;
+
+                      setState(() => _department = selectedValue);
                     },
                   ),
                   LabeledSelectRow(
                     label: 'Visitor Type',
-                    value: _visitorType,
-                    placeholder: 'Please select',
+                    value: visitorTypeDisplayValue,
+                    placeholder: visitorTypeOptionsAsync.isLoading
+                        ? 'Loading...'
+                        : 'Please select',
+                    helperText: visitorTypeLoadError,
+                    enabled: !visitorTypeOptionsAsync.isLoading,
                     onTap: () async {
+                      if (visitorTypeOptionsAsync.hasError) {
+                        ref.invalidate(visitorTypeOptionsProvider);
+                        return;
+                      }
+                      if (!canPickVisitorType || visitorTypeOptions.isEmpty) {
+                        return;
+                      }
+
                       final selected = await _pickFilterOption(
                         title: 'Visitor Type',
-                        options: const ['Visitor', 'Contractor'],
-                        currentValue: _visitorType,
+                        options: visitorTypeOptions
+                            .map(_visitorTypeOptionLabel)
+                            .toList(growable: false),
+                        currentValue: visitorTypeDisplayValue,
                       );
                       if (!mounted || selected == null) return;
-                      setState(() => _visitorType = selected);
+
+                      final pickedOption = visitorTypeOptions.firstWhere(
+                        (option) => _visitorTypeOptionLabel(option) == selected,
+                        orElse: () =>
+                            const VisitorTypeOption(value: '', label: ''),
+                      );
+                      final selectedValue = pickedOption.value.trim().isEmpty
+                          ? null
+                          : pickedOption.value;
+
+                      setState(() => _visitorType = selectedValue);
                     },
                   ),
                   LabeledTextInputRow(
