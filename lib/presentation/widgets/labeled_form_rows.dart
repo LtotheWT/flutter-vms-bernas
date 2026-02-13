@@ -67,31 +67,73 @@ class LabeledTextInputRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         LabeledFieldLabel(label: label, isRequired: isRequired),
         const SizedBox(height: 4),
-        TextFormField(
+        AppTextInputField(
           controller: controller,
           focusNode: focusNode,
           keyboardType: keyboardType,
           onChanged: onChanged,
           validator: validator,
-          decoration: InputDecoration(
-            hintText: hintText,
-            border: InputBorder.none,
-            isCollapsed: true,
-            contentPadding: EdgeInsets.zero,
-            hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
-          ),
+          hintText: hintText,
         ),
         const SizedBox(height: 6),
         const FormRowDivider(),
         const SizedBox(height: 8),
       ],
+    );
+  }
+}
+
+class AppTextInputField extends StatelessWidget {
+  const AppTextInputField({
+    super.key,
+    required this.controller,
+    this.hintText = 'Please input',
+    this.onChanged,
+    this.focusNode,
+    this.keyboardType,
+    this.validator,
+    this.autofocus = false,
+    this.prefixIcon,
+    this.contentPadding = EdgeInsets.zero,
+  });
+
+  final TextEditingController controller;
+  final String hintText;
+  final ValueChanged<String>? onChanged;
+  final FocusNode? focusNode;
+  final TextInputType? keyboardType;
+  final String? Function(String?)? validator;
+  final bool autofocus;
+  final Widget? prefixIcon;
+  final EdgeInsets contentPadding;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return TextFormField(
+      controller: controller,
+      focusNode: focusNode,
+      keyboardType: keyboardType,
+      onChanged: onChanged,
+      validator: validator,
+      autofocus: autofocus,
+      decoration: InputDecoration(
+        hintText: hintText,
+        border: InputBorder.none,
+        isCollapsed: true,
+        contentPadding: contentPadding,
+        hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+        prefixIcon: prefixIcon,
+        prefixIconConstraints: const BoxConstraints(
+          minHeight: 24,
+          minWidth: 24,
+        ),
+      ),
     );
   }
 }

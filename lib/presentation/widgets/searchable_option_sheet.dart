@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'labeled_form_rows.dart';
+
 Future<String?> showSearchableOptionSheet({
   required BuildContext context,
   required String title,
@@ -41,7 +43,7 @@ class _SearchableOptionSheetState extends State<_SearchableOptionSheet> {
   void initState() {
     super.initState();
     _searchController = TextEditingController();
-    _filteredOptions = List<String>.from(widget.options);
+    _filteredOptions = _normalizeDisplayOrder(widget.options);
   }
 
   @override
@@ -53,16 +55,128 @@ class _SearchableOptionSheetState extends State<_SearchableOptionSheet> {
   void _onSearchChanged(String query) {
     final q = query.trim().toLowerCase();
     setState(() {
-      _filteredOptions = q.isEmpty
-          ? List<String>.from(widget.options)
+      final matchedOptions = q.isEmpty
+          ? widget.options
           : widget.options
                 .where((item) => item.toLowerCase().contains(q))
                 .toList(growable: false);
+      _filteredOptions = _normalizeDisplayOrder(matchedOptions);
     });
+  }
+
+  List<String> _normalizeDisplayOrder(Iterable<String> options) {
+    final nonBlank = <String>[];
+    final blank = <String>[];
+    for (final option in options) {
+      if (_isBlankOption(option)) {
+        blank.add(option);
+      } else {
+        nonBlank.add(option);
+      }
+    }
+    return <String>[...nonBlank, ...blank];
+  }
+
+  bool _isBlankOption(String value) {
+    final normalized = value.trim().toLowerCase();
+    return normalized.isEmpty || normalized == '(blank)';
+  }
+
+  ({String primary, String? secondary}) _splitLabel(String raw) {
+    final separatorIndex = raw.indexOf(' - ');
+    if (separatorIndex < 0) {
+      return (primary: raw, secondary: null);
+    }
+
+    final primary = raw.substring(0, separatorIndex).trim();
+    final secondary = raw.substring(separatorIndex + 3).trim();
+    return (
+      primary: primary.isEmpty ? raw : primary,
+      secondary: secondary.isEmpty ? null : secondary,
+    );
+  }
+
+  Widget _buildOptionRow({
+    required BuildContext context,
+    required String option,
+    required bool selected,
+  }) {
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+    final label = _splitLabel(option);
+    final isBlank = _isBlankOption(option);
+
+    final primaryColor = isBlank
+        ? colorScheme.onSurfaceVariant
+        : colorScheme.onSurface;
+    final secondaryColor = isBlank
+        ? colorScheme.onSurfaceVariant.withOpacity(0.7)
+        : colorScheme.onSurfaceVariant;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () => Navigator.of(context).pop(option),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 48),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            color: selected
+                ? colorScheme.primaryContainer.withOpacity(0.35)
+                : Colors.transparent,
+            border: selected
+                ? Border.all(color: colorScheme.primary.withOpacity(0.55))
+                : null,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      label.primary,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.titleMedium?.copyWith(
+                        color: primaryColor,
+                        fontWeight: selected
+                            ? FontWeight.w600
+                            : FontWeight.w500,
+                      ),
+                    ),
+                    if (label.secondary != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        label.secondary!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.bodySmall?.copyWith(
+                          color: secondaryColor,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              if (selected)
+                Icon(Icons.check, size: 19, color: colorScheme.primary),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(
@@ -90,15 +204,19 @@ class _SearchableOptionSheetState extends State<_SearchableOptionSheet> {
                 ),
               ],
             ),
-            TextField(
+            AppTextInputField(
               controller: _searchController,
               onChanged: _onSearchChanged,
               autofocus: true,
-              decoration: const InputDecoration(
-                hintText: 'Search...',
-                prefixIcon: Icon(Icons.search),
+              hintText: 'Search...',
+              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              prefixIcon: Icon(
+                Icons.search,
+                size: 18,
+                color: colorScheme.onSurfaceVariant,
               ),
             ),
+            Divider(height: 1, thickness: 1, color: colorScheme.surface),
             const SizedBox(height: 8),
             SizedBox(
               height: 320,
@@ -106,21 +224,18 @@ class _SearchableOptionSheetState extends State<_SearchableOptionSheet> {
                   ? const Center(child: Text('No results'))
                   : ListView.separated(
                       itemCount: _filteredOptions.length,
-                      separatorBuilder: (_, _) => const Divider(height: 1),
+                      separatorBuilder: (_, _) => Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: colorScheme.surface,
+                      ),
                       itemBuilder: (context, index) {
                         final option = _filteredOptions[index];
                         final selected = option == widget.currentValue;
-                        return ListTile(
-                          dense: true,
-                          title: Text(option),
-                          trailing: selected
-                              ? Icon(
-                                  Icons.check,
-                                  size: 18,
-                                  color: Theme.of(context).colorScheme.primary,
-                                )
-                              : null,
-                          onTap: () => Navigator.of(context).pop(option),
+                        return _buildOptionRow(
+                          context: context,
+                          option: option,
+                          selected: selected,
                         );
                       },
                     ),
