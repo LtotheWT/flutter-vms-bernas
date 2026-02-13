@@ -4,6 +4,7 @@
 - Use a layered, domain-first structure. The `domain` layer is pure Dart and has no Flutter imports.
 - Keep domain logic independent from infrastructure and UI.
 - Prefer immutable models and explicit value objects.
+- For idempotent submissions, manage idempotency key lifecycle in presentation state (stable per logical request, reset on payload change).
 
 ## Folder structure
 - `lib/domain/`
@@ -21,6 +22,7 @@
   - `widgets/`
   - `state/` (Riverpod providers + state classes)
   - Prefer extracting shared UI into `widgets/` and reusing from there.
+  - Use shared field/sheet widgets from `lib/presentation/widgets/labeled_form_rows.dart` and `lib/presentation/widgets/searchable_option_sheet.dart` when implementing select/text rows and searchable option sheets.
 
 ## Dependencies
 - UI depends on `domain` via `usecases`.
@@ -31,6 +33,9 @@
 - Providers live in `lib/presentation/state/`.
 - Expose usecases as providers, and repositories as `Provider`/`FutureProvider` from `data`.
 - Keep provider scopes in `main.dart` and avoid global singletons.
+- Place cross-screen reference option providers in `lib/presentation/state/reference_providers.dart`.
+- Keep feature-specific providers (e.g., invitation form submission state) in feature files like `lib/presentation/state/invitation_add_providers.dart`.
+- Prefer reusing shared providers rather than duplicating provider trees per page.
 
 ## Routing (GoRouter)
 - Router config in `lib/presentation/app/router.dart`.

@@ -70,7 +70,10 @@ description: "Workflows and UI patterns for the vms_bernas Flutter app: GoRouter
   4. Keep widgets stateless unless local UI state is required.
   5. Use the widget consistently wherever the pattern appears.
 
-- Examples: See `references/examples.md` for repo-based snippets.
+- Examples:
+  - See `references/examples.md` for repo-based snippets.
+  - Shared field/select rows: `lib/presentation/widgets/labeled_form_rows.dart`
+  - Shared searchable bottom sheet: `lib/presentation/widgets/searchable_option_sheet.dart`
 - Constraints / Failures:
   - Do not own business logic in widgets.
   - Do not perform navigation in widgets.
@@ -79,6 +82,7 @@ description: "Workflows and UI patterns for the vms_bernas Flutter app: GoRouter
 - Must NOT:
   - Hardcode values that should be configurable.
   - Duplicate extracted widgets under different names.
+  - Keep page-private copies of shared select row or searchable bottom sheet widgets.
 
 ## Skill: reusable_form_field_wrapper
 **Title:** Reusable Form Field Wrapper (AppTextFormField)
@@ -203,6 +207,7 @@ description: "Workflows and UI patterns for the vms_bernas Flutter app: GoRouter
   4. On error: show an error hint and allow tap-to-retry (invalidate/reload provider); avoid validation errors.
   5. Re-enable normal selection when options are loaded.
   6. If backend returns blank child options, keep them visible only when needed and map blank selection to null for required validation.
+  7. Use `lib/presentation/state/reference_providers.dart` as the default home for shared reference option providers reused across screens.
 
 - Examples: See `references/examples.md` for repo-based snippets.
 - Constraints / Failures:
@@ -214,6 +219,41 @@ description: "Workflows and UI patterns for the vms_bernas Flutter app: GoRouter
   - Load child options without a parent selection.
   - Leave child enabled while async load is in-flight.
   - Treat blank API options as valid required selections unless explicitly intended.
+  - Define duplicate entity/site/department/visitor-type option providers in feature-specific files.
+
+## Skill: idempotent_submit_lifecycle
+**Title:** Idempotent Submit Lifecycle
+
+- Purpose:
+  Keep retries for the same logical submit request idempotent and stable.
+
+- Inputs:
+  - Form controller state
+  - Submit action trigger
+  - Payload change/reset events
+
+- Outputs:
+  - Stable idempotency key reuse for retries
+  - Key reset when payload changes
+  - Key propagated to repository/datasource request headers
+
+- Preconditions:
+  - Submit flow is asynchronous and can be retried after timeout/error.
+  - Idempotency header is supported by backend.
+
+- Steps:
+  1. Generate UUID in controller on first submit attempt.
+  2. Persist the key in form state.
+  3. Reuse the key on retries while payload is unchanged.
+  4. Clear key when payload changes or clear/reset is invoked.
+  5. Pass key through usecase to repository/datasource headers.
+
+- Constraints / Failures:
+  - Generating a new key for every retry defeats idempotency behavior.
+
+- Must NOT:
+  - Regenerate key for the same logical retry.
+  - Create idempotency key in repository when retry continuity is required.
 
 ## Skill: searchable_dropdown_menu_anchor
 **Title:** Searchable Dropdown (MenuAnchor + TextField)
