@@ -1,6 +1,6 @@
 ---
 name: vms-bernas
-description: "Workflows and UI patterns for the vms_bernas Flutter app: GoRouter routing setup, reusable widget extraction, form field and dropdown wrappers, stepper validation, and selection/bulk actions. Use when implementing or refactoring these patterns in this codebase."
+description: "Workflows and engineering patterns for the vms_bernas Flutter app: layered domain/data/presentation implementation, Riverpod state flows, GoRouter routing, reusable UI extraction, async option forms, API/repository error mapping, and test-focused refactors."
 ---
 
 # Reusable Skills (vms_bernas)
@@ -424,3 +424,159 @@ description: "Workflows and UI patterns for the vms_bernas Flutter app: GoRouter
 
 - Must NOT:
   - Diverge from the established listing structure without a clear reason.
+
+## Skill: repository_failure_mapping
+**Title:** Repository Failure Mapping (Data -> Domain)
+
+- Purpose:
+  Normalize datasource/transport failures into domain-safe failures so usecases and presentation logic stay infrastructure-agnostic.
+
+- Inputs:
+  - Repository methods calling remote/local datasources
+  - Transport/parse exceptions (Dio, payload issues, unknown runtime errors)
+  - Domain failure model (or equivalent typed error contract)
+
+- Outputs:
+  - Consistent domain-level failure mapping per repository method
+  - Usecases free of transport exception branching
+  - Predictable error contract for providers/pages
+
+- Preconditions:
+  - Repository implementation exists in `lib/data/repositories/`.
+  - Datasource calls may throw transport or parsing exceptions.
+  - Domain layer has (or is adding) explicit failure types.
+
+- Steps:
+  1. Wrap datasource calls in a single mapping boundary in repository methods.
+  2. Map known transport failures (status/auth/network/timeout) to domain failures.
+  3. Map malformed payload/parsing failures to validation or data-contract failures.
+  4. Map unexpected failures to `unknown` domain failure.
+  5. Ensure usecases expose only mapped domain failures.
+  6. Add repository tests for success + each mapped failure class.
+
+- Examples:
+  - Invitation flow: `lib/data/repositories/invitation_repository_impl.dart`
+  - Reference flow: `lib/data/repositories/reference_repository_impl.dart`
+- Constraints / Failures:
+  - Letting `DioException` escape repository boundaries leaks infrastructure concerns upward.
+  - Per-method ad hoc mapping causes inconsistent UX and retry behavior.
+
+- Must NOT:
+  - Branch on Dio exception types in presentation/state layers.
+  - Return raw datasource exceptions from usecases.
+
+## Skill: async_option_orchestration
+**Title:** Riverpod Async Option Orchestration (Load/Error/Retry/Cache)
+
+- Purpose:
+  Provide deterministic option-loading behavior across dependent form selectors with shared loading, error, retry, and cache semantics.
+
+- Inputs:
+  - Parent selections (entity/site/department/etc.)
+  - Riverpod providers/usecases for reference option loading
+  - Current form selection state and touched flags
+
+- Outputs:
+  - Consistent async option UX across all invitation/listing forms
+  - Deterministic reset behavior when parent fields change
+  - Explicit retry path and cache freshness policy
+
+- Preconditions:
+  - Shared option providers live in `lib/presentation/state/reference_providers.dart`.
+  - Feature-specific form state uses controller/notifier in `lib/presentation/state/`.
+
+- Steps:
+  1. Use shared async option helpers for `loading/data/error` branching.
+  2. Reset dependent child selections immediately when parent changes.
+  3. Disable child selectors while loading; show helper text for loading/error.
+  4. Support retry by invalidating and re-watching the option provider.
+  5. Add cache policy (timestamp + TTL) for stable reference data.
+  6. Add tests for load, error, retry success, and stale-cache refresh.
+
+- Examples:
+  - Shared helpers: `lib/presentation/state/async_option_helpers.dart`
+  - Form integration: `lib/presentation/state/invitation_add_providers.dart`
+- Constraints / Failures:
+  - Keeping stale child selection after parent updates produces invalid payloads.
+  - Inconsistent loading/error UI across selectors confuses users.
+
+- Must NOT:
+  - Duplicate shared option providers inside page-specific files.
+  - Trigger required-field validation while a dependent selector is still loading.
+
+## Skill: shared_form_widget_contracts
+**Title:** Shared Form Widget Contracts + Widget Test Harness
+
+- Purpose:
+  Lock reusable form row/sheet behavior behind explicit UI contracts and widget tests so refactors in feature pages do not regress core interactions.
+
+- Inputs:
+  - Shared form widgets (`labeled_form_rows.dart`, `searchable_option_sheet.dart`)
+  - Feature pages composing those widgets (e.g., invitation add/listing)
+  - Expected UX contract (labels, required marker, helper/error text, selection callback)
+
+- Outputs:
+  - Stable widget-level contracts for shared form components
+  - Reduced duplication in pages
+  - Widget tests guarding critical rendering and selection behavior
+
+- Preconditions:
+  - Repeated row/sheet patterns already exist in `lib/presentation/widgets/`.
+  - Critical form flows have known edge cases (empty options, filter/no-result, disabled state).
+
+- Steps:
+  1. Define each shared widget contract (inputs + state rendering behavior).
+  2. Ensure feature pages compose shared widgets instead of local variants.
+  3. Add widget tests for label/helper/error/required combinations.
+  4. Add sheet tests for filtering, empty state, and selection callback.
+  5. Keep widget ownership limited to presentation concerns.
+
+- Examples:
+  - `lib/presentation/widgets/labeled_form_rows.dart`
+  - `lib/presentation/widgets/searchable_option_sheet.dart`
+- Constraints / Failures:
+  - Missing widget tests makes iterative UI refactors risky.
+  - Page-private clones of shared widgets drift and fragment UX.
+
+- Must NOT:
+  - Embed business/usecase/repository logic inside shared widgets.
+  - Maintain duplicate selector implementations for the same interaction pattern.
+
+## Skill: auth_router_guard_reliability
+**Title:** Auth Session + Router Guard Reliability
+
+- Purpose:
+  Centralize auth-driven routing decisions and verify them with tests so splash/login/home transitions remain deterministic as auth/session logic evolves.
+
+- Inputs:
+  - Auth session provider state (`loading/authenticated/unauthenticated`)
+  - Route path constants and GoRouter redirect rules
+  - Session persistence/token bootstrap behavior
+
+- Outputs:
+  - Single redirect decision path in router configuration
+  - State-driven splash/login/home transitions
+  - Test-covered guard behavior for startup/logout/expired session
+
+- Preconditions:
+  - Auth state providers exist in `lib/presentation/state/auth_session_providers.dart`.
+  - Router setup exists in `lib/presentation/app/router.dart`.
+
+- Steps:
+  1. Define one canonical auth state source for routing decisions.
+  2. Keep all auth redirects in router-level logic, not inside pages.
+  3. Ensure splash behavior reflects auth bootstrap state, not timer-only navigation.
+  4. Add tests for authenticated cold start, unauthenticated cold start, logout redirect, and expired token handling.
+  5. Ensure bootstrap failures safely resolve to unauthenticated state.
+
+- Examples:
+  - `lib/presentation/app/router.dart`
+  - `lib/presentation/state/auth_session_providers.dart`
+  - `lib/presentation/pages/splash_page.dart`
+- Constraints / Failures:
+  - Timer-only splash navigation can route authenticated users to the wrong destination.
+  - Scattered redirect logic across pages causes route flicker and inconsistent guards.
+
+- Must NOT:
+  - Duplicate auth guard conditions in multiple page widgets.
+  - Depend on UI timers as the source of truth for auth transitions.
