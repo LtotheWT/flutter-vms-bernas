@@ -37,18 +37,21 @@ class _SearchableOptionSheet extends StatefulWidget {
 
 class _SearchableOptionSheetState extends State<_SearchableOptionSheet> {
   late final TextEditingController _searchController;
+  late final FocusNode _searchFocusNode;
   late List<String> _filteredOptions;
 
   @override
   void initState() {
     super.initState();
     _searchController = TextEditingController();
+    _searchFocusNode = FocusNode();
     _filteredOptions = _normalizeDisplayOrder(widget.options);
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -62,6 +65,12 @@ class _SearchableOptionSheetState extends State<_SearchableOptionSheet> {
                 .toList(growable: false);
       _filteredOptions = _normalizeDisplayOrder(matchedOptions);
     });
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    _onSearchChanged('');
+    _searchFocusNode.requestFocus();
   }
 
   List<String> _normalizeDisplayOrder(Iterable<String> options) {
@@ -198,31 +207,15 @@ class _SearchableOptionSheetState extends State<_SearchableOptionSheet> {
                     ),
                   ),
                 ),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
-                ),
               ],
             ),
-            AppTextInputField(
-              controller: _searchController,
-              onChanged: _onSearchChanged,
-              autofocus: true,
-              hintText: 'Search...',
-              contentPadding: const EdgeInsets.symmetric(vertical: 10),
-              prefixIcon: Icon(
-                Icons.search,
-                size: 18,
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-            Divider(height: 1, thickness: 1, color: colorScheme.surface),
             const SizedBox(height: 8),
             SizedBox(
               height: 320,
               child: _filteredOptions.isEmpty
                   ? const Center(child: Text('No results'))
                   : ListView.separated(
+                      reverse: true,
                       itemCount: _filteredOptions.length,
                       separatorBuilder: (_, _) => Divider(
                         height: 1,
@@ -239,6 +232,46 @@ class _SearchableOptionSheetState extends State<_SearchableOptionSheet> {
                         );
                       },
                     ),
+            ),
+            const SizedBox(height: 8),
+            Divider(height: 1, thickness: 1, color: colorScheme.surface),
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: AppTextInputField(
+                      controller: _searchController,
+                      onChanged: _onSearchChanged,
+                      focusNode: _searchFocusNode,
+                      autofocus: true,
+                      hintText: 'Search...',
+                      contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                      prefixIcon: Icon(
+                        Icons.search,
+                        size: 18,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      suffixIcon: _searchController.text.trim().isEmpty
+                          ? null
+                          : IconButton(
+                              onPressed: _clearSearch,
+                              splashRadius: 16,
+                              icon: Icon(
+                                Icons.close,
+                                size: 18,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Cancel'),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

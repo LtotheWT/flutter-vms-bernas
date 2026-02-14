@@ -99,6 +99,7 @@ class AppTextInputField extends StatelessWidget {
     this.validator,
     this.autofocus = false,
     this.prefixIcon,
+    this.suffixIcon,
     this.contentPadding = EdgeInsets.zero,
   });
 
@@ -110,6 +111,7 @@ class AppTextInputField extends StatelessWidget {
   final String? Function(String?)? validator;
   final bool autofocus;
   final Widget? prefixIcon;
+  final Widget? suffixIcon;
   final EdgeInsets contentPadding;
 
   @override
@@ -130,6 +132,11 @@ class AppTextInputField extends StatelessWidget {
         hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
         prefixIcon: prefixIcon,
         prefixIconConstraints: const BoxConstraints(
+          minHeight: 24,
+          minWidth: 24,
+        ),
+        suffixIcon: suffixIcon,
+        suffixIconConstraints: const BoxConstraints(
           minHeight: 24,
           minWidth: 24,
         ),
