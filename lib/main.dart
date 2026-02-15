@@ -25,7 +25,7 @@ class _AppView extends ConsumerWidget {
     final router = ref.watch(goRouterProvider);
 
     return MaterialApp.router(
-      title: 'VMS Bernas',
+      title: 'VMS Bernass',
       theme: AppTheme.light,
       routerConfig: router,
       builder: (context, child) {
