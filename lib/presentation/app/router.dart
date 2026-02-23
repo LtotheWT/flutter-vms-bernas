@@ -7,6 +7,7 @@ import '../pages/home_page.dart';
 import '../pages/invitation_add_page.dart';
 import '../pages/invitation_listing_page.dart';
 import '../pages/login_page.dart';
+import '../pages/permanent_contractor_check_page.dart';
 import '../pages/report_page.dart';
 import '../pages/splash_page.dart';
 import '../pages/visitor_walk_in_page.dart';
@@ -17,6 +18,7 @@ import '../pages/permanent_contractor_log_page.dart';
 import '../pages/report_dashboard_page.dart';
 import '../pages/report_dashboard_list_page.dart';
 import '../state/auth_session_providers.dart';
+import '../state/permanent_contractor_check_providers.dart';
 
 const String loginRouteName = 'login';
 const String loginRoutePath = '/login';
@@ -47,6 +49,9 @@ const String visitorCheckInRouteName = 'visitor_check_in';
 const String visitorCheckInRoutePath = '/visitor/check-in';
 const String visitorCheckOutRouteName = 'visitor_check_out';
 const String visitorCheckOutRoutePath = '/visitor/check-out';
+const String permanentContractorCheckRouteName = 'permanent_contractor_check';
+const String permanentContractorCheckRoutePath =
+    '/workforce/permanent-contractor-check';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -107,6 +112,19 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         name: visitorCheckOutRouteName,
         path: visitorCheckOutRoutePath,
         builder: (context, state) => const VisitorCheckInPage(isCheckIn: false),
+      ),
+      GoRoute(
+        name: permanentContractorCheckRouteName,
+        path: permanentContractorCheckRoutePath,
+        builder: (context, state) {
+          final checkTypeParam = state.uri.queryParameters['checkType'];
+          final initialCheckType = checkTypeParam == 'check_out'
+              ? PermanentContractorCheckType.checkOut
+              : PermanentContractorCheckType.checkIn;
+          return PermanentContractorCheckPage(
+            initialCheckType: initialCheckType,
+          );
+        },
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>

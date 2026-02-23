@@ -4,6 +4,7 @@ import 'network/remote_parsers.dart';
 import '../models/ref_department_dto.dart';
 import '../models/ref_entity_dto.dart';
 import '../models/ref_location_dto.dart';
+import '../models/permanent_contractor_info_dto.dart';
 import '../models/ref_personel_dto.dart';
 import '../models/ref_visitor_type_dto.dart';
 
@@ -177,6 +178,45 @@ class ReferenceRemoteDataSource {
     } on FormatException {
       throw ReferenceException(
         'Failed to load visitor types. Please try again.',
+      );
+    }
+  }
+
+  Future<PermanentContractorInfoDto> getPermanentContractorInfo({
+    required String accessToken,
+    required String code,
+  }) async {
+    try {
+      final encodedCode = Uri.encodeComponent(code.trim());
+      final response = await _dio.get<dynamic>(
+        '/wmsws/Contractor/$encodedCode',
+        options: Options(
+          headers: {'Authorization': 'Bearer $accessToken', 'accept': '*/*'},
+        ),
+      );
+
+      final map = parseJsonMap(response.data);
+      return PermanentContractorInfoDto.fromJson(map);
+    } on DioException catch (error) {
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 401 || statusCode == 403) {
+        throw ReferenceException(
+          'Please login again to load permanent contractor info.',
+        );
+      }
+
+      if (isConnectivityIssue(error)) {
+        throw ReferenceException(
+          'Unable to load permanent contractor info. Please try again.',
+        );
+      }
+
+      throw ReferenceException(
+        'Failed to load permanent contractor info. Please try again.',
+      );
+    } on FormatException {
+      throw ReferenceException(
+        'Failed to load permanent contractor info. Please try again.',
       );
     }
   }

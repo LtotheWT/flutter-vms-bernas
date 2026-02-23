@@ -31,7 +31,12 @@ class InfoRow extends StatelessWidget {
               ),
             ),
           ),
-          Expanded(child: Text(value, style: textTheme.bodySmall)),
+          Expanded(
+            child: Text(
+              value,
+              style: textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
+            ),
+          ),
         ],
       ),
     );

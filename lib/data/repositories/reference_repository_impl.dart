@@ -1,6 +1,7 @@
 import '../../domain/entities/ref_department_entity.dart';
 import '../../domain/entities/ref_entity_entity.dart';
 import '../../domain/entities/ref_location_entity.dart';
+import '../../domain/entities/permanent_contractor_info_entity.dart';
 import '../../domain/entities/ref_personel_entity.dart';
 import '../../domain/entities/ref_visitor_type_entity.dart';
 import '../../domain/repositories/reference_repository.dart';
@@ -75,6 +76,20 @@ class ReferenceRepositoryImpl implements ReferenceRepository {
       accessToken: accessToken,
     );
     return items.map((item) => item.toEntity()).toList(growable: false);
+  }
+
+  @override
+  Future<PermanentContractorInfoEntity> getPermanentContractorInfo({
+    required String code,
+  }) async {
+    final accessToken = await _getAccessTokenOrThrow(
+      missingMessage: 'Please login again to load permanent contractor info.',
+    );
+    final item = await _remoteDataSource.getPermanentContractorInfo(
+      accessToken: accessToken,
+      code: code,
+    );
+    return item.toEntity();
   }
 
   Future<String> _getAccessTokenOrThrow({

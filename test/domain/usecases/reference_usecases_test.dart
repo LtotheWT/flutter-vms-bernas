@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vms_bernas/domain/entities/ref_department_entity.dart';
 import 'package:vms_bernas/domain/entities/ref_entity_entity.dart';
 import 'package:vms_bernas/domain/entities/ref_location_entity.dart';
+import 'package:vms_bernas/domain/entities/permanent_contractor_info_entity.dart';
 import 'package:vms_bernas/domain/entities/ref_personel_entity.dart';
 import 'package:vms_bernas/domain/entities/ref_visitor_type_entity.dart';
 import 'package:vms_bernas/domain/repositories/reference_repository.dart';
@@ -71,6 +72,22 @@ class _FakeReferenceRepository implements ReferenceRepository {
         typeDescription: 'Visitor/Vendor/Forwarder',
       ),
     ];
+  }
+
+  @override
+  Future<PermanentContractorInfoEntity> getPermanentContractorInfo({
+    required String code,
+  }) async {
+    return const PermanentContractorInfoEntity(
+      contractorId: 'C0023',
+      contractorName: 'Dylan Myer',
+      contractorIc: '',
+      hpNo: '0111111111',
+      email: 'angypin8978@gmail.com',
+      company: 'MMG (M) SDN BHD',
+      validWorkingDateFrom: '2026-01-01T00:00:00',
+      validWorkingDateTo: '2026-12-31T00:00:00',
+    );
   }
 }
 

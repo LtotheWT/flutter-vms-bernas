@@ -104,9 +104,19 @@ class HomePage extends StatelessWidget {
                   title: 'Permanent Contractors',
                   icon: Icons.construction_outlined,
                   color: colorScheme.secondaryContainer,
-                  children: const [
-                    _MenuTile(title: 'Permanent Contractor Check-In'),
-                    _MenuTile(title: 'Permanent Contractor Check-Out'),
+                  children: [
+                    _MenuTile(
+                      title: 'Permanent Contractor Check-In',
+                      onTap: () => context.push(
+                        '$permanentContractorCheckRoutePath?checkType=check_in',
+                      ),
+                    ),
+                    _MenuTile(
+                      title: 'Permanent Contractor Check-Out',
+                      onTap: () => context.push(
+                        '$permanentContractorCheckRoutePath?checkType=check_out',
+                      ),
+                    ),
                   ],
                 ),
               ],
