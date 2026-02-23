@@ -156,6 +156,7 @@ class LabeledSelectRow extends StatelessWidget {
     this.enabled = true,
     this.hasError = false,
     this.helperText,
+    this.onClear,
   });
 
   final String label;
@@ -166,6 +167,7 @@ class LabeledSelectRow extends StatelessWidget {
   final bool enabled;
   final bool hasError;
   final String? helperText;
+  final VoidCallback? onClear;
 
   @override
   Widget build(BuildContext context) {
@@ -206,6 +208,19 @@ class LabeledSelectRow extends StatelessWidget {
                       ? colorScheme.onSurfaceVariant
                       : colorScheme.outline,
                 ),
+                if (onClear != null && value != null)
+                  IconButton(
+                    onPressed: onClear,
+                    tooltip: 'Clear',
+                    icon: Icon(
+                      Icons.clear,
+                      size: 18,
+                      color: enabled
+                          ? colorScheme.onSurfaceVariant
+                          : colorScheme.outline,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                  ),
               ],
             ),
           ),

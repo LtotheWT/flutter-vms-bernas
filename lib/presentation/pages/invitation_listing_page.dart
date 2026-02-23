@@ -688,7 +688,15 @@ class _InvitationFilterPageState extends ConsumerState<_InvitationFilterPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Filters'),
-        actions: [TextButton(onPressed: _clearAll, child: const Text('Clear'))],
+        actions: [
+          TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
+            ),
+            onPressed: _clearAll,
+            child: const Text('Clear All'),
+          ),
+        ],
       ),
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
@@ -711,6 +719,15 @@ class _InvitationFilterPageState extends ConsumerState<_InvitationFilterPage> {
                         : 'Please select',
                     helperText: entityLoadError,
                     enabled: !entityOptionsAsync.isLoading,
+                    onClear: _entity == null
+                        ? null
+                        : () {
+                            setState(() {
+                              _entity = null;
+                              _site = null;
+                              _department = null;
+                            });
+                          },
                     onTap: () async {
                       if (entityOptionsAsync.hasError) {
                         ref.invalidate(entityOptionsProvider);
@@ -752,6 +769,9 @@ class _InvitationFilterPageState extends ConsumerState<_InvitationFilterPage> {
                         : 'Please select',
                     helperText: siteLoadError,
                     enabled: enableSiteField,
+                    onClear: _site == null
+                        ? null
+                        : () => setState(() => _site = null),
                     onTap: () async {
                       if (_entity == null) return;
                       if (canRetrySite) {
@@ -801,6 +821,9 @@ class _InvitationFilterPageState extends ConsumerState<_InvitationFilterPage> {
                         : 'Please select',
                     helperText: departmentLoadError,
                     enabled: enableDepartmentField,
+                    onClear: _department == null
+                        ? null
+                        : () => setState(() => _department = null),
                     onTap: () async {
                       if (canRetryDepartment) {
                         ref.invalidate(departmentOptionsProvider(_entity));
@@ -839,6 +862,9 @@ class _InvitationFilterPageState extends ConsumerState<_InvitationFilterPage> {
                         : 'Please select',
                     helperText: visitorTypeLoadError,
                     enabled: !visitorTypeOptionsAsync.isLoading,
+                    onClear: _visitorType == null
+                        ? null
+                        : () => setState(() => _visitorType = null),
                     onTap: () async {
                       if (visitorTypeOptionsAsync.hasError) {
                         ref.invalidate(visitorTypeOptionsProvider);
@@ -879,9 +905,51 @@ class _InvitationFilterPageState extends ConsumerState<_InvitationFilterPage> {
                       setState(() => _visitorType = selectedValue);
                     },
                   ),
-                  LabeledTextInputRow(
-                    label: 'Invitation ID',
-                    controller: _invitationIdController,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const LabeledFieldLabel(label: 'Invitation ID'),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _invitationIdController,
+                              onChanged: (_) => setState(() {}),
+                              onTapOutside: (_) =>
+                                  FocusManager.instance.primaryFocus?.unfocus(),
+                              style: Theme.of(context).textTheme.titleMedium,
+                              decoration: InputDecoration(
+                                hintText: 'Please input',
+                                hintStyle: TextStyle(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                                ),
+                                border: InputBorder.none,
+                                isCollapsed: true,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                          ),
+                          if (_invitationIdController.text.trim().isNotEmpty)
+                            GestureDetector(
+                              onTap: () {
+                                _invitationIdController.clear();
+                                setState(() {});
+                              },
+                              child: const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: Icon(Icons.clear, size: 18),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      const FormRowDivider(),
+                      const SizedBox(height: 8),
+                    ],
                   ),
                   LabeledSelectRow(
                     label: 'Visit Date From',
@@ -889,6 +957,12 @@ class _InvitationFilterPageState extends ConsumerState<_InvitationFilterPage> {
                         ? null
                         : _dateFromController.text,
                     placeholder: 'Please select',
+                    onClear: _dateFromController.text.trim().isEmpty
+                        ? null
+                        : () {
+                            _dateFromController.clear();
+                            setState(() {});
+                          },
                     onTap: () => _pickDate(controller: _dateFromController),
                   ),
                   LabeledSelectRow(
@@ -897,12 +971,21 @@ class _InvitationFilterPageState extends ConsumerState<_InvitationFilterPage> {
                         ? null
                         : _dateToController.text,
                     placeholder: 'Please select',
+                    onClear: _dateToController.text.trim().isEmpty
+                        ? null
+                        : () {
+                            _dateToController.clear();
+                            setState(() {});
+                          },
                     onTap: () => _pickDate(controller: _dateToController),
                   ),
                   LabeledSelectRow(
                     label: 'Status',
                     value: _status,
                     placeholder: 'Please select',
+                    onClear: _status == null
+                        ? null
+                        : () => setState(() => _status = null),
                     onTap: () async {
                       final selected = await _pickFilterOption(
                         title: 'Status',
@@ -917,6 +1000,14 @@ class _InvitationFilterPageState extends ConsumerState<_InvitationFilterPage> {
                     contentPadding: EdgeInsets.zero,
                     value: _upcomingOnly,
                     title: const Text('Upcoming Visitor'),
+                    secondary: _upcomingOnly
+                        ? IconButton(
+                            onPressed: () =>
+                                setState(() => _upcomingOnly = false),
+                            tooltip: 'Clear',
+                            icon: const Icon(Icons.clear, size: 18),
+                          )
+                        : null,
                     onChanged: (value) => setState(() => _upcomingOnly = value),
                   ),
                 ],
