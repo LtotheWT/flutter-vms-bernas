@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vms_bernas/domain/entities/invitation_list_item_entity.dart';
+import 'package:vms_bernas/domain/entities/invitation_listing_filter_entity.dart';
 import 'package:vms_bernas/domain/entities/invitation_submission_entity.dart';
 import 'package:vms_bernas/domain/repositories/invitation_repository.dart';
 import 'package:vms_bernas/domain/usecases/submit_invitation_usecase.dart';
@@ -15,6 +17,13 @@ class _FakeInvitationRepository implements InvitationRepository {
   String? email;
   String? visitFrom;
   String? visitTo;
+
+  @override
+  Future<List<InvitationListItemEntity>> listInvitations({
+    required InvitationListingFilterEntity filter,
+  }) async {
+    return const <InvitationListItemEntity>[];
+  }
 
   @override
   Future<InvitationSubmissionEntity> submitInvitation({

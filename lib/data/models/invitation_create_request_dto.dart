@@ -39,8 +39,8 @@ class InvitationCreateRequestDto {
       'purpose': purpose,
       'invite_purpose': invitePurpose,
       'email': email,
-      'visit_from': visitFrom,
-      'visit_to': visitTo,
+      // 'visit_from': visitFrom,
+      // 'visit_to': visitTo,
     };
   }
 }

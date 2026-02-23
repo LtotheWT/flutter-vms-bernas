@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../domain/entities/invitation_list_item_entity.dart';
+import '../../domain/entities/invitation_listing_filter_entity.dart';
 import '../state/async_option_helpers.dart';
 import '../state/department_option.dart';
 import '../state/entity_option.dart';
+import '../state/invitation_listing_providers.dart';
 import '../state/option_label_formatters.dart';
 import '../state/reference_providers.dart';
 import '../state/site_option.dart';
@@ -13,16 +16,18 @@ import '../widgets/app_filled_button.dart';
 import '../widgets/labeled_form_rows.dart';
 import '../widgets/app_outlined_button.dart';
 import '../widgets/info_row.dart';
+import '../widgets/invitation_status_badge.dart';
 import '../widgets/searchable_option_sheet.dart';
 
-class InvitationListingPage extends StatefulWidget {
+class InvitationListingPage extends ConsumerStatefulWidget {
   const InvitationListingPage({super.key});
 
   @override
-  State<InvitationListingPage> createState() => _InvitationListingPageState();
+  ConsumerState<InvitationListingPage> createState() =>
+      _InvitationListingPageState();
 }
 
-class _InvitationListingPageState extends State<InvitationListingPage> {
+class _InvitationListingPageState extends ConsumerState<InvitationListingPage> {
   final _invitationIdController = TextEditingController();
   final _dateFromController = TextEditingController();
   final _dateToController = TextEditingController();
@@ -35,24 +40,44 @@ class _InvitationListingPageState extends State<InvitationListingPage> {
   String? _status;
   bool _upcomingOnly = false;
   final Set<String> _selectedIds = <String>{};
-  final List<_InvitationItem> _allItems = [];
-  final List<_InvitationItem> _visibleItems = [];
-  final int _pageSize = 10;
-  bool _hasMore = true;
-  bool _isLoadingMore = false;
+  final List<InvitationListItemEntity> _items = [];
   bool _showBackToTop = false;
   bool _showActionBar = true;
+  late final ProviderSubscription<InvitationListingState> _listingSubscription;
 
   @override
   void initState() {
     super.initState();
-    _seedMockItems();
-    _loadMore();
     _scrollController.addListener(_onScroll);
+    _listingSubscription = ref.listenManual<InvitationListingState>(
+      invitationListingControllerProvider,
+      (previous, next) {
+        if (!mounted) {
+          return;
+        }
+        final hasItemChanges = previous == null || previous.items != next.items;
+        if (!hasItemChanges) {
+          return;
+        }
+
+        setState(() {
+          _items
+            ..clear()
+            ..addAll(next.items);
+          _selectedIds.clear();
+        });
+      },
+      fireImmediately: true,
+    );
+    Future<void>.microtask(
+      () =>
+          ref.read(invitationListingControllerProvider.notifier).loadInitial(),
+    );
   }
 
   @override
   void dispose() {
+    _listingSubscription.close();
     _invitationIdController.dispose();
     _dateFromController.dispose();
     _dateToController.dispose();
@@ -72,113 +97,15 @@ class _InvitationListingPageState extends State<InvitationListingPage> {
       _status = null;
       _upcomingOnly = false;
     });
-  }
-
-  void _seedMockItems() {
-    final base = [
-      _InvitationItem(
-        invitationId: 'IV20251200074',
-        entity: 'AGYTEK',
-        site: 'FACTORY1 T',
-        department: 'ADMIN CENTER',
-        personToVisit: 'Suraya',
-        createdBy: 'admin',
-        visitorType: 'Visitor',
-        company: 'JOHNHANSON LIMITED',
-        vehiclePlateNumber: 'WSD 011234',
-        status: 'Arrived',
-        purpose: 'Meeting',
-        visitDateFrom: '15/12/2025',
-        visitTimeFrom: '00:00 AM',
-        visitDateTo: '31/01/2026',
-        visitTimeTo: '20:00 PM',
-        createDate: '30/12/2025 4:49:37 PM',
-        updateDate: '-',
-        updateBy: '-',
-      ),
-      _InvitationItem(
-        invitationId: 'IV20251200075',
-        entity: 'AGYTEK',
-        site: 'FACTORY1 T',
-        department: 'OPERATIONS',
-        personToVisit: 'Ryan',
-        createdBy: 'admin',
-        visitorType: 'Contractor',
-        company: 'MEGATECH SERVICES',
-        vehiclePlateNumber: 'VBA 8821',
-        status: 'Approved',
-        purpose: 'Maintenance',
-        visitDateFrom: '31/01/2026',
-        visitTimeFrom: '09:00 AM',
-        visitDateTo: '31/01/2026',
-        visitTimeTo: '05:00 PM',
-        createDate: '30/01/2026 10:12:09 AM',
-        updateDate: '30/01/2026 11:05:41 AM',
-        updateBy: 'admin',
-      ),
-      _InvitationItem(
-        invitationId: 'IV20251200076',
-        entity: 'AGYTEK',
-        site: 'FACTORY1 T',
-        department: 'ADMIN CENTER',
-        personToVisit: 'Aisha',
-        createdBy: 'admin',
-        visitorType: 'Visitor',
-        company: 'NORTHFIELD TRADING',
-        vehiclePlateNumber: 'JTP 2290',
-        status: 'New',
-        purpose: 'Interview',
-        visitDateFrom: '02/02/2026',
-        visitTimeFrom: '02:30 PM',
-        visitDateTo: '02/02/2026',
-        visitTimeTo: '04:00 PM',
-        createDate: '31/01/2026 08:15:12 AM',
-        updateDate: '-',
-        updateBy: '-',
-      ),
-    ];
-
-    for (var i = 0; i < 34; i++) {
-      final template = base[i % base.length];
-      _allItems.add(
-        template.copyWith(
-          invitationId: 'IV20251200${100 + i}',
-          company: '${template.company} ${i + 1}',
-          createDate: '31/01/2026 09:${(i % 60).toString().padLeft(2, '0')} AM',
-        ),
-      );
-    }
+    _requestListing();
   }
 
   void _onScroll() {
     final offset = _scrollController.position.pixels;
-    if (offset > _scrollController.position.maxScrollExtent - 200) {
-      _loadMore();
-    }
     final shouldShowTop = offset > 400;
     if (shouldShowTop != _showBackToTop) {
       setState(() => _showBackToTop = shouldShowTop);
     }
-  }
-
-  Future<void> _loadMore() async {
-    if (!_hasMore || _isLoadingMore) {
-      return;
-    }
-    setState(() => _isLoadingMore = true);
-    await Future<void>.delayed(const Duration(milliseconds: 400));
-    final nextIndex = _visibleItems.length;
-    final nextItems = _allItems
-        .skip(nextIndex)
-        .take(_pageSize)
-        .toList(growable: false);
-    setState(() {
-      _visibleItems.addAll(nextItems);
-      _isLoadingMore = false;
-      if (_visibleItems.length >= _allItems.length) {
-        _hasMore = false;
-      }
-    });
   }
 
   void _deleteSelected() {
@@ -186,6 +113,44 @@ class _InvitationListingPageState extends State<InvitationListingPage> {
       return;
     }
     _confirmDelete();
+  }
+
+  Future<void> _requestListing() {
+    return ref
+        .read(invitationListingControllerProvider.notifier)
+        .applyFilters(
+          InvitationListingFilterEntity(
+            entity: _entity,
+            site: _site,
+            department: _department,
+            visitorType: _visitorType,
+            statusCode: _statusToApiCode(_status),
+            invitationId: _invitationIdController.text.trim(),
+            visitDateFrom: _dateFromController.text.trim(),
+            visitDateTo: _dateToController.text.trim(),
+            upcomingOnly: _upcomingOnly,
+          ),
+        );
+  }
+
+  String? _statusToApiCode(String? status) {
+    switch (status) {
+      case 'New':
+        return 'NEW';
+      case 'Approved':
+        return 'APPROVED';
+      case 'Rejected':
+        return 'REJECTED';
+      default:
+        return null;
+    }
+  }
+
+  String _visitorTypeDisplay(String value) {
+    final parts = value.split('_');
+    return parts.length == 2 && parts.first.trim().isNotEmpty
+        ? parts.last.trim()
+        : value;
   }
 
   Future<void> _confirmDelete() async {
@@ -210,16 +175,8 @@ class _InvitationListingPageState extends State<InvitationListingPage> {
 
     if (shouldDelete ?? false) {
       setState(() {
-        _allItems.removeWhere(
-          (item) => _selectedIds.contains(item.invitationId),
-        );
-        _visibleItems.removeWhere(
-          (item) => _selectedIds.contains(item.invitationId),
-        );
+        _items.removeWhere((item) => _selectedIds.contains(item.invitationId));
         _selectedIds.clear();
-        if (_visibleItems.length < _pageSize && _hasMore) {
-          _loadMore();
-        }
       });
     }
   }
@@ -259,11 +216,18 @@ class _InvitationListingPageState extends State<InvitationListingPage> {
       _dateFromController.text = result.dateFrom;
       _dateToController.text = result.dateTo;
     });
+    _requestListing();
   }
 
   @override
   Widget build(BuildContext context) {
+    final listingState = ref.watch(invitationListingControllerProvider);
     final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+    final showInitialLoader =
+        listingState.isLoading && !listingState.hasLoaded && _items.isEmpty;
+    final showEmptyState =
+        !listingState.isLoading && listingState.hasLoaded && _items.isEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -289,48 +253,57 @@ class _InvitationListingPageState extends State<InvitationListingPage> {
                 ? Padding(
                     key: const ValueKey('select-bar'),
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: CheckboxListTile(
-                            value:
-                                _selectedIds.length == _visibleItems.length &&
-                                _visibleItems.isNotEmpty,
-                            onChanged: _visibleItems.isEmpty
-                                ? null
-                                : (checked) {
-                                    setState(() {
-                                      if (checked == true) {
-                                        _selectedIds.addAll(
-                                          _visibleItems.map(
-                                            (item) => item.invitationId,
-                                          ),
-                                        );
-                                      } else {
-                                        _selectedIds.clear();
-                                      }
-                                    });
-                                  },
-                            title: Text(
-                              'Select all (${_selectedIds.length}/${_visibleItems.length})',
+                    child: Material(
+                      elevation: 1,
+                      borderRadius: BorderRadius.circular(12),
+                      color: colorScheme.surface,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: CheckboxListTile(
+                                value:
+                                    _selectedIds.length == _items.length &&
+                                    _items.isNotEmpty,
+                                onChanged: _items.isEmpty
+                                    ? null
+                                    : (checked) {
+                                        setState(() {
+                                          if (checked == true) {
+                                            _selectedIds.addAll(
+                                              _items.map(
+                                                (item) => item.invitationId,
+                                              ),
+                                            );
+                                          } else {
+                                            _selectedIds.clear();
+                                          }
+                                        });
+                                      },
+                                title: Text(
+                                  'Select all (${_selectedIds.length}/${_items.length})',
+                                ),
+                                controlAffinity:
+                                    ListTileControlAffinity.leading,
+                                contentPadding: EdgeInsets.zero,
+                              ),
                             ),
-                            controlAffinity: ListTileControlAffinity.leading,
-                            contentPadding: EdgeInsets.zero,
-                          ),
+                            const SizedBox(width: 12),
+                            AppOutlinedButtonIcon(
+                              onPressed: _selectedIds.isEmpty
+                                  ? null
+                                  : _deleteSelected,
+                              icon: const Icon(Icons.delete_outline),
+                              label: Text(
+                                _selectedIds.isEmpty
+                                    ? 'Delete'
+                                    : 'Delete (${_selectedIds.length})',
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 12),
-                        AppOutlinedButtonIcon(
-                          onPressed: _selectedIds.isEmpty
-                              ? null
-                              : _deleteSelected,
-                          icon: const Icon(Icons.delete_outline),
-                          label: Text(
-                            _selectedIds.isEmpty
-                                ? 'Delete'
-                                : 'Delete (${_selectedIds.length})',
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   )
                 : const SizedBox.shrink(key: ValueKey('select-bar-hidden')),
@@ -351,6 +324,47 @@ class _InvitationListingPageState extends State<InvitationListingPage> {
                 controller: _scrollController,
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 children: [
+                  if (showInitialLoader)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 40),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                  if (listingState.errorMessage != null &&
+                      listingState.errorMessage!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12, bottom: 8),
+                      child: Card(
+                        color: colorScheme.errorContainer.withValues(
+                          alpha: 0.4,
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                listingState.errorMessage!,
+                                style: TextStyle(color: colorScheme.error),
+                              ),
+                              const SizedBox(height: 10),
+                              AppOutlinedButton(
+                                onPressed: _requestListing,
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (showEmptyState)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 40),
+                      child: Text(
+                        'No records to display.',
+                        textAlign: TextAlign.center,
+                        style: textTheme.bodyMedium,
+                      ),
+                    ),
                   const SizedBox(height: 4),
                   Text(
                     'Results',
@@ -359,9 +373,10 @@ class _InvitationListingPageState extends State<InvitationListingPage> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  for (final item in _visibleItems)
+                  for (final item in _items)
                     _InvitationCard(
                       item: item,
+                      visitorTypeLabel: _visitorTypeDisplay(item.visitorType),
                       selected: _selectedIds.contains(item.invitationId),
                       onSelected: (checked) {
                         setState(() {
@@ -372,20 +387,6 @@ class _InvitationListingPageState extends State<InvitationListingPage> {
                           }
                         });
                       },
-                    ),
-                  if (_isLoadingMore)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                      child: Center(child: CircularProgressIndicator()),
-                    ),
-                  if (!_hasMore && _visibleItems.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Text(
-                        'No more results.',
-                        textAlign: TextAlign.center,
-                        style: textTheme.bodySmall,
-                      ),
                     ),
                 ],
               ),
@@ -931,11 +932,13 @@ class _InvitationFilterPageState extends ConsumerState<_InvitationFilterPage> {
 class _InvitationCard extends StatelessWidget {
   const _InvitationCard({
     required this.item,
+    required this.visitorTypeLabel,
     required this.selected,
     required this.onSelected,
   });
 
-  final _InvitationItem item;
+  final InvitationListItemEntity item;
+  final String visitorTypeLabel;
   final bool selected;
   final ValueChanged<bool?> onSelected;
 
@@ -950,11 +953,18 @@ class _InvitationCard extends StatelessWidget {
           children: [
             Checkbox(value: selected, onChanged: onSelected),
             Expanded(
-              child: Text(
-                item.invitationId,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      item.invitationId,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  InvitationStatusBadge(statusCode: item.statusCode),
+                ],
               ),
             ),
           ],
@@ -963,12 +973,11 @@ class _InvitationCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 6),
-            InfoRow(label: 'Status', value: item.status),
-            InfoRow(label: 'Purpose', value: item.purpose),
-            InfoRow(
-              label: 'Visit',
-              value:
-                  '${item.visitDateFrom} ${item.visitTimeFrom} → ${item.visitDateTo} ${item.visitTimeTo}',
+            Text(item.purpose, style: Theme.of(context).textTheme.bodyMedium),
+            const SizedBox(height: 4),
+            Text(
+              '${item.visitDateFrom} ${item.visitTimeFrom} -> ${item.visitDateTo} ${item.visitTimeTo}',
+              style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
         ),
@@ -976,8 +985,8 @@ class _InvitationCard extends StatelessWidget {
           InfoRow(label: 'Entity', value: item.entity),
           InfoRow(label: 'Site', value: item.site),
           InfoRow(label: 'Department', value: item.department),
-          InfoRow(label: 'Person to Visit', value: item.personToVisit),
-          InfoRow(label: 'Visitor Type', value: item.visitorType),
+          InfoRow(label: 'Invite By', value: item.inviteBy),
+          InfoRow(label: 'Visitor Type', value: visitorTypeLabel),
           InfoRow(label: 'Company', value: item.company),
           InfoRow(label: 'Vehicle Plate', value: item.vehiclePlateNumber),
           InfoRow(label: 'Created By', value: item.createdBy),
@@ -986,90 +995,6 @@ class _InvitationCard extends StatelessWidget {
           InfoRow(label: 'Update By', value: item.updateBy),
         ],
       ),
-    );
-  }
-}
-
-class _InvitationItem {
-  const _InvitationItem({
-    required this.invitationId,
-    required this.entity,
-    required this.site,
-    required this.department,
-    required this.personToVisit,
-    required this.createdBy,
-    required this.visitorType,
-    required this.company,
-    required this.vehiclePlateNumber,
-    required this.status,
-    required this.purpose,
-    required this.visitDateFrom,
-    required this.visitTimeFrom,
-    required this.visitDateTo,
-    required this.visitTimeTo,
-    required this.createDate,
-    required this.updateDate,
-    required this.updateBy,
-  });
-
-  final String invitationId;
-  final String entity;
-  final String site;
-  final String department;
-  final String personToVisit;
-  final String createdBy;
-  final String visitorType;
-  final String company;
-  final String vehiclePlateNumber;
-  final String status;
-  final String purpose;
-  final String visitDateFrom;
-  final String visitTimeFrom;
-  final String visitDateTo;
-  final String visitTimeTo;
-  final String createDate;
-  final String updateDate;
-  final String updateBy;
-
-  _InvitationItem copyWith({
-    String? invitationId,
-    String? entity,
-    String? site,
-    String? department,
-    String? personToVisit,
-    String? createdBy,
-    String? visitorType,
-    String? company,
-    String? vehiclePlateNumber,
-    String? status,
-    String? purpose,
-    String? visitDateFrom,
-    String? visitTimeFrom,
-    String? visitDateTo,
-    String? visitTimeTo,
-    String? createDate,
-    String? updateDate,
-    String? updateBy,
-  }) {
-    return _InvitationItem(
-      invitationId: invitationId ?? this.invitationId,
-      entity: entity ?? this.entity,
-      site: site ?? this.site,
-      department: department ?? this.department,
-      personToVisit: personToVisit ?? this.personToVisit,
-      createdBy: createdBy ?? this.createdBy,
-      visitorType: visitorType ?? this.visitorType,
-      company: company ?? this.company,
-      vehiclePlateNumber: vehiclePlateNumber ?? this.vehiclePlateNumber,
-      status: status ?? this.status,
-      purpose: purpose ?? this.purpose,
-      visitDateFrom: visitDateFrom ?? this.visitDateFrom,
-      visitTimeFrom: visitTimeFrom ?? this.visitTimeFrom,
-      visitDateTo: visitDateTo ?? this.visitDateTo,
-      visitTimeTo: visitTimeTo ?? this.visitTimeTo,
-      createDate: createDate ?? this.createDate,
-      updateDate: updateDate ?? this.updateDate,
-      updateBy: updateBy ?? this.updateBy,
     );
   }
 }
