@@ -1,86 +1,166 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../domain/entities/visitor_lookup_item_entity.dart';
+import '../state/visitor_check_in_providers.dart';
 import '../widgets/app_filled_button.dart';
 import '../widgets/app_outlined_button.dart';
 import '../widgets/info_row.dart';
 
-class VisitorCheckInPage extends StatefulWidget {
+class VisitorCheckInPage extends ConsumerStatefulWidget {
   const VisitorCheckInPage({super.key, required this.isCheckIn});
 
   final bool isCheckIn;
 
   @override
-  State<VisitorCheckInPage> createState() => _VisitorCheckInPageState();
+  ConsumerState<VisitorCheckInPage> createState() => _VisitorCheckInPageState();
 }
 
-class _VisitorCheckInPageState extends State<VisitorCheckInPage> {
+class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
   final _scanController = TextEditingController();
-  final _physicalScanController = TextEditingController();
+  final _scanFocusNode = FocusNode();
   final Set<int> _selectedIndexes = <int>{};
-  bool _hasScanResult = false;
   int _resultTabIndex = 0;
-  final List<_VisitorRow> _visitors = [
-    const _VisitorRow(
-      name: 'AAAA',
-      idNumber: 'AAAA',
-      checkStatus: 'IN',
-      checkInDate: '31/01/2026 09:00 AM',
-      checkOutDate: '-',
-      hasPhoto: true,
-    ),
-    const _VisitorRow(
-      name: 'BBBB',
-      idNumber: 'BBB',
-      checkStatus: 'IN',
-      checkInDate: '31/01/2026 09:05 AM',
-      checkOutDate: '-',
-      hasPhoto: false,
-    ),
-    const _VisitorRow(
-      name: 'CCCC',
-      idNumber: 'CCCC',
-      checkStatus: 'IN',
-      checkInDate: '31/01/2026 09:10 AM',
-      checkOutDate: '-',
-      hasPhoto: true,
-    ),
-    const _VisitorRow(
-      name: 'DDDD',
-      idNumber: 'DDD',
-      checkStatus: 'IN',
-      checkInDate: '31/01/2026 09:15 AM',
-      checkOutDate: '-',
-      hasPhoto: false,
-    ),
-  ];
+  late final ProviderSubscription<VisitorCheckState> _stateSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _stateSubscription = ref.listenManual<VisitorCheckState>(
+      visitorCheckControllerProvider,
+      (previous, next) {
+        if (!mounted) {
+          return;
+        }
+
+        if (_scanController.text != next.searchInput) {
+          _scanController.value = TextEditingValue(
+            text: next.searchInput,
+            selection: TextSelection.collapsed(offset: next.searchInput.length),
+          );
+        }
+
+        final hadLookup = previous?.lookup != null;
+        final hasLookup = next.lookup != null;
+        if (hadLookup != hasLookup || previous?.lookup != next.lookup) {
+          setState(() {
+            _selectedIndexes.clear();
+            _resultTabIndex = 0;
+          });
+        }
+      },
+      fireImmediately: true,
+    );
+  }
 
   @override
   void dispose() {
+    _stateSubscription.close();
     _scanController.dispose();
-    _physicalScanController.dispose();
+    _scanFocusNode.dispose();
     super.dispose();
   }
 
-  void _onScanSuccess() {
-    setState(() {
-      _hasScanResult = true;
-      _resultTabIndex = 0;
-    });
+  Future<void> _search() async {
+    final controller = ref.read(visitorCheckControllerProvider.notifier);
+    controller.updateSearchInput(_scanController.text);
+    await controller.search(isCheckIn: widget.isCheckIn);
   }
 
-  void _onClearScan() {
-    setState(() {
-      _scanController.clear();
-      _physicalScanController.clear();
-      _hasScanResult = false;
-      _resultTabIndex = 0;
-      _selectedIndexes.clear();
-    });
+  void _clear() {
+    ref.read(visitorCheckControllerProvider.notifier).clearAll();
+  }
+
+  String _displayOrDash(String value) {
+    final text = value.trim();
+    return text.isEmpty ? '-' : text;
+  }
+
+  String _visitorTypeDisplay(String value) {
+    final text = value.trim();
+    if (text.isEmpty) {
+      return '-';
+    }
+    final parts = text.split('_');
+    if (parts.length == 2 && parts.last.trim().isNotEmpty) {
+      return parts.last.trim();
+    }
+    return text;
+  }
+
+  String _visitStatus(VisitorLookupItemEntity visitor) {
+    final hasCheckOut = visitor.checkOutTime.trim().isNotEmpty;
+    if (hasCheckOut) {
+      return 'OUT';
+    }
+    final hasCheckIn = visitor.checkInTime.trim().isNotEmpty;
+    if (hasCheckIn) {
+      return 'IN';
+    }
+    return '-';
+  }
+
+  bool _isEligibleForCurrentAction(VisitorLookupItemEntity visitor) {
+    if (widget.isCheckIn) {
+      return visitor.checkInTime.trim().isEmpty;
+    }
+    return visitor.checkOutTime.trim().isEmpty;
+  }
+
+  String? _disabledReasonForCurrentAction(VisitorLookupItemEntity visitor) {
+    if (_isEligibleForCurrentAction(visitor)) {
+      return null;
+    }
+    return widget.isCheckIn ? 'Already checked in' : 'Already checked out';
+  }
+
+  Set<int> _eligibleIndexes(List<VisitorLookupItemEntity> visitors) {
+    final result = <int>{};
+    for (var i = 0; i < visitors.length; i++) {
+      if (_isEligibleForCurrentAction(visitors[i])) {
+        result.add(i);
+      }
+    }
+    return result;
+  }
+
+  String _formatDateTime(String raw) {
+    final text = raw.trim();
+    if (text.isEmpty) {
+      return '-';
+    }
+
+    final parsed = DateTime.tryParse(text);
+    if (parsed == null) {
+      return text;
+    }
+
+    final day = parsed.day.toString().padLeft(2, '0');
+    final month = parsed.month.toString().padLeft(2, '0');
+    final year = parsed.year.toString();
+
+    final hour24 = parsed.hour;
+    final minute = parsed.minute.toString().padLeft(2, '0');
+    final meridiem = hour24 >= 12 ? 'PM' : 'AM';
+    final hour12 = ((hour24 + 11) % 12 + 1).toString().padLeft(2, '0');
+
+    return '$day/$month/$year $hour12:$minute $meridiem';
   }
 
   @override
   Widget build(BuildContext context) {
+    final state = ref.watch(visitorCheckControllerProvider);
     final textTheme = Theme.of(context).textTheme;
+    final lookup = state.lookup;
+    final visitors = lookup?.visitors ?? const <VisitorLookupItemEntity>[];
+    final hasResult = lookup != null;
+    final eligibleIndexes = _eligibleIndexes(visitors);
+    final selectedEligibleCount = _selectedIndexes
+        .where(eligibleIndexes.contains)
+        .length;
+    final hasEligibleVisitors = eligibleIndexes.isNotEmpty;
+    final allEligibleSelected =
+        hasEligibleVisitors && selectedEligibleCount == eligibleIndexes.length;
 
     return Scaffold(
       appBar: AppBar(
@@ -111,41 +191,55 @@ class _VisitorCheckInPageState extends State<VisitorCheckInPage> {
                         label: 'Scan QR Code',
                         hintText: 'Please input',
                         trailingIcon: Icons.qr_code_scanner,
-                        onTrailingTap: _onScanSuccess,
-                      ),
-                      const SizedBox(height: 8),
-                      _FlatInputField(
-                        controller: _physicalScanController,
-                        label: 'Scan Physical Tag',
-                        hintText: 'Please input',
-                        trailingIcon: Icons.nfc,
-                        onTrailingTap: _onScanSuccess,
+                        onChanged: ref
+                            .read(visitorCheckControllerProvider.notifier)
+                            .updateSearchInput,
+                        onTrailingTap: () => _scanFocusNode.requestFocus(),
+                        focusNode: _scanFocusNode,
                       ),
                       const SizedBox(height: 8),
                       Row(
                         children: [
                           Expanded(
                             child: AppFilledButton(
-                              onPressed: _onScanSuccess,
-                              child: const Text('Simulate Scan Success'),
+                              onPressed: state.isLoading ? null : _search,
+                              child: state.isLoading
+                                  ? const SizedBox(
+                                      height: 18,
+                                      width: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Text('Search'),
                             ),
                           ),
                           const SizedBox(width: 10),
                           AppOutlinedButton(
-                            onPressed: _onClearScan,
+                            onPressed: state.isLoading ? null : _clear,
                             child: const Text('Clear'),
                           ),
                         ],
                       ),
+                      if (state.errorMessage != null &&
+                          state.errorMessage!.trim().isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 10),
+                          child: Text(
+                            state.errorMessage!,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
               ),
             ),
           ),
-          if (_hasScanResult)
-            const SliverToBoxAdapter(child: SizedBox(height: 12)),
-          if (_hasScanResult)
+          if (hasResult) const SliverToBoxAdapter(child: SizedBox(height: 12)),
+          if (hasResult)
             SliverPersistentHeader(
               pinned: true,
               delegate: _StickySegmentHeaderDelegate(
@@ -154,7 +248,7 @@ class _VisitorCheckInPageState extends State<VisitorCheckInPage> {
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
                   child: _ResultTabBar(
                     selectedIndex: _resultTabIndex,
-                    visitorCount: _visitors.length,
+                    visitorCount: visitors.length,
                     onChanged: (index) =>
                         setState(() => _resultTabIndex = index),
                   ),
@@ -162,9 +256,8 @@ class _VisitorCheckInPageState extends State<VisitorCheckInPage> {
                 height: 56,
               ),
             ),
-          if (_hasScanResult)
-            SliverToBoxAdapter(child: const SizedBox(height: 12)),
-          if (_hasScanResult && _resultTabIndex == 0)
+          if (hasResult) const SliverToBoxAdapter(child: SizedBox(height: 12)),
+          if (hasResult && _resultTabIndex == 0)
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -181,28 +274,54 @@ class _VisitorCheckInPageState extends State<VisitorCheckInPage> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        const InfoRow(
+                        InfoRow(
                           label: 'Invitation ID',
-                          value: 'IV20251200074',
+                          value: _displayOrDash(lookup.invitationId),
                         ),
-                        const InfoRow(
+                        InfoRow(
                           label: 'Department',
-                          value: 'Admin Center',
+                          value: _displayOrDash(
+                            lookup.departmentDesc.trim().isNotEmpty
+                                ? lookup.departmentDesc
+                                : lookup.department,
+                          ),
                         ),
-                        const InfoRow(label: 'Purpose', value: 'Meeting'),
-                        const InfoRow(label: 'Site', value: 'FACTORY1 T'),
-                        const InfoRow(
+                        InfoRow(
+                          label: 'Purpose',
+                          value: _displayOrDash(lookup.purpose),
+                        ),
+                        InfoRow(
+                          label: 'Site',
+                          value: _displayOrDash(
+                            lookup.siteDesc.trim().isNotEmpty
+                                ? lookup.siteDesc
+                                : lookup.site,
+                          ),
+                        ),
+                        InfoRow(
                           label: 'Company',
-                          value: 'JOHNHANSON LIMITED',
+                          value: _displayOrDash(lookup.company),
                         ),
-                        const InfoRow(label: 'Contact', value: '012-3456789'),
+                        InfoRow(
+                          label: 'Contact',
+                          value: _displayOrDash(lookup.contactNumber),
+                        ),
                         const Divider(height: 24),
-                        const InfoRow(label: 'Visitor Type', value: 'Visitor'),
-                        const InfoRow(label: 'Invite By', value: 'Suraya'),
-                        const InfoRow(label: 'Work Level', value: 'Low'),
-                        const InfoRow(
+                        InfoRow(
+                          label: 'Visitor Type',
+                          value: _visitorTypeDisplay(lookup.visitorType),
+                        ),
+                        InfoRow(
+                          label: 'Invite By',
+                          value: _displayOrDash(lookup.inviteBy),
+                        ),
+                        InfoRow(
+                          label: 'Work Level',
+                          value: _displayOrDash(lookup.workLevel),
+                        ),
+                        InfoRow(
                           label: 'Vehicle Plate',
-                          value: 'WSD 011234',
+                          value: _displayOrDash(lookup.vehiclePlateNumber),
                         ),
                       ],
                     ),
@@ -210,7 +329,7 @@ class _VisitorCheckInPageState extends State<VisitorCheckInPage> {
                 ),
               ),
             ),
-          if (_hasScanResult && _resultTabIndex == 1)
+          if (hasResult && _resultTabIndex == 1)
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
@@ -225,29 +344,22 @@ class _VisitorCheckInPageState extends State<VisitorCheckInPage> {
                     ),
                     const SizedBox(height: 8),
                     CheckboxListTile(
-                      value:
-                          _selectedIndexes.length == _visitors.length &&
-                          _visitors.isNotEmpty,
-                      onChanged: _visitors.isEmpty
-                          ? null
-                          : (checked) {
+                      value: allEligibleSelected,
+                      onChanged: hasEligibleVisitors
+                          ? (checked) {
                               setState(() {
                                 if (checked == true) {
                                   _selectedIndexes
                                     ..clear()
-                                    ..addAll(
-                                      List<int>.generate(
-                                        _visitors.length,
-                                        (index) => index,
-                                      ),
-                                    );
+                                    ..addAll(eligibleIndexes);
                                 } else {
                                   _selectedIndexes.clear();
                                 }
                               });
-                            },
+                            }
+                          : null,
                       title: Text(
-                        'Select all (${_selectedIndexes.length}/${_visitors.length})',
+                        'Select all ($selectedEligibleCount/${eligibleIndexes.length})',
                       ),
                       controlAffinity: ListTileControlAffinity.leading,
                       contentPadding: EdgeInsets.zero,
@@ -257,28 +369,39 @@ class _VisitorCheckInPageState extends State<VisitorCheckInPage> {
                 ),
               ),
             ),
-          if (_hasScanResult && _resultTabIndex == 1)
+          if (hasResult && _resultTabIndex == 1)
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate((context, i) {
+                  final visitor = visitors[i];
+                  final isEligible = _isEligibleForCurrentAction(visitor);
                   return _VisitorCard(
-                    visitor: _visitors[i],
+                    visitor: visitor,
                     selected: _selectedIndexes.contains(i),
-                    onSelected: (checked) {
-                      setState(() {
-                        if (checked == true) {
-                          _selectedIndexes.add(i);
-                        } else {
-                          _selectedIndexes.remove(i);
-                        }
-                      });
-                    },
+                    isEligible: isEligible,
+                    ineligibleReason: _disabledReasonForCurrentAction(visitor),
+                    checkStatus: _visitStatus(visitor),
+                    checkInDate: _formatDateTime(visitor.checkInTime),
+                    checkOutDate: _formatDateTime(visitor.checkOutTime),
+                    onSelected: isEligible
+                        ? (checked) {
+                            setState(() {
+                              if (checked == true) {
+                                if (_isEligibleForCurrentAction(visitor)) {
+                                  _selectedIndexes.add(i);
+                                }
+                              } else {
+                                _selectedIndexes.remove(i);
+                              }
+                            });
+                          }
+                        : null,
                   );
-                }, childCount: _visitors.length),
+                }, childCount: visitors.length),
               ),
             ),
-          if (_hasScanResult)
+          if (hasResult)
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -301,10 +424,10 @@ class _VisitorCheckInPageState extends State<VisitorCheckInPage> {
                           label: const Text('Camera'),
                         ),
                         const SizedBox(height: 12),
-                        Wrap(
+                        const Wrap(
                           spacing: 8,
                           runSpacing: 8,
-                          children: const [
+                          children: [
                             _PhotoThumb(hasPhoto: true),
                             _PhotoThumb(hasPhoto: false),
                             _PhotoThumb(hasPhoto: true),
@@ -322,7 +445,7 @@ class _VisitorCheckInPageState extends State<VisitorCheckInPage> {
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.all(16),
         child: AppFilledButton(
-          onPressed: _selectedIndexes.isEmpty ? null : () {},
+          onPressed: selectedEligibleCount == 0 ? null : () {},
           child: Text(
             widget.isCheckIn ? 'Confirm Check-In' : 'Confirm Check-Out',
           ),
@@ -336,17 +459,33 @@ class _VisitorCard extends StatelessWidget {
   const _VisitorCard({
     required this.visitor,
     required this.selected,
+    required this.isEligible,
+    required this.ineligibleReason,
+    required this.checkStatus,
+    required this.checkInDate,
+    required this.checkOutDate,
     required this.onSelected,
   });
 
-  final _VisitorRow visitor;
+  final VisitorLookupItemEntity visitor;
   final bool selected;
-  final ValueChanged<bool?> onSelected;
+  final bool isEligible;
+  final String? ineligibleReason;
+  final String checkStatus;
+  final String checkInDate;
+  final String checkOutDate;
+  final ValueChanged<bool?>? onSelected;
+
+  String _displayOrDash(String value) {
+    final text = value.trim();
+    return text.isEmpty ? '-' : text;
+  }
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     return Card(
+      margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -356,30 +495,43 @@ class _VisitorCard extends StatelessWidget {
               children: [
                 Checkbox(value: selected, onChanged: onSelected),
                 Expanded(
-                  child: Text(
-                    visitor.name,
-                    style: textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _displayOrDash(visitor.name),
+                        style: textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (!isEligible && ineligibleReason != null)
+                        Text(
+                          ineligibleReason!,
+                          style: textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 4),
-            InfoRow(label: 'Name', value: visitor.name),
-            InfoRow(label: 'IC/Passport', value: visitor.idNumber),
-            InfoRow(label: 'Check In/Out', value: visitor.checkStatus),
-            InfoRow(label: 'Check In Date', value: visitor.checkInDate),
-            InfoRow(label: 'Check Out Date', value: visitor.checkOutDate),
-            const InfoRow(label: 'Gate In', value: 'F1_A'),
+            InfoRow(label: 'Name', value: _displayOrDash(visitor.name)),
+            InfoRow(
+              label: 'IC/Passport',
+              value: _displayOrDash(visitor.icPassport),
+            ),
+            InfoRow(label: 'Check In/Out', value: checkStatus),
+            InfoRow(label: 'Check In Date', value: checkInDate),
+            InfoRow(label: 'Check Out Date', value: checkOutDate),
+            const InfoRow(label: 'Gate In', value: '-'),
             const InfoRow(label: 'Gate Out', value: '-'),
-            const InfoRow(label: 'Check In By', value: 'ryan'),
+            const InfoRow(label: 'Check In By', value: '-'),
             const InfoRow(label: 'Check Out By', value: '-'),
-            const SizedBox(height: 6),
-            const _FlatInputField(
+            InfoRow(
               label: 'Physical Tag',
-              hintText: 'Please input',
-              trailingIcon: Icons.qr_code_scanner,
+              value: _displayOrDash(visitor.physicalTag),
             ),
             const SizedBox(height: 10),
             Row(
@@ -393,7 +545,7 @@ class _VisitorCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                _PhotoMock(hasPhoto: visitor.hasPhoto),
+                const _PhotoMock(hasPhoto: false),
                 const SizedBox(width: 12),
                 AppOutlinedButtonIcon(
                   onPressed: () {},
@@ -407,24 +559,6 @@ class _VisitorCard extends StatelessWidget {
       ),
     );
   }
-}
-
-class _VisitorRow {
-  const _VisitorRow({
-    required this.name,
-    required this.idNumber,
-    required this.checkStatus,
-    required this.checkInDate,
-    required this.checkOutDate,
-    required this.hasPhoto,
-  });
-
-  final String name;
-  final String idNumber;
-  final String checkStatus;
-  final String checkInDate;
-  final String checkOutDate;
-  final bool hasPhoto;
 }
 
 class _ResultTabBar extends StatelessWidget {
@@ -443,7 +577,7 @@ class _ResultTabBar extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withOpacity(0.45),
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Padding(
@@ -544,26 +678,6 @@ class _ResultTabChip extends StatelessWidget {
   }
 }
 
-class _Chip extends StatelessWidget {
-  const _Chip({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Text('$label: $value'),
-    );
-  }
-}
-
 class _PhotoMock extends StatelessWidget {
   const _PhotoMock({required this.hasPhoto});
 
@@ -626,6 +740,8 @@ class _FlatInputField extends StatelessWidget {
     this.controller,
     this.trailingIcon,
     this.onTrailingTap,
+    this.onChanged,
+    this.focusNode,
   });
 
   final String label;
@@ -633,6 +749,8 @@ class _FlatInputField extends StatelessWidget {
   final TextEditingController? controller;
   final IconData? trailingIcon;
   final VoidCallback? onTrailingTap;
+  final ValueChanged<String>? onChanged;
+  final FocusNode? focusNode;
 
   @override
   Widget build(BuildContext context) {
@@ -655,6 +773,8 @@ class _FlatInputField extends StatelessWidget {
             Expanded(
               child: TextFormField(
                 controller: controller,
+                focusNode: focusNode,
+                onChanged: onChanged,
                 decoration: InputDecoration(
                   hintText: hintText,
                   border: InputBorder.none,
@@ -690,7 +810,7 @@ class _FieldRowDivider extends StatelessWidget {
     return Divider(
       height: 1,
       thickness: 0.6,
-      color: colorScheme.outline.withOpacity(0.25),
+      color: colorScheme.outline.withValues(alpha: 0.25),
     );
   }
 }
