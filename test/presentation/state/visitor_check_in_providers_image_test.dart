@@ -35,6 +35,13 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
   }) async {
     throw UnimplementedError();
   }
+
+  @override
+  Future<VisitorCheckInResultEntity> submitVisitorCheckOut({
+    required VisitorCheckInSubmissionEntity submission,
+  }) async {
+    throw UnimplementedError();
+  }
 }
 
 void main() {

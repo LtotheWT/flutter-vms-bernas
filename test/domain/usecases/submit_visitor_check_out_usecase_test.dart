@@ -6,24 +6,24 @@ import 'package:vms_bernas/domain/entities/visitor_check_in_submission_entity.da
 import 'package:vms_bernas/domain/entities/visitor_check_in_submission_item_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_lookup_entity.dart';
 import 'package:vms_bernas/domain/repositories/visitor_access_repository.dart';
-import 'package:vms_bernas/domain/usecases/submit_visitor_check_in_usecase.dart';
+import 'package:vms_bernas/domain/usecases/submit_visitor_check_out_usecase.dart';
 
 class _FakeVisitorAccessRepository implements VisitorAccessRepository {
   VisitorCheckInSubmissionEntity? capturedSubmission;
 
   @override
-  Future<VisitorCheckInResultEntity> submitVisitorCheckIn({
+  Future<VisitorCheckInResultEntity> submitVisitorCheckOut({
     required VisitorCheckInSubmissionEntity submission,
   }) async {
     capturedSubmission = submission;
     return const VisitorCheckInResultEntity(
       success: true,
-      message: 'Checked-in successfully.',
+      message: 'Checked-out successfully.',
     );
   }
 
   @override
-  Future<VisitorCheckInResultEntity> submitVisitorCheckOut({
+  Future<VisitorCheckInResultEntity> submitVisitorCheckIn({
     required VisitorCheckInSubmissionEntity submission,
   }) async {
     throw UnimplementedError();
@@ -49,7 +49,7 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
 void main() {
   test('forwards submission to repository', () async {
     final repository = _FakeVisitorAccessRepository();
-    final useCase = SubmitVisitorCheckInUseCase(repository);
+    final useCase = SubmitVisitorCheckOutUseCase(repository);
     const submission = VisitorCheckInSubmissionEntity(
       userId: 'Ryan',
       entity: 'AGYTEK',

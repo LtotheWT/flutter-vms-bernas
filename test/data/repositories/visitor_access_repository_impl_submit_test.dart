@@ -24,7 +24,8 @@ class _FakeVisitorAccessRemoteDataSource extends VisitorAccessRemoteDataSource {
   _FakeVisitorAccessRemoteDataSource() : super(Dio());
 
   String? capturedAccessToken;
-  VisitorCheckInRequestDto? capturedRequest;
+  VisitorCheckInRequestDto? capturedCheckInRequest;
+  VisitorCheckInRequestDto? capturedCheckOutRequest;
 
   @override
   Future<VisitorCheckInResponseDto> submitVisitorCheckIn({
@@ -32,10 +33,23 @@ class _FakeVisitorAccessRemoteDataSource extends VisitorAccessRemoteDataSource {
     required VisitorCheckInRequestDto request,
   }) async {
     capturedAccessToken = accessToken;
-    capturedRequest = request;
+    capturedCheckInRequest = request;
     return const VisitorCheckInResponseDto(
       success: true,
       message: 'Checked-in successfully.',
+    );
+  }
+
+  @override
+  Future<VisitorCheckInResponseDto> submitVisitorCheckOut({
+    required String accessToken,
+    required VisitorCheckInRequestDto request,
+  }) async {
+    capturedAccessToken = accessToken;
+    capturedCheckOutRequest = request;
+    return const VisitorCheckInResponseDto(
+      success: true,
+      message: 'Checked-out successfully.',
     );
   }
 
@@ -76,6 +90,18 @@ void main() {
     );
   });
 
+  test('throws for check-out when auth token missing', () async {
+    final repository = VisitorAccessRepositoryImpl(
+      _FakeVisitorAccessRemoteDataSource(),
+      _FakeAuthLocalDataSource(null),
+    );
+
+    expect(
+      () => repository.submitVisitorCheckOut(submission: submission),
+      throwsA(isA<Exception>()),
+    );
+  });
+
   test('maps submit response and forwards payload', () async {
     final remote = _FakeVisitorAccessRemoteDataSource();
     final repository = VisitorAccessRepositoryImpl(
@@ -96,8 +122,33 @@ void main() {
     );
 
     expect(remote.capturedAccessToken, 'token123');
-    expect(remote.capturedRequest?.invitationId, 'IV20260200038');
+    expect(remote.capturedCheckInRequest?.invitationId, 'IV20260200038');
     expect(result.success, isTrue);
     expect(result.message, 'Checked-in successfully.');
+  });
+
+  test('maps check-out submit response and forwards payload', () async {
+    final remote = _FakeVisitorAccessRemoteDataSource();
+    final repository = VisitorAccessRepositoryImpl(
+      remote,
+      _FakeAuthLocalDataSource(
+        const AuthSessionDto(
+          username: 'Ryan',
+          fullname: 'Ryan',
+          accessToken: 'token123',
+          defaultSite: 'FACTORY1',
+          defaultGate: 'F1_A',
+        ),
+      ),
+    );
+
+    final result = await repository.submitVisitorCheckOut(
+      submission: submission,
+    );
+
+    expect(remote.capturedAccessToken, 'token123');
+    expect(remote.capturedCheckOutRequest?.invitationId, 'IV20260200038');
+    expect(result.success, isTrue);
+    expect(result.message, 'Checked-out successfully.');
   });
 }

@@ -13,6 +13,7 @@ import 'package:vms_bernas/domain/entities/visitor_lookup_item_entity.dart';
 import 'package:vms_bernas/domain/repositories/visitor_access_repository.dart';
 import 'package:vms_bernas/domain/usecases/get_visitor_lookup_usecase.dart';
 import 'package:vms_bernas/domain/usecases/submit_visitor_check_in_usecase.dart';
+import 'package:vms_bernas/domain/usecases/submit_visitor_check_out_usecase.dart';
 import 'package:vms_bernas/presentation/pages/visitor_check_in_page.dart';
 import 'package:vms_bernas/presentation/state/auth_session_providers.dart';
 import 'package:vms_bernas/presentation/state/visitor_check_in_providers.dart';
@@ -34,7 +35,8 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
   final Duration? imageDelay;
   final Object? imageError;
   bool? lastIsCheckIn;
-  VisitorCheckInSubmissionEntity? lastSubmission;
+  VisitorCheckInSubmissionEntity? lastCheckInSubmission;
+  VisitorCheckInSubmissionEntity? lastCheckOutSubmission;
   int lookupCalls = 0;
 
   @override
@@ -90,10 +92,21 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
   Future<VisitorCheckInResultEntity> submitVisitorCheckIn({
     required VisitorCheckInSubmissionEntity submission,
   }) async {
-    lastSubmission = submission;
+    lastCheckInSubmission = submission;
     return const VisitorCheckInResultEntity(
       success: true,
       message: 'Checked-in successfully.',
+    );
+  }
+
+  @override
+  Future<VisitorCheckInResultEntity> submitVisitorCheckOut({
+    required VisitorCheckInSubmissionEntity submission,
+  }) async {
+    lastCheckOutSubmission = submission;
+    return const VisitorCheckInResultEntity(
+      success: true,
+      message: 'Checked-out successfully.',
     );
   }
 
@@ -135,6 +148,9 @@ Widget _buildApp({
       submitVisitorCheckInUseCaseProvider.overrideWithValue(
         SubmitVisitorCheckInUseCase(repository),
       ),
+      submitVisitorCheckOutUseCaseProvider.overrideWithValue(
+        SubmitVisitorCheckOutUseCase(repository),
+      ),
       if (authLocalDataSource != null)
         authLocalDataSourceProvider.overrideWithValue(authLocalDataSource),
     ],
@@ -165,7 +181,7 @@ void main() {
     expect(find.text('Visitor Photo'), findsNothing);
     expect(find.text('Check In/Out'), findsNothing);
     expect(find.text('History'), findsOneWidget);
-    expect(find.text('Checked In'), findsOneWidget);
+    expect(find.text('IN'), findsOneWidget);
     expect(find.text('KAK -V036'), findsOneWidget);
   });
 
@@ -245,7 +261,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Already checked in'), findsNothing);
-    expect(find.text('Checked In'), findsOneWidget);
+    expect(find.text('IN'), findsOneWidget);
     expect(find.text('Select all (0/0)'), findsOneWidget);
     expect(
       tester
@@ -304,7 +320,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Already checked out'), findsNothing);
-    expect(find.text('Checked Out'), findsOneWidget);
+    expect(find.text('OUT'), findsOneWidget);
     expect(find.text('Select all (0/0)'), findsOneWidget);
     expect(
       tester
@@ -368,6 +384,8 @@ void main() {
     await tester.tap(find.text('Visitor List (2)'));
     await tester.pumpAndSettle();
 
+    expect(find.text('IN'), findsOneWidget);
+    expect(find.text('OUT'), findsNothing);
     expect(find.text('Select all (0/1)'), findsOneWidget);
     await tester.tap(find.text('Select all (0/1)'));
     await tester.pumpAndSettle();
@@ -380,6 +398,52 @@ void main() {
           .onPressed,
       isNotNull,
     );
+  });
+
+  testWidgets('unknown status hides top-right status tag', (tester) async {
+    const lookup = VisitorLookupEntity(
+      invitationId: 'IV1',
+      entity: 'AGYTEK',
+      site: 'FACTORY1',
+      siteDesc: 'FACTORY1 T',
+      department: 'ADC',
+      departmentDesc: 'ADMIN CENTER',
+      purpose: 'MEETING',
+      company: 'TEST',
+      contactNumber: '0123',
+      visitorType: '1_Visitor',
+      inviteBy: 'Suraya',
+      workLevel: '',
+      vehiclePlateNumber: 'WWW0000',
+      status: 'ARRIVED',
+      visitDateFrom: '2026-02-25T00:00:00',
+      visitDateTo: '2026-02-25T00:00:00',
+      visitTimeFrom: '19:00:PM',
+      visitTimeTo: '20:00:PM',
+      visitors: [
+        VisitorLookupItemEntity(
+          name: 'NO_STATUS',
+          icPassport: '333',
+          physicalTag: '',
+          email: '',
+          contactNo: '',
+          company: '',
+          checkInTime: '',
+          checkOutTime: '',
+        ),
+      ],
+    );
+    final repository = _FakeVisitorAccessRepository(lookup: lookup);
+    await tester.pumpWidget(_buildApp(repository: repository, isCheckIn: true));
+
+    await tester.enterText(find.byType(TextFormField).first, 'VIS|IV|A|F');
+    await tester.tap(find.widgetWithText(FilledButton, 'Search'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Visitor List (1)'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('IN'), findsNothing);
+    expect(find.text('OUT'), findsNothing);
   });
 
   testWidgets(
@@ -481,25 +545,109 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Confirm Check-In'));
       await tester.pumpAndSettle();
 
-      expect(repository.lastSubmission, isNotNull);
-      expect(repository.lastSubmission?.userId, 'Ryan');
-      expect(repository.lastSubmission?.site, 'FACTORY1');
-      expect(repository.lastSubmission?.gate, 'F1_A');
-      expect(repository.lastSubmission?.entity, 'AGYTEK');
-      expect(repository.lastSubmission?.invitationId, 'IV20260200038');
-      expect(repository.lastSubmission?.visitors.first.appId, '123456561231');
+      expect(repository.lastCheckInSubmission, isNotNull);
+      expect(repository.lastCheckInSubmission?.userId, 'Ryan');
+      expect(repository.lastCheckInSubmission?.site, 'FACTORY1');
+      expect(repository.lastCheckInSubmission?.gate, 'F1_A');
+      expect(repository.lastCheckInSubmission?.entity, 'AGYTEK');
+      expect(repository.lastCheckInSubmission?.invitationId, 'IV20260200038');
+      expect(
+        repository.lastCheckInSubmission?.visitors.first.appId,
+        '123456561231',
+      );
       expect(repository.lookupCalls, greaterThanOrEqualTo(2));
       expect(find.text('Checked-in successfully.'), findsOneWidget);
       await tester.tap(find.text('Visitor List (1)'));
       await tester.pumpAndSettle();
-      expect(find.text('Checked In'), findsOneWidget);
+      expect(find.text('IN'), findsOneWidget);
     },
   );
 
-  testWidgets('check-out confirm remains non-functional', (tester) async {
-    final repository = _FakeVisitorAccessRepository();
+  testWidgets('check-out confirm submits payload and refreshes lookup', (
+    tester,
+  ) async {
+    const beforeSubmit = VisitorLookupEntity(
+      invitationId: 'IV20260200038',
+      entity: 'AGYTEK',
+      site: 'FACTORY1',
+      siteDesc: 'FACTORY1 T',
+      department: 'ADC',
+      departmentDesc: 'ADMIN CENTER',
+      purpose: 'MEETING',
+      company: 'TEST',
+      contactNumber: '0123456789',
+      visitorType: '1_Visitor',
+      inviteBy: 'Suraya',
+      workLevel: '',
+      vehiclePlateNumber: 'WWW0000',
+      status: 'ARRIVED',
+      visitDateFrom: '2026-02-25T00:00:00',
+      visitDateTo: '2026-02-25T00:00:00',
+      visitTimeFrom: '19:00:PM',
+      visitTimeTo: '20:00:PM',
+      visitors: [
+        VisitorLookupItemEntity(
+          name: 'NAME',
+          icPassport: '12345656123',
+          physicalTag: 'KAK -V036',
+          email: '',
+          contactNo: '',
+          company: '',
+          checkInTime: '2026-02-25T17:27:39.723',
+          checkOutTime: '',
+        ),
+      ],
+    );
+    const afterSubmit = VisitorLookupEntity(
+      invitationId: 'IV20260200038',
+      entity: 'AGYTEK',
+      site: 'FACTORY1',
+      siteDesc: 'FACTORY1 T',
+      department: 'ADC',
+      departmentDesc: 'ADMIN CENTER',
+      purpose: 'MEETING',
+      company: 'TEST',
+      contactNumber: '0123456789',
+      visitorType: '1_Visitor',
+      inviteBy: 'Suraya',
+      workLevel: '',
+      vehiclePlateNumber: 'WWW0000',
+      status: 'ARRIVED',
+      visitDateFrom: '2026-02-25T00:00:00',
+      visitDateTo: '2026-02-25T00:00:00',
+      visitTimeFrom: '19:00:PM',
+      visitTimeTo: '20:00:PM',
+      visitors: [
+        VisitorLookupItemEntity(
+          name: 'NAME',
+          icPassport: '12345656123',
+          physicalTag: 'KAK -V036',
+          email: '',
+          contactNo: '',
+          company: '',
+          checkInTime: '2026-02-25T17:27:39.723',
+          checkOutTime: '2026-02-25T18:01:39.723',
+        ),
+      ],
+    );
+    final repository = _FakeVisitorAccessRepository(
+      lookupResponses: const [beforeSubmit, afterSubmit],
+    );
+    final authLocalDataSource = _FakeAuthLocalDataSource(
+      const AuthSessionDto(
+        username: 'Ryan',
+        fullname: 'Ryan',
+        accessToken: 'token123',
+        defaultSite: 'FACTORY1',
+        defaultGate: 'F1_A',
+      ),
+    );
     await tester.pumpWidget(
-      _buildApp(repository: repository, isCheckIn: false),
+      _buildApp(
+        repository: repository,
+        isCheckIn: false,
+        authLocalDataSource: authLocalDataSource,
+      ),
     );
 
     await tester.enterText(find.byType(TextFormField).first, 'VIS|IV|A|F');
@@ -508,15 +656,26 @@ void main() {
     await tester.tap(find.text('Visitor List (1)'));
     await tester.pumpAndSettle();
 
+    await tester.tap(find.text('Select all (0/1)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Confirm Check-Out'));
+    await tester.pumpAndSettle();
+
+    expect(repository.lastCheckOutSubmission, isNotNull);
+    expect(repository.lastCheckOutSubmission?.userId, 'Ryan');
+    expect(repository.lastCheckOutSubmission?.site, 'FACTORY1');
+    expect(repository.lastCheckOutSubmission?.gate, 'F1_A');
+    expect(repository.lastCheckOutSubmission?.entity, 'AGYTEK');
+    expect(repository.lastCheckOutSubmission?.invitationId, 'IV20260200038');
     expect(
-      tester
-          .widget<FilledButton>(
-            find.widgetWithText(FilledButton, 'Confirm Check-Out'),
-          )
-          .onPressed,
-      isNull,
+      repository.lastCheckOutSubmission?.visitors.first.appId,
+      '12345656123',
     );
-    expect(repository.lastSubmission, isNull);
+    expect(repository.lookupCalls, greaterThanOrEqualTo(2));
+    expect(find.text('Checked-out successfully.'), findsOneWidget);
+    await tester.tap(find.text('Visitor List (1)'));
+    await tester.pumpAndSettle();
+    expect(find.text('OUT'), findsOneWidget);
   });
 
   testWidgets('visitor photo shows loading spinner while fetching', (

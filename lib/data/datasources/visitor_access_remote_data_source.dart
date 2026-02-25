@@ -126,6 +126,58 @@ class VisitorAccessRemoteDataSource {
     }
   }
 
+  Future<VisitorCheckInResponseDto> submitVisitorCheckOut({
+    required String accessToken,
+    required VisitorCheckInRequestDto request,
+  }) async {
+    try {
+      final response = await _dio.post<dynamic>(
+        '/wmsws/Visitor/check-out',
+        data: request.toJson(),
+        options: Options(
+          headers: {'Authorization': 'Bearer $accessToken', 'accept': '*/*'},
+        ),
+      );
+
+      final dto = VisitorCheckInResponseDto.fromJson(
+        parseJsonMap(response.data),
+      );
+      if (!dto.success) {
+        throw VisitorAccessException(
+          _resolveBackendMessage(dto.message) ??
+              'Failed to submit visitor check-out. Please try again.',
+        );
+      }
+      return dto;
+    } on DioException catch (error) {
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 401 || statusCode == 403) {
+        throw VisitorAccessException('Please login again to submit check-out.');
+      }
+
+      final backendMessage = _extractCheckInBackendMessage(
+        error.response?.data,
+      );
+      if (backendMessage != null) {
+        throw VisitorAccessException(backendMessage);
+      }
+
+      if (isConnectivityIssue(error)) {
+        throw VisitorAccessException(
+          'Unable to submit visitor check-out. Please try again.',
+        );
+      }
+
+      throw VisitorAccessException(
+        'Failed to submit visitor check-out. Please try again.',
+      );
+    } on FormatException {
+      throw VisitorAccessException(
+        'Failed to submit visitor check-out. Please try again.',
+      );
+    }
+  }
+
   Future<Uint8List?> getVisitorApplicantImage({
     required String accessToken,
     required String invitationId,

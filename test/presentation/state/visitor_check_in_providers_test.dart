@@ -69,6 +69,13 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
   }
 
   @override
+  Future<VisitorCheckInResultEntity> submitVisitorCheckOut({
+    required VisitorCheckInSubmissionEntity submission,
+  }) async {
+    return const VisitorCheckInResultEntity(success: true, message: 'ok');
+  }
+
+  @override
   Future<Uint8List?> getVisitorApplicantImage({
     required String invitationId,
     required String appId,

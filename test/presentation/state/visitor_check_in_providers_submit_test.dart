@@ -7,6 +7,7 @@ import 'package:vms_bernas/domain/entities/visitor_check_in_submission_item_enti
 import 'package:vms_bernas/domain/entities/visitor_lookup_entity.dart';
 import 'package:vms_bernas/domain/repositories/visitor_access_repository.dart';
 import 'package:vms_bernas/domain/usecases/submit_visitor_check_in_usecase.dart';
+import 'package:vms_bernas/domain/usecases/submit_visitor_check_out_usecase.dart';
 import 'package:vms_bernas/presentation/state/visitor_check_in_providers.dart';
 
 class _FakeVisitorAccessRepository implements VisitorAccessRepository {
@@ -14,13 +15,14 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
 
   final Object? error;
   final Duration? submitDelay;
-  VisitorCheckInSubmissionEntity? capturedSubmission;
+  VisitorCheckInSubmissionEntity? capturedCheckInSubmission;
+  VisitorCheckInSubmissionEntity? capturedCheckOutSubmission;
 
   @override
   Future<VisitorCheckInResultEntity> submitVisitorCheckIn({
     required VisitorCheckInSubmissionEntity submission,
   }) async {
-    capturedSubmission = submission;
+    capturedCheckInSubmission = submission;
     if (submitDelay != null) {
       await Future<void>.delayed(submitDelay!);
     }
@@ -30,6 +32,23 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
     return const VisitorCheckInResultEntity(
       success: true,
       message: 'Checked-in successfully.',
+    );
+  }
+
+  @override
+  Future<VisitorCheckInResultEntity> submitVisitorCheckOut({
+    required VisitorCheckInSubmissionEntity submission,
+  }) async {
+    capturedCheckOutSubmission = submission;
+    if (submitDelay != null) {
+      await Future<void>.delayed(submitDelay!);
+    }
+    if (error != null) {
+      throw error!;
+    }
+    return const VisitorCheckInResultEntity(
+      success: true,
+      message: 'Checked-out successfully.',
     );
   }
 
@@ -86,7 +105,7 @@ void main() {
     final result = await controller.submitCheckIn(submission: submission);
 
     final state = container.read(visitorCheckControllerProvider);
-    expect(repository.capturedSubmission, submission);
+    expect(repository.capturedCheckInSubmission, submission);
     expect(result.success, isTrue);
     expect(state.isSubmitting, isFalse);
     expect(state.errorMessage, isNull);
@@ -147,5 +166,98 @@ void main() {
     expect(firstResult.success, isTrue);
     expect(secondResult.success, isFalse);
     expect(secondResult.message, 'Check-in is currently submitting.');
+  });
+
+  test('submit check-out success toggles loading and returns result', () async {
+    final repository = _FakeVisitorAccessRepository();
+    final container = ProviderContainer(
+      overrides: [
+        submitVisitorCheckOutUseCaseProvider.overrideWithValue(
+          SubmitVisitorCheckOutUseCase(repository),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    final sub = container.listen<VisitorCheckState>(
+      visitorCheckControllerProvider,
+      (_, __) {},
+      fireImmediately: true,
+    );
+    addTearDown(sub.close);
+
+    final controller = container.read(visitorCheckControllerProvider.notifier);
+    final result = await controller.submitCheckOut(submission: submission);
+
+    final state = container.read(visitorCheckControllerProvider);
+    expect(repository.capturedCheckOutSubmission, submission);
+    expect(result.success, isTrue);
+    expect(state.isSubmitting, isFalse);
+    expect(state.errorMessage, isNull);
+  });
+
+  test(
+    'submit check-out failure returns error and sets state errorMessage',
+    () async {
+      final repository = _FakeVisitorAccessRepository(
+        error: Exception('failed'),
+      );
+      final container = ProviderContainer(
+        overrides: [
+          submitVisitorCheckOutUseCaseProvider.overrideWithValue(
+            SubmitVisitorCheckOutUseCase(repository),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      final sub = container.listen<VisitorCheckState>(
+        visitorCheckControllerProvider,
+        (_, __) {},
+        fireImmediately: true,
+      );
+      addTearDown(sub.close);
+
+      final controller = container.read(
+        visitorCheckControllerProvider.notifier,
+      );
+      final result = await controller.submitCheckOut(submission: submission);
+
+      final state = container.read(visitorCheckControllerProvider);
+      expect(result.success, isFalse);
+      expect(result.message, 'failed');
+      expect(state.errorMessage, 'failed');
+      expect(state.isSubmitting, isFalse);
+    },
+  );
+
+  test('submit check-out loading guard prevents duplicate submit', () async {
+    final repository = _FakeVisitorAccessRepository(
+      submitDelay: const Duration(milliseconds: 150),
+    );
+    final container = ProviderContainer(
+      overrides: [
+        submitVisitorCheckOutUseCaseProvider.overrideWithValue(
+          SubmitVisitorCheckOutUseCase(repository),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    final sub = container.listen<VisitorCheckState>(
+      visitorCheckControllerProvider,
+      (_, __) {},
+      fireImmediately: true,
+    );
+    addTearDown(sub.close);
+
+    final controller = container.read(visitorCheckControllerProvider.notifier);
+    final firstFuture = controller.submitCheckOut(submission: submission);
+    await Future<void>.delayed(const Duration(milliseconds: 30));
+    final secondResult = await controller.submitCheckOut(
+      submission: submission,
+    );
+    final firstResult = await firstFuture;
+
+    expect(firstResult.success, isTrue);
+    expect(secondResult.success, isFalse);
+    expect(secondResult.message, 'Check-out is currently submitting.');
   });
 }

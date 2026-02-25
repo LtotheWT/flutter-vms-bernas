@@ -14,6 +14,10 @@ abstract class VisitorAccessRepository {
     required VisitorCheckInSubmissionEntity submission,
   });
 
+  Future<VisitorCheckInResultEntity> submitVisitorCheckOut({
+    required VisitorCheckInSubmissionEntity submission,
+  });
+
   Future<Uint8List?> getVisitorApplicantImage({
     required String invitationId,
     required String appId,

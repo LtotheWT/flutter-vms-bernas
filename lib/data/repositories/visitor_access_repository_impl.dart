@@ -54,6 +54,23 @@ class VisitorAccessRepositoryImpl implements VisitorAccessRepository {
   }
 
   @override
+  Future<VisitorCheckInResultEntity> submitVisitorCheckOut({
+    required VisitorCheckInSubmissionEntity submission,
+  }) async {
+    final session = await _authLocalDataSource.getSession();
+    final accessToken = session?.accessToken.trim() ?? '';
+    if (accessToken.isEmpty) {
+      throw Exception('Please login again to submit check-out.');
+    }
+
+    final dto = await _remoteDataSource.submitVisitorCheckOut(
+      accessToken: accessToken,
+      request: VisitorCheckInRequestDto.fromEntity(submission),
+    );
+    return dto.toEntity();
+  }
+
+  @override
   Future<Uint8List?> getVisitorApplicantImage({
     required String invitationId,
     required String appId,

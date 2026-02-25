@@ -90,4 +90,52 @@ void main() {
       ),
     );
   });
+
+  test('posts check-out payload to correct endpoint', () async {
+    final dio = Dio();
+    String? capturedPath;
+    dynamic capturedData;
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          capturedPath = options.path;
+          capturedData = options.data;
+          handler.resolve(
+            Response<dynamic>(
+              requestOptions: options,
+              data: const {
+                'Success': true,
+                'Message': 'Checked-out successfully.',
+              },
+            ),
+          );
+        },
+      ),
+    );
+    final dataSource = VisitorAccessRemoteDataSource(dio);
+
+    final result = await dataSource.submitVisitorCheckOut(
+      accessToken: 'token',
+      request: const VisitorCheckInRequestDto(
+        userId: 'Ryan',
+        entity: 'AGYTEK',
+        site: 'FACTORY1',
+        gate: 'F1_A',
+        invitationId: 'IV20260200038',
+        visitors: [
+          VisitorCheckInSubmissionItemEntity(
+            appId: '123456561231',
+            physicalTag: '',
+          ),
+        ],
+      ),
+    );
+
+    expect(capturedPath, '/wmsws/Visitor/check-out');
+    expect(
+      (capturedData as Map<String, dynamic>)['invitationid'],
+      'IV20260200038',
+    );
+    expect(result.success, isTrue);
+  });
 }

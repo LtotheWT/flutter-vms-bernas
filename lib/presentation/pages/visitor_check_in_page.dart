@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:vms_bernas/presentation/widgets/labeled_form_rows.dart';
 
 import '../../domain/entities/visitor_check_in_submission_entity.dart';
 import '../../domain/entities/visitor_check_in_submission_item_entity.dart';
@@ -84,7 +85,7 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
     ref.read(visitorCheckControllerProvider.notifier).clearAll();
   }
 
-  Future<void> _confirmCheckIn({
+  Future<void> _confirmSubmit({
     required VisitorCheckState state,
     required List<VisitorLookupItemEntity> visitors,
     required Set<int> eligibleIndexes,
@@ -107,9 +108,11 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
     final userId = session?.username.trim() ?? '';
     final site = session?.defaultSite.trim() ?? '';
     final gate = session?.defaultGate.trim() ?? '';
+    final actionLabel = widget.isCheckIn ? 'check-in' : 'check-out';
+    final actionPast = widget.isCheckIn ? 'checked in' : 'checked out';
     if (userId.isEmpty || site.isEmpty || gate.isEmpty) {
       if (mounted) {
-        showAppSnackBar(context, 'Please login again to submit check-in.');
+        showAppSnackBar(context, 'Please login again to submit $actionLabel.');
       }
       return;
     }
@@ -122,7 +125,7 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
         if (mounted) {
           showAppSnackBar(
             context,
-            'Selected visitor has empty IC/Passport and cannot be checked in.',
+            'Selected visitor has empty IC/Passport and cannot be $actionPast.',
           );
         }
         return;
@@ -144,16 +147,20 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
       visitors: selectedVisitors,
     );
 
-    final result = await ref
-        .read(visitorCheckControllerProvider.notifier)
-        .submitCheckIn(submission: submission);
+    final controller = ref.read(visitorCheckControllerProvider.notifier);
+    final result = await (widget.isCheckIn
+        ? controller.submitCheckIn(submission: submission)
+        : controller.submitCheckOut(submission: submission));
 
     if (!mounted) {
       return;
     }
 
-    final message = result.message.trim().isEmpty
+    final defaultMessage = widget.isCheckIn
         ? 'Checked-in successfully.'
+        : 'Checked-out successfully.';
+    final message = result.message.trim().isEmpty
+        ? defaultMessage
         : result.message;
     showAppSnackBar(context, message);
 
@@ -289,6 +296,7 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
                         onTrailingTap: () => _scanFocusNode.requestFocus(),
                         focusNode: _scanFocusNode,
                       ),
+                      FormRowDivider(),
                       const SizedBox(height: 8),
                       Row(
                         children: [
@@ -402,7 +410,7 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
                           label: 'Contact',
                           value: _displayOrDash(lookup.contactNumber),
                         ),
-                        const Divider(height: 24),
+                        const FormRowDivider(height: 12),
                         InfoRow(
                           label: 'Visitor Type',
                           value: _visitorTypeDisplay(lookup.visitorType),
@@ -432,13 +440,6 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      'Visitor List',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
                     CheckboxListTile(
                       value: allEligibleSelected,
                       onChanged: hasEligibleVisitors
@@ -542,17 +543,16 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
         minimum: const EdgeInsets.all(16),
         child: AppFilledButton(
           onPressed:
-              widget.isCheckIn &&
-                  !state.isSubmitting &&
+              !state.isSubmitting &&
                   !state.isLoading &&
                   selectedEligibleCount > 0
-              ? () => _confirmCheckIn(
+              ? () => _confirmSubmit(
                   state: state,
                   visitors: visitors,
                   eligibleIndexes: eligibleIndexes,
                 )
               : null,
-          child: state.isSubmitting && widget.isCheckIn
+          child: state.isSubmitting
               ? const SizedBox(
                   height: 18,
                   width: 18,
@@ -627,14 +627,14 @@ class _VisitorCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _VisitorPhotoSlot(
                       invitationId: invitationId,
                       appId: visitor.icPassport,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(width: 8),
                     _StatusTag(status: checkStatus),
                   ],
                 ),
@@ -673,18 +673,16 @@ class _StatusTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     final normalized = status.trim().toUpperCase();
 
     final (text, bg, fg) = switch (normalized) {
-      'IN' => ('Checked In', colorScheme.primary, Colors.white),
-      'OUT' => ('Checked Out', colorScheme.error, Colors.white),
-      _ => (
-        '-',
-        Theme.of(context).colorScheme.surfaceContainerHighest,
-        Theme.of(context).colorScheme.onSurfaceVariant,
-      ),
+      'IN' => ('IN', const Color(0xFF16A34A), Colors.white),
+      'OUT' => ('OUT', const Color(0xFFDC2626), Colors.white),
+      _ => ('', Colors.transparent, Colors.transparent),
     };
+    if (text.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
     return DecoratedBox(
       decoration: BoxDecoration(

@@ -10,6 +10,7 @@ import '../../domain/entities/visitor_lookup_entity.dart';
 import '../../domain/repositories/visitor_access_repository.dart';
 import '../../domain/usecases/get_visitor_lookup_usecase.dart';
 import '../../domain/usecases/submit_visitor_check_in_usecase.dart';
+import '../../domain/usecases/submit_visitor_check_out_usecase.dart';
 import 'auth_session_providers.dart';
 
 final visitorAccessRemoteDataSourceProvider =
@@ -37,6 +38,12 @@ final submitVisitorCheckInUseCaseProvider =
     Provider<SubmitVisitorCheckInUseCase>((ref) {
       final repository = ref.read(visitorAccessRepositoryProvider);
       return SubmitVisitorCheckInUseCase(repository);
+    });
+
+final submitVisitorCheckOutUseCaseProvider =
+    Provider<SubmitVisitorCheckOutUseCase>((ref) {
+      final repository = ref.read(visitorAccessRepositoryProvider);
+      return SubmitVisitorCheckOutUseCase(repository);
     });
 
 @immutable
@@ -160,6 +167,33 @@ class VisitorCheckController extends Notifier<VisitorCheckState> {
       final message = text.startsWith('Exception:')
           ? text.replaceFirst('Exception:', '').trim()
           : (text.isEmpty ? 'Failed to submit visitor check-in.' : text);
+      state = state.copyWith(isSubmitting: false, errorMessage: message);
+      return VisitorCheckInResultEntity(success: false, message: message);
+    }
+  }
+
+  Future<VisitorCheckInResultEntity> submitCheckOut({
+    required VisitorCheckInSubmissionEntity submission,
+  }) async {
+    if (state.isSubmitting) {
+      return const VisitorCheckInResultEntity(
+        success: false,
+        message: 'Check-out is currently submitting.',
+      );
+    }
+
+    state = state.copyWith(isSubmitting: true, errorMessage: null);
+
+    try {
+      final useCase = ref.read(submitVisitorCheckOutUseCaseProvider);
+      final result = await useCase(submission: submission);
+      state = state.copyWith(isSubmitting: false);
+      return result;
+    } catch (error) {
+      final text = error.toString().trim();
+      final message = text.startsWith('Exception:')
+          ? text.replaceFirst('Exception:', '').trim()
+          : (text.isEmpty ? 'Failed to submit visitor check-out.' : text);
       state = state.copyWith(isSubmitting: false, errorMessage: message);
       return VisitorCheckInResultEntity(success: false, message: message);
     }

@@ -34,12 +34,13 @@ class LabeledFieldLabel extends StatelessWidget {
 }
 
 class FormRowDivider extends StatelessWidget {
-  const FormRowDivider({super.key});
+  final double height;
+  const FormRowDivider({super.key, this.height = 1});
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Divider(height: 1, thickness: 1, color: colorScheme.surface);
+    return Divider(height: height, thickness: 1, color: colorScheme.surface);
   }
 }
 
