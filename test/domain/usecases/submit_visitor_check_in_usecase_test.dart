@@ -1,0 +1,65 @@
+import 'dart:typed_data';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:vms_bernas/domain/entities/visitor_check_in_result_entity.dart';
+import 'package:vms_bernas/domain/entities/visitor_check_in_submission_entity.dart';
+import 'package:vms_bernas/domain/entities/visitor_check_in_submission_item_entity.dart';
+import 'package:vms_bernas/domain/entities/visitor_lookup_entity.dart';
+import 'package:vms_bernas/domain/repositories/visitor_access_repository.dart';
+import 'package:vms_bernas/domain/usecases/submit_visitor_check_in_usecase.dart';
+
+class _FakeVisitorAccessRepository implements VisitorAccessRepository {
+  VisitorCheckInSubmissionEntity? capturedSubmission;
+
+  @override
+  Future<VisitorCheckInResultEntity> submitVisitorCheckIn({
+    required VisitorCheckInSubmissionEntity submission,
+  }) async {
+    capturedSubmission = submission;
+    return const VisitorCheckInResultEntity(
+      success: true,
+      message: 'Checked-in successfully.',
+    );
+  }
+
+  @override
+  Future<VisitorLookupEntity> getVisitorLookup({
+    required String code,
+    required bool isCheckIn,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Uint8List?> getVisitorApplicantImage({
+    required String invitationId,
+    required String appId,
+  }) async {
+    return null;
+  }
+}
+
+void main() {
+  test('forwards submission to repository', () async {
+    final repository = _FakeVisitorAccessRepository();
+    final useCase = SubmitVisitorCheckInUseCase(repository);
+    const submission = VisitorCheckInSubmissionEntity(
+      userId: 'Ryan',
+      entity: 'AGYTEK',
+      site: 'FACTORY1',
+      gate: 'F1_A',
+      invitationId: 'IV20260200038',
+      visitors: [
+        VisitorCheckInSubmissionItemEntity(
+          appId: '123456561231',
+          physicalTag: '',
+        ),
+      ],
+    );
+
+    final result = await useCase(submission: submission);
+
+    expect(repository.capturedSubmission, submission);
+    expect(result.success, isTrue);
+  });
+}

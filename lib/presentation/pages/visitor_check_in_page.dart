@@ -1,11 +1,17 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../domain/entities/visitor_check_in_submission_entity.dart';
+import '../../domain/entities/visitor_check_in_submission_item_entity.dart';
 import '../../domain/entities/visitor_lookup_item_entity.dart';
+import '../state/auth_session_providers.dart';
 import '../state/visitor_check_in_providers.dart';
 import '../widgets/app_filled_button.dart';
 import '../widgets/app_outlined_button.dart';
 import '../widgets/info_row.dart';
+import '../widgets/app_snackbar.dart';
 
 class VisitorCheckInPage extends ConsumerStatefulWidget {
   const VisitorCheckInPage({super.key, required this.isCheckIn});
@@ -21,6 +27,7 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
   final _scanFocusNode = FocusNode();
   final Set<int> _selectedIndexes = <int>{};
   int _resultTabIndex = 0;
+  String _lastLookupCode = '';
   late final ProviderSubscription<VisitorCheckState> _stateSubscription;
 
   @override
@@ -61,14 +68,106 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
     super.dispose();
   }
 
-  Future<void> _search() async {
+  Future<void> _search({String? overrideCode}) async {
+    final value = overrideCode ?? _scanController.text;
+    final code = value.trim();
     final controller = ref.read(visitorCheckControllerProvider.notifier);
-    controller.updateSearchInput(_scanController.text);
-    await controller.search(isCheckIn: widget.isCheckIn);
+    controller.updateSearchInput(value);
+    final ok = await controller.search(isCheckIn: widget.isCheckIn);
+    if (ok && code.isNotEmpty) {
+      _lastLookupCode = code;
+    }
   }
 
   void _clear() {
+    _lastLookupCode = '';
     ref.read(visitorCheckControllerProvider.notifier).clearAll();
+  }
+
+  Future<void> _confirmCheckIn({
+    required VisitorCheckState state,
+    required List<VisitorLookupItemEntity> visitors,
+    required Set<int> eligibleIndexes,
+  }) async {
+    final lookup = state.lookup;
+    if (lookup == null) {
+      showAppSnackBar(context, 'Please search visitor data first.');
+      return;
+    }
+
+    final selectedEligible = _selectedIndexes
+        .where(eligibleIndexes.contains)
+        .toList(growable: false);
+    if (selectedEligible.isEmpty) {
+      showAppSnackBar(context, 'Select at least one eligible visitor.');
+      return;
+    }
+
+    final session = await ref.read(authLocalDataSourceProvider).getSession();
+    final userId = session?.username.trim() ?? '';
+    final site = session?.defaultSite.trim() ?? '';
+    final gate = session?.defaultGate.trim() ?? '';
+    if (userId.isEmpty || site.isEmpty || gate.isEmpty) {
+      if (mounted) {
+        showAppSnackBar(context, 'Please login again to submit check-in.');
+      }
+      return;
+    }
+
+    final selectedVisitors = <VisitorCheckInSubmissionItemEntity>[];
+    for (final index in selectedEligible) {
+      final visitor = visitors[index];
+      final appId = visitor.icPassport.trim();
+      if (appId.isEmpty) {
+        if (mounted) {
+          showAppSnackBar(
+            context,
+            'Selected visitor has empty IC/Passport and cannot be checked in.',
+          );
+        }
+        return;
+      }
+      selectedVisitors.add(
+        VisitorCheckInSubmissionItemEntity(
+          appId: appId,
+          physicalTag: visitor.physicalTag.trim(),
+        ),
+      );
+    }
+
+    final submission = VisitorCheckInSubmissionEntity(
+      userId: userId,
+      entity: lookup.entity.trim(),
+      site: site,
+      gate: gate,
+      invitationId: lookup.invitationId.trim(),
+      visitors: selectedVisitors,
+    );
+
+    final result = await ref
+        .read(visitorCheckControllerProvider.notifier)
+        .submitCheckIn(submission: submission);
+
+    if (!mounted) {
+      return;
+    }
+
+    final message = result.message.trim().isEmpty
+        ? 'Checked-in successfully.'
+        : result.message;
+    showAppSnackBar(context, message);
+
+    if (!result.success) {
+      return;
+    }
+
+    setState(() {
+      _selectedIndexes.clear();
+    });
+
+    if (_lastLookupCode.isNotEmpty) {
+      await _search(overrideCode: _lastLookupCode);
+    }
   }
 
   String _displayOrDash(String value) {
@@ -202,7 +301,9 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
                         children: [
                           Expanded(
                             child: AppFilledButton(
-                              onPressed: state.isLoading ? null : _search,
+                              onPressed: state.isLoading || state.isSubmitting
+                                  ? null
+                                  : _search,
                               child: state.isLoading
                                   ? const SizedBox(
                                       height: 18,
@@ -216,7 +317,9 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
                           ),
                           const SizedBox(width: 10),
                           AppOutlinedButton(
-                            onPressed: state.isLoading ? null : _clear,
+                            onPressed: state.isLoading || state.isSubmitting
+                                ? null
+                                : _clear,
                             child: const Text('Clear'),
                           ),
                         ],
@@ -377,6 +480,7 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
                   final visitor = visitors[i];
                   final isEligible = _isEligibleForCurrentAction(visitor);
                   return _VisitorCard(
+                    invitationId: lookup.invitationId,
                     visitor: visitor,
                     selected: _selectedIndexes.contains(i),
                     isEligible: isEligible,
@@ -445,10 +549,26 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.all(16),
         child: AppFilledButton(
-          onPressed: selectedEligibleCount == 0 ? null : () {},
-          child: Text(
-            widget.isCheckIn ? 'Confirm Check-In' : 'Confirm Check-Out',
-          ),
+          onPressed:
+              widget.isCheckIn &&
+                  !state.isSubmitting &&
+                  !state.isLoading &&
+                  selectedEligibleCount > 0
+              ? () => _confirmCheckIn(
+                  state: state,
+                  visitors: visitors,
+                  eligibleIndexes: eligibleIndexes,
+                )
+              : null,
+          child: state.isSubmitting && widget.isCheckIn
+              ? const SizedBox(
+                  height: 18,
+                  width: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(
+                  widget.isCheckIn ? 'Confirm Check-In' : 'Confirm Check-Out',
+                ),
         ),
       ),
     );
@@ -457,6 +577,7 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
 
 class _VisitorCard extends StatelessWidget {
   const _VisitorCard({
+    required this.invitationId,
     required this.visitor,
     required this.selected,
     required this.isEligible,
@@ -467,6 +588,7 @@ class _VisitorCard extends StatelessWidget {
     required this.onSelected,
   });
 
+  final String invitationId;
   final VisitorLookupItemEntity visitor;
   final bool selected;
   final bool isEligible;
@@ -492,6 +614,7 @@ class _VisitorCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Checkbox(value: selected, onChanged: onSelected),
                 Expanded(
@@ -514,10 +637,25 @@ class _VisitorCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    _VisitorPhotoSlot(
+                      invitationId: invitationId,
+                      appId: visitor.icPassport,
+                    ),
+                    const SizedBox(height: 8),
+                    AppOutlinedButtonIcon(
+                      onPressed: () {},
+                      icon: const Icon(Icons.history),
+                      label: const Text('History'),
+                    ),
+                  ],
+                ),
               ],
             ),
-            const SizedBox(height: 4),
-            InfoRow(label: 'Name', value: _displayOrDash(visitor.name)),
+            const SizedBox(height: 8),
             InfoRow(
               label: 'IC/Passport',
               value: _displayOrDash(visitor.icPassport),
@@ -532,27 +670,6 @@ class _VisitorCard extends StatelessWidget {
             InfoRow(
               label: 'Physical Tag',
               value: _displayOrDash(visitor.physicalTag),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                SizedBox(
-                  width: 120,
-                  child: Text(
-                    'Visitor Photo',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: Colors.grey[700],
-                    ),
-                  ),
-                ),
-                const _PhotoMock(hasPhoto: false),
-                const SizedBox(width: 12),
-                AppOutlinedButtonIcon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.history),
-                  label: const Text('History'),
-                ),
-              ],
             ),
           ],
         ),
@@ -697,6 +814,93 @@ class _PhotoMock extends StatelessWidget {
           size: 30,
           color: hasPhoto ? colorScheme.onPrimaryContainer : Colors.black54,
         ),
+      ),
+    );
+  }
+}
+
+class _VisitorPhotoSlot extends ConsumerWidget {
+  const _VisitorPhotoSlot({required this.invitationId, required this.appId});
+
+  final String invitationId;
+  final String appId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final key = VisitorPhotoKey(invitationId: invitationId, appId: appId);
+    final asyncBytes = ref.watch(visitorApplicantImageProvider(key));
+
+    return asyncBytes.when(
+      data: (bytes) {
+        if (bytes == null || bytes.isEmpty) {
+          return const _PhotoMock(hasPhoto: false);
+        }
+        return GestureDetector(
+          key: const Key('visitor-photo-thumbnail'),
+          onTap: () {
+            showDialog<void>(
+              context: context,
+              barrierColor: Colors.black87,
+              builder: (_) => _FullScreenPhotoDialog(bytes: bytes),
+            );
+          },
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(
+              height: 72,
+              width: 72,
+              child: Image.memory(bytes, fit: BoxFit.cover),
+            ),
+          ),
+        );
+      },
+      error: (_, __) => const _PhotoMock(hasPhoto: false),
+      loading: () => Stack(
+        alignment: Alignment.center,
+        children: const [
+          _PhotoMock(hasPhoto: false),
+          SizedBox(
+            height: 20,
+            width: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FullScreenPhotoDialog extends StatelessWidget {
+  const _FullScreenPhotoDialog({required this.bytes});
+
+  final Uint8List bytes;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      key: const Key('visitor-photo-fullscreen'),
+      insetPadding: EdgeInsets.zero,
+      backgroundColor: Colors.transparent,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: InteractiveViewer(
+              minScale: 0.8,
+              maxScale: 4,
+              child: Center(child: Image.memory(bytes, fit: BoxFit.contain)),
+            ),
+          ),
+          Positioned(
+            top: 16,
+            right: 16,
+            child: IconButton(
+              tooltip: 'Close photo',
+              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(Icons.close),
+              color: Colors.white,
+            ),
+          ),
+        ],
       ),
     );
   }

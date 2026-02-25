@@ -1,19 +1,41 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'dart:typed_data';
+import 'package:vms_bernas/data/datasources/auth_local_data_source.dart';
+import 'package:vms_bernas/data/models/auth_session_dto.dart';
+import 'package:vms_bernas/domain/entities/visitor_check_in_result_entity.dart';
+import 'package:vms_bernas/domain/entities/visitor_check_in_submission_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_lookup_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_lookup_item_entity.dart';
 import 'package:vms_bernas/domain/repositories/visitor_access_repository.dart';
 import 'package:vms_bernas/domain/usecases/get_visitor_lookup_usecase.dart';
+import 'package:vms_bernas/domain/usecases/submit_visitor_check_in_usecase.dart';
 import 'package:vms_bernas/presentation/pages/visitor_check_in_page.dart';
+import 'package:vms_bernas/presentation/state/auth_session_providers.dart';
 import 'package:vms_bernas/presentation/state/visitor_check_in_providers.dart';
 
 class _FakeVisitorAccessRepository implements VisitorAccessRepository {
-  _FakeVisitorAccessRepository({this.error, this.lookup});
+  _FakeVisitorAccessRepository({
+    this.error,
+    this.lookup,
+    this.lookupResponses,
+    this.imageBytes,
+    this.imageDelay,
+    this.imageError,
+  });
 
   final Object? error;
   final VisitorLookupEntity? lookup;
+  final List<VisitorLookupEntity>? lookupResponses;
+  final Uint8List? imageBytes;
+  final Duration? imageDelay;
+  final Object? imageError;
   bool? lastIsCheckIn;
+  VisitorCheckInSubmissionEntity? lastSubmission;
+  int lookupCalls = 0;
 
   @override
   Future<VisitorLookupEntity> getVisitorLookup({
@@ -21,8 +43,13 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
     required bool isCheckIn,
   }) async {
     lastIsCheckIn = isCheckIn;
+    lookupCalls += 1;
     if (error != null) {
       throw error!;
+    }
+    if (lookupResponses != null && lookupResponses!.isNotEmpty) {
+      final index = (lookupCalls - 1).clamp(0, lookupResponses!.length - 1);
+      return lookupResponses![index];
     }
     return lookup ??
         const VisitorLookupEntity(
@@ -58,17 +85,58 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
           ],
         );
   }
+
+  @override
+  Future<VisitorCheckInResultEntity> submitVisitorCheckIn({
+    required VisitorCheckInSubmissionEntity submission,
+  }) async {
+    lastSubmission = submission;
+    return const VisitorCheckInResultEntity(
+      success: true,
+      message: 'Checked-in successfully.',
+    );
+  }
+
+  @override
+  Future<Uint8List?> getVisitorApplicantImage({
+    required String invitationId,
+    required String appId,
+  }) async {
+    if (imageDelay != null) {
+      await Future<void>.delayed(imageDelay!);
+    }
+    if (imageError != null) {
+      throw imageError!;
+    }
+    return imageBytes;
+  }
+}
+
+class _FakeAuthLocalDataSource extends AuthLocalDataSource {
+  _FakeAuthLocalDataSource(this._session) : super(const FlutterSecureStorage());
+
+  final AuthSessionDto? _session;
+
+  @override
+  Future<AuthSessionDto?> getSession() async => _session;
 }
 
 Widget _buildApp({
   required VisitorAccessRepository repository,
   required bool isCheckIn,
+  AuthLocalDataSource? authLocalDataSource,
 }) {
   return ProviderScope(
     overrides: [
+      visitorAccessRepositoryProvider.overrideWithValue(repository),
       getVisitorLookupUseCaseProvider.overrideWithValue(
         GetVisitorLookupUseCase(repository),
       ),
+      submitVisitorCheckInUseCaseProvider.overrideWithValue(
+        SubmitVisitorCheckInUseCase(repository),
+      ),
+      if (authLocalDataSource != null)
+        authLocalDataSourceProvider.overrideWithValue(authLocalDataSource),
     ],
     child: MaterialApp(home: VisitorCheckInPage(isCheckIn: isCheckIn)),
   );
@@ -91,6 +159,11 @@ void main() {
 
     await tester.tap(find.text('Visitor List (1)'));
     await tester.pumpAndSettle();
+
+    expect(find.text('NAME'), findsOneWidget);
+    expect(find.text('Name'), findsNothing);
+    expect(find.text('Visitor Photo'), findsNothing);
+    expect(find.text('History'), findsOneWidget);
     expect(find.text('KAK -V036'), findsOneWidget);
   });
 
@@ -307,5 +380,221 @@ void main() {
           .onPressed,
       isNotNull,
     );
+  });
+
+  testWidgets(
+    'confirm check-in submits payload and refreshes lookup after success',
+    (tester) async {
+      const beforeSubmit = VisitorLookupEntity(
+        invitationId: 'IV20260200038',
+        entity: 'AGYTEK',
+        site: 'FACTORY1',
+        siteDesc: 'FACTORY1 T',
+        department: 'ADC',
+        departmentDesc: 'ADMIN CENTER',
+        purpose: 'MEETING',
+        company: 'TEST',
+        contactNumber: '0123456789',
+        visitorType: '1_Visitor',
+        inviteBy: 'Suraya',
+        workLevel: '',
+        vehiclePlateNumber: 'WWW0000',
+        status: 'ARRIVED',
+        visitDateFrom: '2026-02-25T00:00:00',
+        visitDateTo: '2026-02-25T00:00:00',
+        visitTimeFrom: '19:00:PM',
+        visitTimeTo: '20:00:PM',
+        visitors: [
+          VisitorLookupItemEntity(
+            name: 'NAME2',
+            icPassport: '123456561231',
+            physicalTag: '',
+            email: '',
+            contactNo: '',
+            company: '',
+            checkInTime: '',
+            checkOutTime: '',
+          ),
+        ],
+      );
+      const afterSubmit = VisitorLookupEntity(
+        invitationId: 'IV20260200038',
+        entity: 'AGYTEK',
+        site: 'FACTORY1',
+        siteDesc: 'FACTORY1 T',
+        department: 'ADC',
+        departmentDesc: 'ADMIN CENTER',
+        purpose: 'MEETING',
+        company: 'TEST',
+        contactNumber: '0123456789',
+        visitorType: '1_Visitor',
+        inviteBy: 'Suraya',
+        workLevel: '',
+        vehiclePlateNumber: 'WWW0000',
+        status: 'ARRIVED',
+        visitDateFrom: '2026-02-25T00:00:00',
+        visitDateTo: '2026-02-25T00:00:00',
+        visitTimeFrom: '19:00:PM',
+        visitTimeTo: '20:00:PM',
+        visitors: [
+          VisitorLookupItemEntity(
+            name: 'NAME2',
+            icPassport: '123456561231',
+            physicalTag: '',
+            email: '',
+            contactNo: '',
+            company: '',
+            checkInTime: '2026-02-25T17:27:39.723',
+            checkOutTime: '',
+          ),
+        ],
+      );
+      final repository = _FakeVisitorAccessRepository(
+        lookupResponses: const [beforeSubmit, afterSubmit],
+      );
+      final authLocalDataSource = _FakeAuthLocalDataSource(
+        const AuthSessionDto(
+          username: 'Ryan',
+          fullname: 'Ryan',
+          accessToken: 'token123',
+          defaultSite: 'FACTORY1',
+          defaultGate: 'F1_A',
+        ),
+      );
+
+      await tester.pumpWidget(
+        _buildApp(
+          repository: repository,
+          isCheckIn: true,
+          authLocalDataSource: authLocalDataSource,
+        ),
+      );
+
+      await tester.enterText(find.byType(TextFormField).first, 'VIS|IV|A|F');
+      await tester.tap(find.widgetWithText(FilledButton, 'Search'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Visitor List (1)'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Select all (0/1)'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Confirm Check-In'));
+      await tester.pumpAndSettle();
+
+      expect(repository.lastSubmission, isNotNull);
+      expect(repository.lastSubmission?.userId, 'Ryan');
+      expect(repository.lastSubmission?.site, 'FACTORY1');
+      expect(repository.lastSubmission?.gate, 'F1_A');
+      expect(repository.lastSubmission?.entity, 'AGYTEK');
+      expect(repository.lastSubmission?.invitationId, 'IV20260200038');
+      expect(repository.lastSubmission?.visitors.first.appId, '123456561231');
+      expect(repository.lookupCalls, greaterThanOrEqualTo(2));
+      expect(find.text('Checked-in successfully.'), findsOneWidget);
+      await tester.tap(find.text('Visitor List (1)'));
+      await tester.pumpAndSettle();
+      expect(find.text('Already checked in'), findsOneWidget);
+    },
+  );
+
+  testWidgets('check-out confirm remains non-functional', (tester) async {
+    final repository = _FakeVisitorAccessRepository();
+    await tester.pumpWidget(
+      _buildApp(repository: repository, isCheckIn: false),
+    );
+
+    await tester.enterText(find.byType(TextFormField).first, 'VIS|IV|A|F');
+    await tester.tap(find.widgetWithText(FilledButton, 'Search'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Visitor List (1)'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.widgetWithText(FilledButton, 'Confirm Check-Out'),
+          )
+          .onPressed,
+      isNull,
+    );
+    expect(repository.lastSubmission, isNull);
+  });
+
+  testWidgets('visitor photo shows loading spinner while fetching', (
+    tester,
+  ) async {
+    final repository = _FakeVisitorAccessRepository(
+      imageDelay: const Duration(milliseconds: 400),
+    );
+    await tester.pumpWidget(_buildApp(repository: repository, isCheckIn: true));
+
+    await tester.enterText(find.byType(TextFormField).first, 'VIS|IV|A|F');
+    await tester.tap(find.widgetWithText(FilledButton, 'Search'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Visitor List (1)'));
+    await tester.pump();
+
+    expect(find.byType(CircularProgressIndicator), findsWidgets);
+    await tester.pump(const Duration(milliseconds: 500));
+  });
+
+  testWidgets('visitor photo renders image when bytes available', (
+    tester,
+  ) async {
+    final repository = _FakeVisitorAccessRepository(
+      imageBytes: base64Decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5WcMsAAAAASUVORK5CYII=',
+      ),
+    );
+    await tester.pumpWidget(_buildApp(repository: repository, isCheckIn: true));
+
+    await tester.enterText(find.byType(TextFormField).first, 'VIS|IV|A|F');
+    await tester.tap(find.widgetWithText(FilledButton, 'Search'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Visitor List (1)'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(Image), findsWidgets);
+  });
+
+  testWidgets('visitor photo keeps placeholder on image error', (tester) async {
+    final repository = _FakeVisitorAccessRepository(
+      imageError: Exception('image failed'),
+    );
+    await tester.pumpWidget(_buildApp(repository: repository, isCheckIn: true));
+
+    await tester.enterText(find.byType(TextFormField).first, 'VIS|IV|A|F');
+    await tester.tap(find.widgetWithText(FilledButton, 'Search'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Visitor List (1)'));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.person), findsWidgets);
+  });
+
+  testWidgets('visitor photo opens fullscreen preview when tapped', (
+    tester,
+  ) async {
+    final repository = _FakeVisitorAccessRepository(
+      imageBytes: base64Decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5WcMsAAAAASUVORK5CYII=',
+      ),
+    );
+    await tester.pumpWidget(_buildApp(repository: repository, isCheckIn: true));
+
+    await tester.enterText(find.byType(TextFormField).first, 'VIS|IV|A|F');
+    await tester.tap(find.widgetWithText(FilledButton, 'Search'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Visitor List (1)'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.byKey(const Key('visitor-photo-thumbnail')));
+    await tester.tap(find.byKey(const Key('visitor-photo-thumbnail')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('visitor-photo-fullscreen')), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Close photo'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('visitor-photo-fullscreen')), findsNothing);
   });
 }
