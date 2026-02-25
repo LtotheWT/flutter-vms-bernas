@@ -5,10 +5,12 @@ void main() {
   test('parses success payload with auth details', () {
     const json = {
       'Status': true,
-      'ErrorMessage': null,
+      'Message': null,
       'Details': {
         'username': 'Ryan',
         'fullname': 'Ryan',
+        'default_site': 'FACTORY1',
+        'default_gate': 'F1_A',
         'access_token': 'token123',
       },
     };
@@ -19,6 +21,8 @@ void main() {
     expect(dto.errorMessage, isNull);
     expect(dto.details, isNotNull);
     expect(dto.details?.username, 'Ryan');
+    expect(dto.details?.defaultSite, 'FACTORY1');
+    expect(dto.details?.defaultGate, 'F1_A');
     expect(dto.details?.accessToken, 'token123');
   });
 

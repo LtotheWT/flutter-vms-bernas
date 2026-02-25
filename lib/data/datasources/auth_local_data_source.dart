@@ -10,11 +10,15 @@ class AuthLocalDataSource {
   static const String _tokenKey = 'auth_access_token';
   static const String _usernameKey = 'auth_username';
   static const String _fullnameKey = 'auth_fullname';
+  static const String _defaultSiteKey = 'auth_default_site';
+  static const String _defaultGateKey = 'auth_default_gate';
 
   Future<void> saveSession(AuthSessionDto session) async {
     await _storage.write(key: _tokenKey, value: session.accessToken);
     await _storage.write(key: _usernameKey, value: session.username);
     await _storage.write(key: _fullnameKey, value: session.fullname);
+    await _storage.write(key: _defaultSiteKey, value: session.defaultSite);
+    await _storage.write(key: _defaultGateKey, value: session.defaultGate);
   }
 
   Future<AuthSessionDto?> getSession() async {
@@ -25,11 +29,15 @@ class AuthLocalDataSource {
 
     final username = await _storage.read(key: _usernameKey) ?? '';
     final fullname = await _storage.read(key: _fullnameKey) ?? '';
+    final defaultSite = await _storage.read(key: _defaultSiteKey) ?? '';
+    final defaultGate = await _storage.read(key: _defaultGateKey) ?? '';
 
     return AuthSessionDto(
       username: username,
       fullname: fullname,
       accessToken: accessToken,
+      defaultSite: defaultSite,
+      defaultGate: defaultGate,
     );
   }
 
@@ -37,5 +45,7 @@ class AuthLocalDataSource {
     await _storage.delete(key: _tokenKey);
     await _storage.delete(key: _usernameKey);
     await _storage.delete(key: _fullnameKey);
+    await _storage.delete(key: _defaultSiteKey);
+    await _storage.delete(key: _defaultGateKey);
   }
 }

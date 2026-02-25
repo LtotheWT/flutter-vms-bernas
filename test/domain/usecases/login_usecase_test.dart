@@ -21,6 +21,8 @@ class _FakeAuthRepository implements AuthRepository {
       username: 'Ryan',
       fullname: 'Ryan',
       accessToken: 'token',
+      defaultSite: 'FACTORY1',
+      defaultGate: 'F1_A',
     );
   }
 

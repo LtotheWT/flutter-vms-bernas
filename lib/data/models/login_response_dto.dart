@@ -16,7 +16,9 @@ class LoginResponseDto {
 
     return LoginResponseDto(
       status: json['Status'] == true,
-      errorMessage: (json['ErrorMessage'] as String?)?.trim(),
+      errorMessage:
+          (json['ErrorMessage'] as String?)?.trim() ??
+          (json['Message'] as String?)?.trim(),
       details: detailsValue is Map<String, dynamic>
           ? AuthSessionDto.fromJson(detailsValue)
           : null,
