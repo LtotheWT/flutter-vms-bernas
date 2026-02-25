@@ -138,6 +138,7 @@ Widget _buildApp({
   required VisitorAccessRepository repository,
   required bool isCheckIn,
   AuthLocalDataSource? authLocalDataSource,
+  Future<String?> Function(BuildContext context)? scanLauncher,
 }) {
   return ProviderScope(
     overrides: [
@@ -154,7 +155,12 @@ Widget _buildApp({
       if (authLocalDataSource != null)
         authLocalDataSourceProvider.overrideWithValue(authLocalDataSource),
     ],
-    child: MaterialApp(home: VisitorCheckInPage(isCheckIn: isCheckIn)),
+    child: MaterialApp(
+      home: VisitorCheckInPage(
+        isCheckIn: isCheckIn,
+        scanLauncher: scanLauncher,
+      ),
+    ),
   );
 }
 
@@ -196,6 +202,42 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repository.lastIsCheckIn, isFalse);
+  });
+
+  testWidgets('scan icon auto-searches with scanned value', (tester) async {
+    final repository = _FakeVisitorAccessRepository();
+    await tester.pumpWidget(
+      _buildApp(
+        repository: repository,
+        isCheckIn: true,
+        scanLauncher: (_) async => 'VIS|SCANNED|A|F',
+      ),
+    );
+
+    await tester.tap(find.byIcon(Icons.qr_code_scanner).first);
+    await tester.pumpAndSettle();
+
+    expect(repository.lastIsCheckIn, isTrue);
+    expect(find.text('IV20260200038'), findsOneWidget);
+  });
+
+  testWidgets('scan icon with empty result does not trigger search', (
+    tester,
+  ) async {
+    final repository = _FakeVisitorAccessRepository();
+    await tester.pumpWidget(
+      _buildApp(
+        repository: repository,
+        isCheckIn: true,
+        scanLauncher: (_) async => '   ',
+      ),
+    );
+
+    await tester.tap(find.byIcon(Icons.qr_code_scanner).first);
+    await tester.pumpAndSettle();
+
+    expect(repository.lastIsCheckIn, isNull);
+    expect(find.text('IV20260200038'), findsNothing);
   });
 
   testWidgets('error state is shown on failed search', (tester) async {

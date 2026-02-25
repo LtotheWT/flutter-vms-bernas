@@ -7,6 +7,7 @@ import 'package:vms_bernas/presentation/widgets/labeled_form_rows.dart';
 import '../../domain/entities/visitor_check_in_submission_entity.dart';
 import '../../domain/entities/visitor_check_in_submission_item_entity.dart';
 import '../../domain/entities/visitor_lookup_item_entity.dart';
+import 'mobile_scanner_page.dart';
 import '../state/auth_session_providers.dart';
 import '../state/visitor_check_in_providers.dart';
 import '../widgets/app_filled_button.dart';
@@ -15,9 +16,14 @@ import '../widgets/info_row.dart';
 import '../widgets/app_snackbar.dart';
 
 class VisitorCheckInPage extends ConsumerStatefulWidget {
-  const VisitorCheckInPage({super.key, required this.isCheckIn});
+  const VisitorCheckInPage({
+    super.key,
+    required this.isCheckIn,
+    this.scanLauncher,
+  });
 
   final bool isCheckIn;
+  final Future<String?> Function(BuildContext context)? scanLauncher;
 
   @override
   ConsumerState<VisitorCheckInPage> createState() => _VisitorCheckInPageState();
@@ -78,6 +84,25 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
     if (ok && code.isNotEmpty) {
       _lastLookupCode = code;
     }
+  }
+
+  Future<void> _openScannerAndSearch() async {
+    final scannerResult =
+        await (widget.scanLauncher?.call(context) ??
+            Navigator.of(context).push<String>(
+              MaterialPageRoute(
+                builder: (_) => const MobileScannerPage(
+                  title: 'Scan QR Code',
+                  description: 'Align QR code inside the frame to scan.',
+                ),
+              ),
+            ));
+
+    final scanned = scannerResult?.trim() ?? '';
+    if (scanned.isEmpty || !mounted) {
+      return;
+    }
+    await _search(overrideCode: scanned);
   }
 
   void _clear() {
@@ -293,7 +318,9 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
                         onChanged: ref
                             .read(visitorCheckControllerProvider.notifier)
                             .updateSearchInput,
-                        onTrailingTap: () => _scanFocusNode.requestFocus(),
+                        onTrailingTap: state.isLoading || state.isSubmitting
+                            ? null
+                            : _openScannerAndSearch,
                         focusNode: _scanFocusNode,
                       ),
                       FormRowDivider(),
@@ -674,10 +701,10 @@ class _StatusTag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final normalized = status.trim().toUpperCase();
-
+    final colorScheme = Theme.of(context).colorScheme;
     final (text, bg, fg) = switch (normalized) {
-      'IN' => ('IN', const Color(0xFF16A34A), Colors.white),
-      'OUT' => ('OUT', const Color(0xFFDC2626), Colors.white),
+      'IN' => ('IN', colorScheme.primary, colorScheme.onPrimary),
+      'OUT' => ('OUT', colorScheme.error, colorScheme.onError),
       _ => ('', Colors.transparent, Colors.transparent),
     };
     if (text.isEmpty) {
