@@ -163,7 +163,9 @@ void main() {
     expect(find.text('NAME'), findsOneWidget);
     expect(find.text('Name'), findsNothing);
     expect(find.text('Visitor Photo'), findsNothing);
+    expect(find.text('Check In/Out'), findsNothing);
     expect(find.text('History'), findsOneWidget);
+    expect(find.text('Checked In'), findsOneWidget);
     expect(find.text('KAK -V036'), findsOneWidget);
   });
 
@@ -198,123 +200,121 @@ void main() {
     expect(find.text('VIS|BAD|A|F'), findsOneWidget);
   });
 
-  testWidgets(
-    'check-in mode disables visitor already checked in and shows helper text',
-    (tester) async {
-      const lookup = VisitorLookupEntity(
-        invitationId: 'IV1',
-        entity: 'AGYTEK',
-        site: 'FACTORY1',
-        siteDesc: 'FACTORY1 T',
-        department: 'ADC',
-        departmentDesc: 'ADMIN CENTER',
-        purpose: 'MEETING',
-        company: 'TEST',
-        contactNumber: '0123',
-        visitorType: '1_Visitor',
-        inviteBy: 'Suraya',
-        workLevel: '',
-        vehiclePlateNumber: 'WWW0000',
-        status: 'ARRIVED',
-        visitDateFrom: '2026-02-25T00:00:00',
-        visitDateTo: '2026-02-25T00:00:00',
-        visitTimeFrom: '19:00:PM',
-        visitTimeTo: '20:00:PM',
-        visitors: [
-          VisitorLookupItemEntity(
-            name: 'IN_PERSON',
-            icPassport: '123',
-            physicalTag: '',
-            email: '',
-            contactNo: '',
-            company: '',
-            checkInTime: '2026-02-25T10:00:00',
-            checkOutTime: '',
-          ),
-        ],
-      );
-      final repository = _FakeVisitorAccessRepository(lookup: lookup);
-      await tester.pumpWidget(
-        _buildApp(repository: repository, isCheckIn: true),
-      );
+  testWidgets('check-in mode disables visitor already checked in', (
+    tester,
+  ) async {
+    const lookup = VisitorLookupEntity(
+      invitationId: 'IV1',
+      entity: 'AGYTEK',
+      site: 'FACTORY1',
+      siteDesc: 'FACTORY1 T',
+      department: 'ADC',
+      departmentDesc: 'ADMIN CENTER',
+      purpose: 'MEETING',
+      company: 'TEST',
+      contactNumber: '0123',
+      visitorType: '1_Visitor',
+      inviteBy: 'Suraya',
+      workLevel: '',
+      vehiclePlateNumber: 'WWW0000',
+      status: 'ARRIVED',
+      visitDateFrom: '2026-02-25T00:00:00',
+      visitDateTo: '2026-02-25T00:00:00',
+      visitTimeFrom: '19:00:PM',
+      visitTimeTo: '20:00:PM',
+      visitors: [
+        VisitorLookupItemEntity(
+          name: 'IN_PERSON',
+          icPassport: '123',
+          physicalTag: '',
+          email: '',
+          contactNo: '',
+          company: '',
+          checkInTime: '2026-02-25T10:00:00',
+          checkOutTime: '',
+        ),
+      ],
+    );
+    final repository = _FakeVisitorAccessRepository(lookup: lookup);
+    await tester.pumpWidget(_buildApp(repository: repository, isCheckIn: true));
 
-      await tester.enterText(find.byType(TextFormField).first, 'VIS|IV|A|F');
-      await tester.tap(find.widgetWithText(FilledButton, 'Search'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Visitor List (1)'));
-      await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, 'VIS|IV|A|F');
+    await tester.tap(find.widgetWithText(FilledButton, 'Search'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Visitor List (1)'));
+    await tester.pumpAndSettle();
 
-      expect(find.text('Already checked in'), findsOneWidget);
-      expect(find.text('Select all (0/0)'), findsOneWidget);
-      expect(
-        tester
-            .widget<FilledButton>(
-              find.widgetWithText(FilledButton, 'Confirm Check-In'),
-            )
-            .onPressed,
-        isNull,
-      );
-    },
-  );
+    expect(find.text('Already checked in'), findsNothing);
+    expect(find.text('Checked In'), findsOneWidget);
+    expect(find.text('Select all (0/0)'), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.widgetWithText(FilledButton, 'Confirm Check-In'),
+          )
+          .onPressed,
+      isNull,
+    );
+  });
 
-  testWidgets(
-    'check-out mode disables visitor already checked out and shows helper text',
-    (tester) async {
-      const lookup = VisitorLookupEntity(
-        invitationId: 'IV1',
-        entity: 'AGYTEK',
-        site: 'FACTORY1',
-        siteDesc: 'FACTORY1 T',
-        department: 'ADC',
-        departmentDesc: 'ADMIN CENTER',
-        purpose: 'MEETING',
-        company: 'TEST',
-        contactNumber: '0123',
-        visitorType: '1_Visitor',
-        inviteBy: 'Suraya',
-        workLevel: '',
-        vehiclePlateNumber: 'WWW0000',
-        status: 'ARRIVED',
-        visitDateFrom: '2026-02-25T00:00:00',
-        visitDateTo: '2026-02-25T00:00:00',
-        visitTimeFrom: '19:00:PM',
-        visitTimeTo: '20:00:PM',
-        visitors: [
-          VisitorLookupItemEntity(
-            name: 'OUT_PERSON',
-            icPassport: '123',
-            physicalTag: '',
-            email: '',
-            contactNo: '',
-            company: '',
-            checkInTime: '2026-02-25T10:00:00',
-            checkOutTime: '2026-02-25T11:00:00',
-          ),
-        ],
-      );
-      final repository = _FakeVisitorAccessRepository(lookup: lookup);
-      await tester.pumpWidget(
-        _buildApp(repository: repository, isCheckIn: false),
-      );
+  testWidgets('check-out mode disables visitor already checked out', (
+    tester,
+  ) async {
+    const lookup = VisitorLookupEntity(
+      invitationId: 'IV1',
+      entity: 'AGYTEK',
+      site: 'FACTORY1',
+      siteDesc: 'FACTORY1 T',
+      department: 'ADC',
+      departmentDesc: 'ADMIN CENTER',
+      purpose: 'MEETING',
+      company: 'TEST',
+      contactNumber: '0123',
+      visitorType: '1_Visitor',
+      inviteBy: 'Suraya',
+      workLevel: '',
+      vehiclePlateNumber: 'WWW0000',
+      status: 'ARRIVED',
+      visitDateFrom: '2026-02-25T00:00:00',
+      visitDateTo: '2026-02-25T00:00:00',
+      visitTimeFrom: '19:00:PM',
+      visitTimeTo: '20:00:PM',
+      visitors: [
+        VisitorLookupItemEntity(
+          name: 'OUT_PERSON',
+          icPassport: '123',
+          physicalTag: '',
+          email: '',
+          contactNo: '',
+          company: '',
+          checkInTime: '2026-02-25T10:00:00',
+          checkOutTime: '2026-02-25T11:00:00',
+        ),
+      ],
+    );
+    final repository = _FakeVisitorAccessRepository(lookup: lookup);
+    await tester.pumpWidget(
+      _buildApp(repository: repository, isCheckIn: false),
+    );
 
-      await tester.enterText(find.byType(TextFormField).first, 'VIS|IV|A|F');
-      await tester.tap(find.widgetWithText(FilledButton, 'Search'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Visitor List (1)'));
-      await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, 'VIS|IV|A|F');
+    await tester.tap(find.widgetWithText(FilledButton, 'Search'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Visitor List (1)'));
+    await tester.pumpAndSettle();
 
-      expect(find.text('Already checked out'), findsOneWidget);
-      expect(find.text('Select all (0/0)'), findsOneWidget);
-      expect(
-        tester
-            .widget<FilledButton>(
-              find.widgetWithText(FilledButton, 'Confirm Check-Out'),
-            )
-            .onPressed,
-        isNull,
-      );
-    },
-  );
+    expect(find.text('Already checked out'), findsNothing);
+    expect(find.text('Checked Out'), findsOneWidget);
+    expect(find.text('Select all (0/0)'), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.widgetWithText(FilledButton, 'Confirm Check-Out'),
+          )
+          .onPressed,
+      isNull,
+    );
+  });
 
   testWidgets('select all targets only eligible visitors', (tester) async {
     const lookup = VisitorLookupEntity(
@@ -492,7 +492,7 @@ void main() {
       expect(find.text('Checked-in successfully.'), findsOneWidget);
       await tester.tap(find.text('Visitor List (1)'));
       await tester.pumpAndSettle();
-      expect(find.text('Already checked in'), findsOneWidget);
+      expect(find.text('Checked In'), findsOneWidget);
     },
   );
 
@@ -587,7 +587,9 @@ void main() {
     await tester.tap(find.text('Visitor List (1)'));
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.byKey(const Key('visitor-photo-thumbnail')));
+    await tester.ensureVisible(
+      find.byKey(const Key('visitor-photo-thumbnail')),
+    );
     await tester.tap(find.byKey(const Key('visitor-photo-thumbnail')));
     await tester.pumpAndSettle();
 

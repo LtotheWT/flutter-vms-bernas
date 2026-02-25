@@ -206,13 +206,6 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
     return visitor.checkOutTime.trim().isEmpty;
   }
 
-  String? _disabledReasonForCurrentAction(VisitorLookupItemEntity visitor) {
-    if (_isEligibleForCurrentAction(visitor)) {
-      return null;
-    }
-    return widget.isCheckIn ? 'Already checked in' : 'Already checked out';
-  }
-
   Set<int> _eligibleIndexes(List<VisitorLookupItemEntity> visitors) {
     final result = <int>{};
     for (var i = 0; i < visitors.length; i++) {
@@ -484,7 +477,6 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
                     visitor: visitor,
                     selected: _selectedIndexes.contains(i),
                     isEligible: isEligible,
-                    ineligibleReason: _disabledReasonForCurrentAction(visitor),
                     checkStatus: _visitStatus(visitor),
                     checkInDate: _formatDateTime(visitor.checkInTime),
                     checkOutDate: _formatDateTime(visitor.checkOutTime),
@@ -581,7 +573,6 @@ class _VisitorCard extends StatelessWidget {
     required this.visitor,
     required this.selected,
     required this.isEligible,
-    required this.ineligibleReason,
     required this.checkStatus,
     required this.checkInDate,
     required this.checkOutDate,
@@ -592,7 +583,6 @@ class _VisitorCard extends StatelessWidget {
   final VisitorLookupItemEntity visitor;
   final bool selected;
   final bool isEligible;
-  final String? ineligibleReason;
   final String checkStatus;
   final String checkInDate;
   final String checkOutDate;
@@ -627,13 +617,12 @@ class _VisitorCard extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      if (!isEligible && ineligibleReason != null)
-                        Text(
-                          ineligibleReason!,
-                          style: textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.error,
-                          ),
+                      Text(
+                        _displayOrDash(visitor.icPassport),
+                        style: textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
                         ),
+                      ),
                     ],
                   ),
                 ),
@@ -646,32 +635,70 @@ class _VisitorCard extends StatelessWidget {
                       appId: visitor.icPassport,
                     ),
                     const SizedBox(height: 8),
-                    AppOutlinedButtonIcon(
-                      onPressed: () {},
-                      icon: const Icon(Icons.history),
-                      label: const Text('History'),
-                    ),
+                    _StatusTag(status: checkStatus),
                   ],
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            InfoRow(
-              label: 'IC/Passport',
-              value: _displayOrDash(visitor.icPassport),
-            ),
-            InfoRow(label: 'Check In/Out', value: checkStatus),
             InfoRow(label: 'Check In Date', value: checkInDate),
             InfoRow(label: 'Check Out Date', value: checkOutDate),
-            const InfoRow(label: 'Gate In', value: '-'),
-            const InfoRow(label: 'Gate Out', value: '-'),
-            const InfoRow(label: 'Check In By', value: '-'),
-            const InfoRow(label: 'Check Out By', value: '-'),
+            // const InfoRow(label: 'Gate In', value: '-'),
+            // const InfoRow(label: 'Gate Out', value: '-'),
+            // const InfoRow(label: 'Check In By', value: '-'),
+            // const InfoRow(label: 'Check Out By', value: '-'),
             InfoRow(
               label: 'Physical Tag',
               value: _displayOrDash(visitor.physicalTag),
             ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: AppOutlinedButtonIcon(
+                onPressed: () {},
+                icon: const Icon(Icons.history),
+                label: const Text('History'),
+              ),
+            ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusTag extends StatelessWidget {
+  const _StatusTag({required this.status});
+
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final normalized = status.trim().toUpperCase();
+
+    final (text, bg, fg) = switch (normalized) {
+      'IN' => ('Checked In', colorScheme.primary, Colors.white),
+      'OUT' => ('Checked Out', colorScheme.error, Colors.white),
+      _ => (
+        '-',
+        Theme.of(context).colorScheme.surfaceContainerHighest,
+        Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+    };
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        child: Text(
+          text,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: fg,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
     );
