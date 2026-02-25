@@ -19,6 +19,14 @@ import '../widgets/info_row.dart';
 import '../widgets/invitation_status_badge.dart';
 import '../widgets/searchable_option_sheet.dart';
 
+String _todayDateText() {
+  final now = DateTime.now();
+  final year = now.year.toString().padLeft(4, '0');
+  final month = now.month.toString().padLeft(2, '0');
+  final day = now.day.toString().padLeft(2, '0');
+  return '$year-$month-$day';
+}
+
 class InvitationListingPage extends ConsumerStatefulWidget {
   const InvitationListingPage({super.key});
 
@@ -48,6 +56,9 @@ class _InvitationListingPageState extends ConsumerState<InvitationListingPage> {
   @override
   void initState() {
     super.initState();
+    final today = _todayDateText();
+    _dateFromController.text = today;
+    _dateToController.text = today;
     _scrollController.addListener(_onScroll);
     _listingSubscription = ref.listenManual<InvitationListingState>(
       invitationListingControllerProvider,
@@ -86,9 +97,10 @@ class _InvitationListingPageState extends ConsumerState<InvitationListingPage> {
   }
 
   void _clearFilters() {
+    final today = _todayDateText();
     _invitationIdController.clear();
-    _dateFromController.clear();
-    _dateToController.clear();
+    _dateFromController.text = today;
+    _dateToController.text = today;
     setState(() {
       _entity = null;
       _site = null;
@@ -486,8 +498,16 @@ class _InvitationFilterPageState extends ConsumerState<_InvitationFilterPage> {
     _invitationIdController = TextEditingController(
       text: widget.initialInvitationId,
     );
-    _dateFromController = TextEditingController(text: widget.initialDateFrom);
-    _dateToController = TextEditingController(text: widget.initialDateTo);
+    _dateFromController = TextEditingController(
+      text: widget.initialDateFrom.trim().isEmpty
+          ? _todayDateText()
+          : widget.initialDateFrom,
+    );
+    _dateToController = TextEditingController(
+      text: widget.initialDateTo.trim().isEmpty
+          ? _todayDateText()
+          : widget.initialDateTo,
+    );
   }
 
   @override
@@ -542,16 +562,17 @@ class _InvitationFilterPageState extends ConsumerState<_InvitationFilterPage> {
   }
 
   void _clearAll() {
+    final today = _todayDateText();
     Navigator.of(context).pop(
-      const _InvitationFilterResult(
+      _InvitationFilterResult(
         entity: null,
         site: null,
         department: null,
         visitorType: null,
         status: null,
         invitationId: '',
-        dateFrom: '',
-        dateTo: '',
+        dateFrom: today,
+        dateTo: today,
         upcomingOnly: false,
         clearRequested: true,
       ),

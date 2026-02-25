@@ -28,6 +28,14 @@ class InvitationRepositoryImpl implements InvitationRepository {
       throw Exception('Please login again to load invitation listing.');
     }
 
+    final todayDateText = _toDateText(DateTime.now());
+    final visitDateFrom = (filter.visitDateFrom?.trim().isNotEmpty ?? false)
+        ? filter.visitDateFrom!.trim()
+        : todayDateText;
+    final visitDateTo = (filter.visitDateTo?.trim().isNotEmpty ?? false)
+        ? filter.visitDateTo!.trim()
+        : todayDateText;
+
     final requestDto = InvitationListingRequestDto(
       department: filter.department?.trim() ?? '',
       visitorType: filter.visitorType?.trim() ?? '',
@@ -36,8 +44,8 @@ class InvitationRepositoryImpl implements InvitationRepository {
       site: filter.site?.trim() ?? '',
       entity: filter.entity?.trim() ?? '',
       userId: userId,
-      visitFrom: _toDayBoundaryIsoUtc(filter.visitDateFrom, isStart: true),
-      visitTo: _toDayBoundaryIsoUtc(filter.visitDateTo, isStart: false),
+      visitFrom: _toDayBoundaryIsoUtc(visitDateFrom, isStart: true),
+      visitTo: _toDayBoundaryIsoUtc(visitDateTo, isStart: false),
     );
 
     final dtos = await _remoteDataSource.listInvitations(
@@ -122,6 +130,13 @@ class InvitationRepositoryImpl implements InvitationRepository {
     return parsed.toUtc().toIso8601String();
   }
 
+  String _toDateText(DateTime date) {
+    final year = date.year.toString().padLeft(4, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+    return '$year-$month-$day';
+  }
+
   String _toDayBoundaryIsoUtc(String? value, {required bool isStart}) {
     final text = value?.trim() ?? '';
     if (text.isEmpty) {
@@ -133,9 +148,9 @@ class InvitationRepositoryImpl implements InvitationRepository {
       throw Exception('Invalid visit date format.');
     }
 
-    final adjusted = isStart
-        ? DateTime(parsed.year, parsed.month, parsed.day, 0, 0, 0)
-        : DateTime(parsed.year, parsed.month, parsed.day, 23, 59, 59, 999);
-    return adjusted.toUtc().toIso8601String();
+    final adjustedUtc = isStart
+        ? DateTime.utc(parsed.year, parsed.month, parsed.day, 0, 0, 0)
+        : DateTime.utc(parsed.year, parsed.month, parsed.day, 23, 59, 59, 999);
+    return adjustedUtc.toIso8601String();
   }
 }

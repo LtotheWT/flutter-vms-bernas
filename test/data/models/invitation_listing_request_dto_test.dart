@@ -33,5 +33,7 @@ void main() {
     expect(json['status'], 'NEW');
     expect(json['ccn'], 'AGYTEK');
     expect(json['userid'], 'ryan');
+    expect(json['visit_from'], '2026-02-23T00:00:00.000Z');
+    expect(json['visit_to'], '2026-02-23T23:59:59.999Z');
   });
 }

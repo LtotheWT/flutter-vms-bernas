@@ -30,6 +30,8 @@ class InvitationListingRequestDto {
       'site': site,
       'ccn': entity,
       'userid': userId,
+      'visit_from': visitFrom,
+      'visit_to': visitTo,
     };
   }
 }
