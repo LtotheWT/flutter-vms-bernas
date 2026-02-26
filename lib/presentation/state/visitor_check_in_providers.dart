@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -150,7 +152,7 @@ class VisitorCheckController extends Notifier<VisitorCheckState> {
   }) async {
     if (state.isSubmitting) {
       return const VisitorCheckInResultEntity(
-        success: false,
+        status: false,
         message: 'Check-in is currently submitting.',
       );
     }
@@ -168,7 +170,7 @@ class VisitorCheckController extends Notifier<VisitorCheckState> {
           ? text.replaceFirst('Exception:', '').trim()
           : (text.isEmpty ? 'Failed to submit visitor check-in.' : text);
       state = state.copyWith(isSubmitting: false, errorMessage: message);
-      return VisitorCheckInResultEntity(success: false, message: message);
+      return VisitorCheckInResultEntity(status: false, message: message);
     }
   }
 
@@ -177,7 +179,7 @@ class VisitorCheckController extends Notifier<VisitorCheckState> {
   }) async {
     if (state.isSubmitting) {
       return const VisitorCheckInResultEntity(
-        success: false,
+        status: false,
         message: 'Check-out is currently submitting.',
       );
     }
@@ -195,7 +197,7 @@ class VisitorCheckController extends Notifier<VisitorCheckState> {
           ? text.replaceFirst('Exception:', '').trim()
           : (text.isEmpty ? 'Failed to submit visitor check-out.' : text);
       state = state.copyWith(isSubmitting: false, errorMessage: message);
-      return VisitorCheckInResultEntity(success: false, message: message);
+      return VisitorCheckInResultEntity(status: false, message: message);
     }
   }
 }

@@ -17,7 +17,7 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
   }) async {
     capturedSubmission = submission;
     return const VisitorCheckInResultEntity(
-      success: true,
+      status: true,
       message: 'Checked-in successfully.',
     );
   }
@@ -67,6 +67,6 @@ void main() {
     final result = await useCase(submission: submission);
 
     expect(repository.capturedSubmission, submission);
-    expect(result.success, isTrue);
+    expect(result.status, isTrue);
   });
 }

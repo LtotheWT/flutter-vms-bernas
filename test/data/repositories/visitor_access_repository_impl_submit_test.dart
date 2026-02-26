@@ -35,7 +35,7 @@ class _FakeVisitorAccessRemoteDataSource extends VisitorAccessRemoteDataSource {
     capturedAccessToken = accessToken;
     capturedCheckInRequest = request;
     return const VisitorCheckInResponseDto(
-      success: true,
+      status: true,
       message: 'Checked-in successfully.',
     );
   }
@@ -48,7 +48,7 @@ class _FakeVisitorAccessRemoteDataSource extends VisitorAccessRemoteDataSource {
     capturedAccessToken = accessToken;
     capturedCheckOutRequest = request;
     return const VisitorCheckInResponseDto(
-      success: true,
+      status: true,
       message: 'Checked-out successfully.',
     );
   }
@@ -123,7 +123,7 @@ void main() {
 
     expect(remote.capturedAccessToken, 'token123');
     expect(remote.capturedCheckInRequest?.invitationId, 'IV20260200038');
-    expect(result.success, isTrue);
+    expect(result.status, isTrue);
     expect(result.message, 'Checked-in successfully.');
   });
 
@@ -148,7 +148,7 @@ void main() {
 
     expect(remote.capturedAccessToken, 'token123');
     expect(remote.capturedCheckOutRequest?.invitationId, 'IV20260200038');
-    expect(result.success, isTrue);
+    expect(result.status, isTrue);
     expect(result.message, 'Checked-out successfully.');
   });
 }

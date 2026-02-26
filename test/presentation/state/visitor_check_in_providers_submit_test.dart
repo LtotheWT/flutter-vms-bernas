@@ -30,7 +30,7 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
       throw error!;
     }
     return const VisitorCheckInResultEntity(
-      success: true,
+      status: true,
       message: 'Checked-in successfully.',
     );
   }
@@ -47,7 +47,7 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
       throw error!;
     }
     return const VisitorCheckInResultEntity(
-      success: true,
+      status: true,
       message: 'Checked-out successfully.',
     );
   }
@@ -84,7 +84,7 @@ void main() {
     ],
   );
 
-  test('submit success toggles loading and returns result', () async {
+  test('submit status toggles loading and returns result', () async {
     final repository = _FakeVisitorAccessRepository();
     final container = ProviderContainer(
       overrides: [
@@ -106,7 +106,7 @@ void main() {
 
     final state = container.read(visitorCheckControllerProvider);
     expect(repository.capturedCheckInSubmission, submission);
-    expect(result.success, isTrue);
+    expect(result.status, isTrue);
     expect(state.isSubmitting, isFalse);
     expect(state.errorMessage, isNull);
   });
@@ -132,7 +132,7 @@ void main() {
     final result = await controller.submitCheckIn(submission: submission);
 
     final state = container.read(visitorCheckControllerProvider);
-    expect(result.success, isFalse);
+    expect(result.status, isFalse);
     expect(result.message, 'failed');
     expect(state.errorMessage, 'failed');
     expect(state.isSubmitting, isFalse);
@@ -163,12 +163,12 @@ void main() {
     final secondResult = await controller.submitCheckIn(submission: submission);
     final firstResult = await firstFuture;
 
-    expect(firstResult.success, isTrue);
-    expect(secondResult.success, isFalse);
+    expect(firstResult.status, isTrue);
+    expect(secondResult.status, isFalse);
     expect(secondResult.message, 'Check-in is currently submitting.');
   });
 
-  test('submit check-out success toggles loading and returns result', () async {
+  test('submit check-out status toggles loading and returns result', () async {
     final repository = _FakeVisitorAccessRepository();
     final container = ProviderContainer(
       overrides: [
@@ -190,7 +190,7 @@ void main() {
 
     final state = container.read(visitorCheckControllerProvider);
     expect(repository.capturedCheckOutSubmission, submission);
-    expect(result.success, isTrue);
+    expect(result.status, isTrue);
     expect(state.isSubmitting, isFalse);
     expect(state.errorMessage, isNull);
   });
@@ -222,7 +222,7 @@ void main() {
       final result = await controller.submitCheckOut(submission: submission);
 
       final state = container.read(visitorCheckControllerProvider);
-      expect(result.success, isFalse);
+      expect(result.status, isFalse);
       expect(result.message, 'failed');
       expect(state.errorMessage, 'failed');
       expect(state.isSubmitting, isFalse);
@@ -256,8 +256,8 @@ void main() {
     );
     final firstResult = await firstFuture;
 
-    expect(firstResult.success, isTrue);
-    expect(secondResult.success, isFalse);
+    expect(firstResult.status, isTrue);
+    expect(secondResult.status, isFalse);
     expect(secondResult.message, 'Check-out is currently submitting.');
   });
 }

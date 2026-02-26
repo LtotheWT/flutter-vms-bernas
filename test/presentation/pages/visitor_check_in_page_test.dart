@@ -94,7 +94,7 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
   }) async {
     lastCheckInSubmission = submission;
     return const VisitorCheckInResultEntity(
-      success: true,
+      status: true,
       message: 'Checked-in successfully.',
     );
   }
@@ -105,7 +105,7 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
   }) async {
     lastCheckOutSubmission = submission;
     return const VisitorCheckInResultEntity(
-      success: true,
+      status: true,
       message: 'Checked-out successfully.',
     );
   }
@@ -139,6 +139,7 @@ Widget _buildApp({
   required bool isCheckIn,
   AuthLocalDataSource? authLocalDataSource,
   Future<String?> Function(BuildContext context)? scanLauncher,
+  Future<String?> Function(BuildContext context)? physicalTagScanLauncher,
 }) {
   return ProviderScope(
     overrides: [
@@ -159,6 +160,7 @@ Widget _buildApp({
       home: VisitorCheckInPage(
         isCheckIn: isCheckIn,
         scanLauncher: scanLauncher,
+        physicalTagScanLauncher: physicalTagScanLauncher,
       ),
     ),
   );
@@ -313,6 +315,8 @@ void main() {
           .onPressed,
       isNull,
     );
+    expect(find.byKey(const Key('physical-tag-input-123')), findsNothing);
+    expect(find.byKey(const Key('physical-tag-scan-123')), findsNothing);
   });
 
   testWidgets('check-out mode disables visitor already checked out', (
@@ -372,7 +376,78 @@ void main() {
           .onPressed,
       isNull,
     );
+    expect(find.byKey(const Key('physical-tag-input-123')), findsNothing);
+    expect(find.byKey(const Key('physical-tag-scan-123')), findsNothing);
   });
+
+  testWidgets(
+    'check-in eligible row shows editable physical tag and scan icon',
+    (tester) async {
+      const lookup = VisitorLookupEntity(
+        invitationId: 'IV1',
+        entity: 'AGYTEK',
+        site: 'FACTORY1',
+        siteDesc: 'FACTORY1 T',
+        department: 'ADC',
+        departmentDesc: 'ADMIN CENTER',
+        purpose: 'MEETING',
+        company: 'TEST',
+        contactNumber: '0123',
+        visitorType: '1_Visitor',
+        inviteBy: 'Suraya',
+        workLevel: '',
+        vehiclePlateNumber: 'WWW0000',
+        status: 'ARRIVED',
+        visitDateFrom: '2026-02-25T00:00:00',
+        visitDateTo: '2026-02-25T00:00:00',
+        visitTimeFrom: '19:00:PM',
+        visitTimeTo: '20:00:PM',
+        visitors: [
+          VisitorLookupItemEntity(
+            name: 'ELIGIBLE',
+            icPassport: '222',
+            physicalTag: '',
+            email: '',
+            contactNo: '',
+            company: '',
+            checkInTime: '',
+            checkOutTime: '',
+          ),
+        ],
+      );
+      final repository = _FakeVisitorAccessRepository(lookup: lookup);
+      await tester.pumpWidget(
+        _buildApp(repository: repository, isCheckIn: true),
+      );
+
+      await tester.enterText(find.byType(TextFormField).first, 'VIS|IV|A|F');
+      await tester.tap(find.widgetWithText(FilledButton, 'Search'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Visitor List (1)'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('physical-tag-input-222')), findsOneWidget);
+      expect(find.byKey(const Key('physical-tag-scan-222')), findsOneWidget);
+      expect(
+        tester
+            .widget<TextFormField>(
+              find.byKey(const Key('physical-tag-input-222')),
+            )
+            .enabled,
+        isFalse,
+      );
+      await tester.tap(find.text('Select all (0/1)'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<TextFormField>(
+              find.byKey(const Key('physical-tag-input-222')),
+            )
+            .enabled,
+        isTrue,
+      );
+    },
+  );
 
   testWidgets('select all targets only eligible visitors', (tester) async {
     const lookup = VisitorLookupEntity(
@@ -584,6 +659,10 @@ void main() {
 
       await tester.tap(find.text('Select all (0/1)'));
       await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('physical-tag-input-123456561231')),
+        'TAG-EDITED',
+      );
       await tester.tap(find.widgetWithText(FilledButton, 'Confirm Check-In'));
       await tester.pumpAndSettle();
 
@@ -597,6 +676,10 @@ void main() {
         repository.lastCheckInSubmission?.visitors.first.appId,
         '123456561231',
       );
+      expect(
+        repository.lastCheckInSubmission?.visitors.first.physicalTag,
+        'TAG-EDITED',
+      );
       expect(repository.lookupCalls, greaterThanOrEqualTo(2));
       expect(find.text('Checked-in successfully.'), findsOneWidget);
       await tester.tap(find.text('Visitor List (1)'));
@@ -604,6 +687,96 @@ void main() {
       expect(find.text('IN'), findsOneWidget);
     },
   );
+
+  testWidgets('scan physical tag updates input and submits scanned value', (
+    tester,
+  ) async {
+    const beforeSubmit = VisitorLookupEntity(
+      invitationId: 'IV20260200038',
+      entity: 'AGYTEK',
+      site: 'FACTORY1',
+      siteDesc: 'FACTORY1 T',
+      department: 'ADC',
+      departmentDesc: 'ADMIN CENTER',
+      purpose: 'MEETING',
+      company: 'TEST',
+      contactNumber: '0123456789',
+      visitorType: '1_Visitor',
+      inviteBy: 'Suraya',
+      workLevel: '',
+      vehiclePlateNumber: 'WWW0000',
+      status: 'ARRIVED',
+      visitDateFrom: '2026-02-25T00:00:00',
+      visitDateTo: '2026-02-25T00:00:00',
+      visitTimeFrom: '19:00:PM',
+      visitTimeTo: '20:00:PM',
+      visitors: [
+        VisitorLookupItemEntity(
+          name: 'NAME2',
+          icPassport: '123456561231',
+          physicalTag: '',
+          email: '',
+          contactNo: '',
+          company: '',
+          checkInTime: '',
+          checkOutTime: '',
+        ),
+      ],
+    );
+    final repository = _FakeVisitorAccessRepository(
+      lookupResponses: const [beforeSubmit, beforeSubmit],
+    );
+    final authLocalDataSource = _FakeAuthLocalDataSource(
+      const AuthSessionDto(
+        username: 'Ryan',
+        fullname: 'Ryan',
+        accessToken: 'token123',
+        defaultSite: 'FACTORY1',
+        defaultGate: 'F1_A',
+      ),
+    );
+
+    await tester.pumpWidget(
+      _buildApp(
+        repository: repository,
+        isCheckIn: true,
+        authLocalDataSource: authLocalDataSource,
+        physicalTagScanLauncher: (_) async => 'SCANNED-TAG',
+      ),
+    );
+
+    await tester.enterText(find.byType(TextFormField).first, 'VIS|IV|A|F');
+    await tester.tap(find.widgetWithText(FilledButton, 'Search'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Visitor List (1)'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(Checkbox).last);
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.byKey(const Key('physical-tag-input-123456561231')),
+          )
+          .enabled,
+      isTrue,
+    );
+    final scanButton = tester.widget<IconButton>(
+      find.byKey(const Key('physical-tag-scan-123456561231')),
+    );
+    expect(scanButton.onPressed, isNotNull);
+    scanButton.onPressed!.call();
+    await tester.pumpAndSettle();
+    expect(find.text('SCANNED-TAG'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Confirm Check-In'));
+    await tester.pumpAndSettle();
+
+    expect(
+      repository.lastCheckInSubmission?.visitors.first.physicalTag,
+      'SCANNED-TAG',
+    );
+  });
 
   testWidgets('check-out confirm submits payload and refreshes lookup', (
     tester,

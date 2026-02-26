@@ -50,7 +50,7 @@ void main() {
       (capturedData as Map<String, dynamic>)['invitationid'],
       'IV20260200038',
     );
-    expect(result.success, isTrue);
+    expect(result.status, isTrue);
   });
 
   test('throws backend message on failed submit', () async {
@@ -136,6 +136,6 @@ void main() {
       (capturedData as Map<String, dynamic>)['invitationid'],
       'IV20260200038',
     );
-    expect(result.success, isTrue);
+    expect(result.status, isTrue);
   });
 }

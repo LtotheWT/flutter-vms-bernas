@@ -1,24 +1,26 @@
+import 'dart:developer';
+
 import '../../domain/entities/visitor_check_in_result_entity.dart';
 
 class VisitorCheckInResponseDto {
   const VisitorCheckInResponseDto({
-    required this.success,
+    required this.status,
     required this.message,
   });
 
-  final bool success;
+  final bool status;
   final String? message;
 
   factory VisitorCheckInResponseDto.fromJson(Map<String, dynamic> json) {
     return VisitorCheckInResponseDto(
-      success: json['Success'] == true,
+      status: json['Status'] == true,
       message: (json['Message'] as String?)?.trim(),
     );
   }
 
   VisitorCheckInResultEntity toEntity() {
     return VisitorCheckInResultEntity(
-      success: success,
+      status: status,
       message: message?.trim() ?? '',
     );
   }

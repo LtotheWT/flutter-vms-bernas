@@ -7,9 +7,9 @@ void main() {
     final dto = VisitorCheckInResponseDto.fromJson(json);
     final entity = dto.toEntity();
 
-    expect(dto.success, isTrue);
+    expect(dto.status, isTrue);
     expect(dto.message, 'Checked-in successfully.');
-    expect(entity.success, isTrue);
+    expect(entity.status, isTrue);
     expect(entity.message, 'Checked-in successfully.');
   });
 
@@ -18,7 +18,7 @@ void main() {
     final dto = VisitorCheckInResponseDto.fromJson(json);
     final entity = dto.toEntity();
 
-    expect(dto.success, isFalse);
+    expect(dto.status, isFalse);
     expect(entity.message, isEmpty);
   });
 }

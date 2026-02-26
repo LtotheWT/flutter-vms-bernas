@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:dio/dio.dart';
 import 'dart:typed_data';
 
@@ -90,10 +92,10 @@ class VisitorAccessRemoteDataSource {
       final dto = VisitorCheckInResponseDto.fromJson(
         parseJsonMap(response.data),
       );
-      if (!dto.success) {
+      if (!dto.status) {
         throw VisitorAccessException(
           _resolveBackendMessage(dto.message) ??
-              'Failed to submit visitor check-in. Please try again.',
+              'Failed to submit visitor check-in. Please try again. ${response.data}',
         );
       }
       return dto;
@@ -117,11 +119,11 @@ class VisitorAccessRemoteDataSource {
       }
 
       throw VisitorAccessException(
-        'Failed to submit visitor check-in. Please try again.',
+        'Failed to submit visitor check-in. Please try again. $error',
       );
-    } on FormatException {
+    } on FormatException catch (error) {
       throw VisitorAccessException(
-        'Failed to submit visitor check-in. Please try again.',
+        'Failed to submit visitor check-in. Please try again. $error',
       );
     }
   }
@@ -142,7 +144,7 @@ class VisitorAccessRemoteDataSource {
       final dto = VisitorCheckInResponseDto.fromJson(
         parseJsonMap(response.data),
       );
-      if (!dto.success) {
+      if (!dto.status) {
         throw VisitorAccessException(
           _resolveBackendMessage(dto.message) ??
               'Failed to submit visitor check-out. Please try again.',

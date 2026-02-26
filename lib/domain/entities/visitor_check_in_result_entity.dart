@@ -2,13 +2,13 @@ import 'package:equatable/equatable.dart';
 
 class VisitorCheckInResultEntity extends Equatable {
   const VisitorCheckInResultEntity({
-    required this.success,
+    required this.status,
     required this.message,
   });
 
-  final bool success;
+  final bool status;
   final String message;
 
   @override
-  List<Object?> get props => [success, message];
+  List<Object?> get props => [status, message];
 }

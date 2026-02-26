@@ -20,10 +20,12 @@ class VisitorCheckInPage extends ConsumerStatefulWidget {
     super.key,
     required this.isCheckIn,
     this.scanLauncher,
+    this.physicalTagScanLauncher,
   });
 
   final bool isCheckIn;
   final Future<String?> Function(BuildContext context)? scanLauncher;
+  final Future<String?> Function(BuildContext context)? physicalTagScanLauncher;
 
   @override
   ConsumerState<VisitorCheckInPage> createState() => _VisitorCheckInPageState();
@@ -33,6 +35,9 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
   final _scanController = TextEditingController();
   final _scanFocusNode = FocusNode();
   final Set<int> _selectedIndexes = <int>{};
+  final Map<String, String> _physicalTagDraftByAppId = <String, String>{};
+  final Map<String, TextEditingController> _physicalTagControllerByAppId =
+      <String, TextEditingController>{};
   int _resultTabIndex = 0;
   String _lastLookupCode = '';
   late final ProviderSubscription<VisitorCheckState> _stateSubscription;
@@ -57,9 +62,14 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
         final hadLookup = previous?.lookup != null;
         final hasLookup = next.lookup != null;
         if (hadLookup != hasLookup || previous?.lookup != next.lookup) {
+          for (final controller in _physicalTagControllerByAppId.values) {
+            controller.dispose();
+          }
           setState(() {
             _selectedIndexes.clear();
             _resultTabIndex = 0;
+            _physicalTagDraftByAppId.clear();
+            _physicalTagControllerByAppId.clear();
           });
         }
       },
@@ -72,6 +82,9 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
     _stateSubscription.close();
     _scanController.dispose();
     _scanFocusNode.dispose();
+    for (final controller in _physicalTagControllerByAppId.values) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
@@ -103,6 +116,76 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
       return;
     }
     await _search(overrideCode: scanned);
+  }
+
+  Future<void> _scanPhysicalTagFor(VisitorLookupItemEntity visitor) async {
+    final result =
+        await (widget.physicalTagScanLauncher?.call(context) ??
+            Navigator.of(context).push<String>(
+              MaterialPageRoute(
+                builder: (_) => const MobileScannerPage(
+                  title: 'Scan Physical Tag',
+                  description:
+                      'Align QR code inside the frame to scan physical tag.',
+                ),
+              ),
+            ));
+    final scanned = result?.trim() ?? '';
+    if (scanned.isEmpty || !mounted) {
+      return;
+    }
+    final appId = visitor.icPassport.trim();
+    if (appId.isEmpty) {
+      return;
+    }
+    _setPhysicalTagFor(visitor, scanned);
+    final controller = _physicalTagControllerByAppId[appId];
+    if (controller != null && controller.text != scanned) {
+      controller.value = TextEditingValue(
+        text: scanned,
+        selection: TextSelection.collapsed(offset: scanned.length),
+      );
+    }
+    setState(() {});
+  }
+
+  String _physicalTagFor(VisitorLookupItemEntity visitor) {
+    final appId = visitor.icPassport.trim();
+    if (appId.isEmpty) {
+      return visitor.physicalTag.trim();
+    }
+    if (!_physicalTagDraftByAppId.containsKey(appId)) {
+      _physicalTagDraftByAppId[appId] = visitor.physicalTag.trim();
+    }
+    return _physicalTagDraftByAppId[appId] ?? '';
+  }
+
+  void _setPhysicalTagFor(VisitorLookupItemEntity visitor, String value) {
+    final appId = visitor.icPassport.trim();
+    if (appId.isEmpty) {
+      return;
+    }
+    _physicalTagDraftByAppId[appId] = value;
+  }
+
+  TextEditingController _physicalTagControllerFor(
+    VisitorLookupItemEntity visitor,
+  ) {
+    final appId = visitor.icPassport.trim();
+    final existing = _physicalTagControllerByAppId[appId];
+    final value = _physicalTagFor(visitor);
+    if (existing != null) {
+      if (existing.text != value) {
+        existing.value = TextEditingValue(
+          text: value,
+          selection: TextSelection.collapsed(offset: value.length),
+        );
+      }
+      return existing;
+    }
+    final controller = TextEditingController(text: value);
+    _physicalTagControllerByAppId[appId] = controller;
+    return controller;
   }
 
   void _clear() {
@@ -158,7 +241,11 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
       selectedVisitors.add(
         VisitorCheckInSubmissionItemEntity(
           appId: appId,
-          physicalTag: visitor.physicalTag.trim(),
+          physicalTag:
+              (widget.isCheckIn
+                      ? (_physicalTagDraftByAppId[appId] ?? visitor.physicalTag)
+                      : visitor.physicalTag)
+                  .trim(),
         ),
       );
     }
@@ -189,7 +276,7 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
         : result.message;
     showAppSnackBar(context, message);
 
-    if (!result.success) {
+    if (!result.status) {
       return;
     }
 
@@ -500,14 +587,29 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
                 delegate: SliverChildBuilderDelegate((context, i) {
                   final visitor = visitors[i];
                   final isEligible = _isEligibleForCurrentAction(visitor);
+                  final isPhysicalTagEditable =
+                      widget.isCheckIn && visitor.checkInTime.trim().isEmpty;
+                  final isPhysicalTagEnabled =
+                      isPhysicalTagEditable && _selectedIndexes.contains(i);
                   return _VisitorCard(
                     invitationId: lookup.invitationId,
                     visitor: visitor,
                     selected: _selectedIndexes.contains(i),
                     isEligible: isEligible,
+                    isCheckInMode: widget.isCheckIn,
+                    isPhysicalTagEditable: isPhysicalTagEditable,
                     checkStatus: _visitStatus(visitor),
                     checkInDate: _formatDateTime(visitor.checkInTime),
                     checkOutDate: _formatDateTime(visitor.checkOutTime),
+                    physicalTagController: isPhysicalTagEditable
+                        ? _physicalTagControllerFor(visitor)
+                        : null,
+                    onPhysicalTagChanged: isPhysicalTagEnabled
+                        ? (value) => _setPhysicalTagFor(visitor, value)
+                        : null,
+                    onPhysicalTagScanTap: isPhysicalTagEnabled
+                        ? () => _scanPhysicalTagFor(visitor)
+                        : null,
                     onSelected: isEligible
                         ? (checked) {
                             setState(() {
@@ -600,9 +702,14 @@ class _VisitorCard extends StatelessWidget {
     required this.visitor,
     required this.selected,
     required this.isEligible,
+    required this.isCheckInMode,
+    required this.isPhysicalTagEditable,
     required this.checkStatus,
     required this.checkInDate,
     required this.checkOutDate,
+    required this.physicalTagController,
+    required this.onPhysicalTagChanged,
+    required this.onPhysicalTagScanTap,
     required this.onSelected,
   });
 
@@ -610,9 +717,14 @@ class _VisitorCard extends StatelessWidget {
   final VisitorLookupItemEntity visitor;
   final bool selected;
   final bool isEligible;
+  final bool isCheckInMode;
+  final bool isPhysicalTagEditable;
   final String checkStatus;
   final String checkInDate;
   final String checkOutDate;
+  final TextEditingController? physicalTagController;
+  final ValueChanged<String>? onPhysicalTagChanged;
+  final VoidCallback? onPhysicalTagScanTap;
   final ValueChanged<bool?>? onSelected;
 
   String _displayOrDash(String value) {
@@ -674,10 +786,19 @@ class _VisitorCard extends StatelessWidget {
             // const InfoRow(label: 'Gate Out', value: '-'),
             // const InfoRow(label: 'Check In By', value: '-'),
             // const InfoRow(label: 'Check Out By', value: '-'),
-            InfoRow(
-              label: 'Physical Tag',
-              value: _displayOrDash(visitor.physicalTag),
-            ),
+            if (isCheckInMode && isPhysicalTagEditable)
+              _PhysicalTagInputRow(
+                appId: visitor.icPassport.trim(),
+                controller: physicalTagController!,
+                enabled: onPhysicalTagChanged != null,
+                onChanged: onPhysicalTagChanged,
+                onScanTap: onPhysicalTagScanTap,
+              )
+            else
+              InfoRow(
+                label: 'Physical Tag',
+                value: _displayOrDash(visitor.physicalTag),
+              ),
             Align(
               alignment: Alignment.centerRight,
               child: AppOutlinedButtonIcon(
@@ -688,6 +809,64 @@ class _VisitorCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _PhysicalTagInputRow extends StatelessWidget {
+  const _PhysicalTagInputRow({
+    required this.appId,
+    required this.controller,
+    required this.enabled,
+    required this.onChanged,
+    required this.onScanTap,
+  });
+
+  final String appId;
+  final TextEditingController controller;
+  final bool enabled;
+  final ValueChanged<String>? onChanged;
+  final VoidCallback? onScanTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              'Physical Tag',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: Colors.grey[700]),
+            ),
+          ),
+          Expanded(
+            child: TextFormField(
+              key: Key('physical-tag-input-$appId'),
+              enabled: enabled,
+              controller: controller,
+              onChanged: onChanged,
+              decoration: const InputDecoration(
+                hintText: 'Optional',
+                isDense: true,
+                border: UnderlineInputBorder(),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            key: Key('physical-tag-scan-$appId'),
+            tooltip: 'Scan physical tag',
+            onPressed: onScanTap,
+            icon: const Icon(Icons.qr_code_scanner),
+            visualDensity: VisualDensity.compact,
+          ),
+        ],
       ),
     );
   }

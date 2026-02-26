@@ -65,14 +65,14 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
   Future<VisitorCheckInResultEntity> submitVisitorCheckIn({
     required VisitorCheckInSubmissionEntity submission,
   }) async {
-    return const VisitorCheckInResultEntity(success: true, message: 'ok');
+    return const VisitorCheckInResultEntity(status: true, message: 'ok');
   }
 
   @override
   Future<VisitorCheckInResultEntity> submitVisitorCheckOut({
     required VisitorCheckInSubmissionEntity submission,
   }) async {
-    return const VisitorCheckInResultEntity(success: true, message: 'ok');
+    return const VisitorCheckInResultEntity(status: true, message: 'ok');
   }
 
   @override
@@ -85,7 +85,7 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
 }
 
 void main() {
-  test('search success clears input and sets lookup', () async {
+  test('search status clears input and sets lookup', () async {
     final repository = _FakeVisitorAccessRepository();
     final container = ProviderContainer(
       overrides: [
