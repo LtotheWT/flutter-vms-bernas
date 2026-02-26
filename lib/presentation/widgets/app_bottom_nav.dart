@@ -26,6 +26,11 @@ class AppBottomNav extends StatelessWidget {
           selectedIcon: Icon(Icons.insert_chart),
           label: 'Report',
         ),
+        NavigationDestination(
+          icon: Icon(Icons.person_outline),
+          selectedIcon: Icon(Icons.person),
+          label: 'Profile',
+        ),
       ],
     );
   }

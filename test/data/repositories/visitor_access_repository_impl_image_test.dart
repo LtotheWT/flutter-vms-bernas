@@ -84,6 +84,7 @@ void main() {
         const AuthSessionDto(
           username: 'Ryan',
           fullname: 'Ryan',
+          entity: "AGYTEK",
           accessToken: 'token123',
           defaultSite: 'FACTORY1',
           defaultGate: 'F1_A',

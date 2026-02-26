@@ -54,15 +54,19 @@ class AuthSessionController {
     _ref.read(authRouteNotifierProvider).setUnauthenticated();
   }
 
-  Future<void> logoutDueToUnauthorized() {
+  Future<void> logout() {
     if (_logoutFuture != null) {
       return _logoutFuture!;
     }
-    _logoutFuture = _performUnauthorizedLogout();
+    _logoutFuture = _performLogout();
     return _logoutFuture!;
   }
 
-  Future<void> _performUnauthorizedLogout() async {
+  Future<void> logoutDueToUnauthorized() {
+    return logout();
+  }
+
+  Future<void> _performLogout() async {
     try {
       await _ref.read(authLocalDataSourceProvider).clearSession();
       markUnauthenticated();

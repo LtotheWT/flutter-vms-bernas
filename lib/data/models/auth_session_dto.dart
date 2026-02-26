@@ -4,6 +4,7 @@ class AuthSessionDto {
   const AuthSessionDto({
     required this.username,
     required this.fullname,
+    required this.entity,
     required this.accessToken,
     required this.defaultSite,
     required this.defaultGate,
@@ -11,6 +12,7 @@ class AuthSessionDto {
 
   final String username;
   final String fullname;
+  final String entity;
   final String accessToken;
   final String defaultSite;
   final String defaultGate;
@@ -19,6 +21,7 @@ class AuthSessionDto {
     return AuthSessionDto(
       username: (json['username'] as String?)?.trim() ?? '',
       fullname: (json['fullname'] as String?)?.trim() ?? '',
+      entity: (json['entity'] as String?)?.trim() ?? '',
       accessToken: (json['access_token'] as String?)?.trim() ?? '',
       defaultSite: (json['default_site'] as String?)?.trim() ?? '',
       defaultGate: (json['default_gate'] as String?)?.trim() ?? '',
@@ -29,6 +32,7 @@ class AuthSessionDto {
     return {
       'username': username,
       'fullname': fullname,
+      'entity': entity,
       'access_token': accessToken,
       'default_site': defaultSite,
       'default_gate': defaultGate,
@@ -39,6 +43,7 @@ class AuthSessionDto {
     return AuthSessionEntity(
       username: username,
       fullname: fullname,
+      entity: entity,
       accessToken: accessToken,
       defaultSite: defaultSite,
       defaultGate: defaultGate,
@@ -49,6 +54,7 @@ class AuthSessionDto {
     return AuthSessionDto(
       username: entity.username,
       fullname: entity.fullname,
+      entity: entity.entity,
       accessToken: entity.accessToken,
       defaultSite: entity.defaultSite,
       defaultGate: entity.defaultGate,

@@ -20,6 +20,7 @@ class _FakeAuthRepository implements AuthRepository {
     return const AuthSessionEntity(
       username: 'Ryan',
       fullname: 'Ryan',
+      entity: "AGYTEK",
       accessToken: 'token',
       defaultSite: 'FACTORY1',
       defaultGate: 'F1_A',

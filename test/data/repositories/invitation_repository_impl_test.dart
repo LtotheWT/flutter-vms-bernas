@@ -53,6 +53,7 @@ void main() {
         const AuthSessionDto(
           username: 'ryan',
           fullname: 'Ryan',
+          entity: "AGYTEK",
           accessToken: 'token',
           defaultSite: 'FACTORY1',
           defaultGate: 'F1_A',
@@ -82,6 +83,7 @@ void main() {
       const AuthSessionDto(
         username: 'ryan',
         fullname: 'Ryan',
+        entity: "AGYTEK",
         accessToken: 'token',
         defaultSite: 'FACTORY1',
         defaultGate: 'F1_A',
