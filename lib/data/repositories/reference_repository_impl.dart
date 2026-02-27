@@ -5,6 +5,7 @@ import '../../domain/entities/permanent_contractor_info_entity.dart';
 import '../../domain/entities/ref_personel_entity.dart';
 import '../../domain/entities/ref_visitor_type_entity.dart';
 import '../../domain/repositories/reference_repository.dart';
+import 'dart:typed_data';
 import '../datasources/auth_local_data_source.dart';
 import '../datasources/reference_remote_data_source.dart';
 
@@ -90,6 +91,19 @@ class ReferenceRepositoryImpl implements ReferenceRepository {
       code: code,
     );
     return item.toEntity();
+  }
+
+  @override
+  Future<Uint8List?> getPermanentContractorImage({
+    required String contractorId,
+  }) async {
+    final accessToken = await _getAccessTokenOrThrow(
+      missingMessage: 'Please login again to load permanent contractor image.',
+    );
+    return _remoteDataSource.getPermanentContractorImage(
+      accessToken: accessToken,
+      contractorId: contractorId,
+    );
   }
 
   Future<String> _getAccessTokenOrThrow({

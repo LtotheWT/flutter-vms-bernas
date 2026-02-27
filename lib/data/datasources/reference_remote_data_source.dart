@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'dart:typed_data';
 
 import 'network/remote_parsers.dart';
 import '../models/ref_department_dto.dart';
@@ -195,8 +196,18 @@ class ReferenceRemoteDataSource {
         ),
       );
 
-      final map = parseJsonMap(response.data);
-      return PermanentContractorInfoDto.fromJson(map);
+      final root = parseJsonMap(response.data);
+      final isSuccess = root['Status'] == true;
+      if (!isSuccess) {
+        final backendMessage = _resolveBackendMessage(root['Message']);
+        throw ReferenceException(
+          backendMessage ??
+              'Failed to load permanent contractor info. Please try again.',
+        );
+      }
+
+      final details = parseJsonMap(root['Details']);
+      return PermanentContractorInfoDto.fromJson(details);
     } on DioException catch (error) {
       final statusCode = error.response?.statusCode;
       if (statusCode == 401 || statusCode == 403) {
@@ -219,6 +230,66 @@ class ReferenceRemoteDataSource {
         'Failed to load permanent contractor info. Please try again.',
       );
     }
+  }
+
+  Future<Uint8List?> getPermanentContractorImage({
+    required String accessToken,
+    required String contractorId,
+  }) async {
+    final encodedContractorId = Uri.encodeComponent(contractorId.trim());
+    try {
+      final response = await _dio.get<dynamic>(
+        '/wmsws/Contractor/image/$encodedContractorId',
+        options: Options(
+          headers: {'Authorization': 'Bearer $accessToken', 'accept': '*/*'},
+          responseType: ResponseType.bytes,
+        ),
+      );
+
+      final data = response.data;
+      if (data is Uint8List) {
+        return data.isEmpty ? null : data;
+      }
+      if (data is List<int>) {
+        return data.isEmpty ? null : Uint8List.fromList(data);
+      }
+      return null;
+    } on DioException catch (error) {
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 404) {
+        return null;
+      }
+      if (statusCode == 401 || statusCode == 403) {
+        throw ReferenceException(
+          'Please login again to load permanent contractor image.',
+        );
+      }
+
+      if (isConnectivityIssue(error)) {
+        throw ReferenceException(
+          'Unable to load permanent contractor image. Please try again.',
+        );
+      }
+
+      throw ReferenceException(
+        'Failed to load permanent contractor image. Please try again.',
+      );
+    } on FormatException {
+      throw ReferenceException(
+        'Failed to load permanent contractor image. Please try again.',
+      );
+    }
+  }
+
+  String? _resolveBackendMessage(dynamic message) {
+    if (message == null) {
+      return null;
+    }
+    final normalized = message.toString().trim();
+    if (normalized.isEmpty || normalized.toLowerCase() == 'null') {
+      return null;
+    }
+    return normalized;
   }
 }
 

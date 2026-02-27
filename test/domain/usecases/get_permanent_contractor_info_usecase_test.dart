@@ -7,6 +7,7 @@ import 'package:vms_bernas/domain/entities/ref_personel_entity.dart';
 import 'package:vms_bernas/domain/entities/ref_visitor_type_entity.dart';
 import 'package:vms_bernas/domain/repositories/reference_repository.dart';
 import 'package:vms_bernas/domain/usecases/get_permanent_contractor_info_usecase.dart';
+import 'dart:typed_data';
 
 class _FakeReferenceRepository implements ReferenceRepository {
   String? capturedCode;
@@ -50,6 +51,11 @@ class _FakeReferenceRepository implements ReferenceRepository {
 
   @override
   Future<List<RefVisitorTypeEntity>> getVisitorTypes() async => const [];
+
+  @override
+  Future<Uint8List?> getPermanentContractorImage({
+    required String contractorId,
+  }) async => null;
 }
 
 void main() {

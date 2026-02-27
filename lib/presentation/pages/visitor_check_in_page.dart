@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vms_bernas/presentation/widgets/labeled_form_rows.dart';
@@ -13,6 +11,7 @@ import '../state/visitor_check_in_providers.dart';
 import '../widgets/app_filled_button.dart';
 import '../widgets/app_outlined_button.dart';
 import '../widgets/info_row.dart';
+import '../widgets/remote_photo_slot.dart';
 import '../widgets/app_snackbar.dart';
 
 class VisitorCheckInPage extends ConsumerStatefulWidget {
@@ -1059,80 +1058,10 @@ class _VisitorPhotoSlot extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final key = VisitorPhotoKey(invitationId: invitationId, appId: appId);
-    final asyncBytes = ref.watch(visitorApplicantImageProvider(key));
-
-    return asyncBytes.when(
-      data: (bytes) {
-        if (bytes == null || bytes.isEmpty) {
-          return const _PhotoMock(hasPhoto: false);
-        }
-        return GestureDetector(
-          key: const Key('visitor-photo-thumbnail'),
-          onTap: () {
-            showDialog<void>(
-              context: context,
-              barrierColor: Colors.black87,
-              builder: (_) => _FullScreenPhotoDialog(bytes: bytes),
-            );
-          },
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: SizedBox(
-              height: 72,
-              width: 72,
-              child: Image.memory(bytes, fit: BoxFit.cover),
-            ),
-          ),
-        );
-      },
-      error: (_, __) => const _PhotoMock(hasPhoto: false),
-      loading: () => Stack(
-        alignment: Alignment.center,
-        children: const [
-          _PhotoMock(hasPhoto: false),
-          SizedBox(
-            height: 20,
-            width: 20,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FullScreenPhotoDialog extends StatelessWidget {
-  const _FullScreenPhotoDialog({required this.bytes});
-
-  final Uint8List bytes;
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      key: const Key('visitor-photo-fullscreen'),
-      insetPadding: EdgeInsets.zero,
-      backgroundColor: Colors.transparent,
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: InteractiveViewer(
-              minScale: 0.8,
-              maxScale: 4,
-              child: Center(child: Image.memory(bytes, fit: BoxFit.contain)),
-            ),
-          ),
-          Positioned(
-            top: 16,
-            right: 16,
-            child: IconButton(
-              tooltip: 'Close photo',
-              onPressed: () => Navigator.of(context).pop(),
-              icon: const Icon(Icons.close),
-              color: Colors.white,
-            ),
-          ),
-        ],
-      ),
+    return RemotePhotoSlot(
+      asyncBytes: ref.watch(visitorApplicantImageProvider(key)),
+      thumbnailKey: const Key('visitor-photo-thumbnail'),
+      fullscreenKey: const Key('visitor-photo-fullscreen'),
     );
   }
 }

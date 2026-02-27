@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +12,7 @@ import '../../domain/usecases/get_visitor_lookup_usecase.dart';
 import '../../domain/usecases/submit_visitor_check_in_usecase.dart';
 import '../../domain/usecases/submit_visitor_check_out_usecase.dart';
 import 'auth_session_providers.dart';
+import 'photo_cache_helpers.dart';
 
 final visitorAccessRemoteDataSourceProvider =
     Provider<VisitorAccessRemoteDataSource>((ref) {
@@ -228,15 +227,13 @@ final visitorApplicantImageProvider = FutureProvider.autoDispose
       }
 
       final cache = ref.read(visitorPhotoCacheProvider);
-      if (cache.containsKey(key.cacheKey)) {
-        return cache[key.cacheKey];
-      }
-
       final repository = ref.read(visitorAccessRepositoryProvider);
-      final bytes = await repository.getVisitorApplicantImage(
-        invitationId: invitationId,
-        appId: appId,
+      return fetchPhotoWithMemoryCache(
+        cache: cache,
+        cacheKey: key.cacheKey,
+        loader: () => repository.getVisitorApplicantImage(
+          invitationId: invitationId,
+          appId: appId,
+        ),
       );
-      cache[key.cacheKey] = bytes;
-      return bytes;
     });

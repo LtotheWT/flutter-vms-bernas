@@ -5,6 +5,7 @@ import '../state/permanent_contractor_check_providers.dart';
 import '../widgets/app_filled_button.dart';
 import '../widgets/info_row.dart';
 import '../widgets/labeled_form_rows.dart';
+import '../widgets/remote_photo_slot.dart';
 
 class PermanentContractorCheckPage extends ConsumerStatefulWidget {
   const PermanentContractorCheckPage({
@@ -249,6 +250,25 @@ class _PermanentContractorCheckPageState
                     'Permanent Contractor Info',
                     style: textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: RemotePhotoSlot(
+                      thumbnailKey: const Key(
+                        'permanent-contractor-photo-thumbnail',
+                      ),
+                      fullscreenKey: const Key(
+                        'permanent-contractor-photo-fullscreen',
+                      ),
+                      asyncBytes: ref.watch(
+                        permanentContractorImageProvider(
+                          PermanentContractorPhotoKey(
+                            contractorId: state.info?.contractorId ?? '',
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 8),

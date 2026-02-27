@@ -1,9 +1,11 @@
+import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/entities/permanent_contractor_info_entity.dart';
 import '../../domain/usecases/get_permanent_contractor_info_usecase.dart';
 import 'reference_providers.dart';
+import 'photo_cache_helpers.dart';
 
 enum PermanentContractorCheckType { checkIn, checkOut }
 
@@ -121,3 +123,36 @@ class PermanentContractorCheckController
     }
   }
 }
+
+@immutable
+class PermanentContractorPhotoKey extends Equatable {
+  const PermanentContractorPhotoKey({required this.contractorId});
+
+  final String contractorId;
+
+  String get cacheKey => contractorId.trim();
+
+  @override
+  List<Object?> get props => [contractorId];
+}
+
+final permanentContractorPhotoCacheProvider = Provider<Map<String, Uint8List?>>(
+  (ref) => <String, Uint8List?>{},
+);
+
+final permanentContractorImageProvider = FutureProvider.autoDispose
+    .family<Uint8List?, PermanentContractorPhotoKey>((ref, key) async {
+      final contractorId = key.contractorId.trim();
+      if (contractorId.isEmpty) {
+        return null;
+      }
+
+      final cache = ref.read(permanentContractorPhotoCacheProvider);
+      final repository = ref.read(referenceRepositoryProvider);
+      return fetchPhotoWithMemoryCache(
+        cache: cache,
+        cacheKey: key.cacheKey,
+        loader: () =>
+            repository.getPermanentContractorImage(contractorId: contractorId),
+      );
+    });

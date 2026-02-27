@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'dart:typed_data';
 import 'package:vms_bernas/domain/entities/ref_department_entity.dart';
 import 'package:vms_bernas/domain/entities/ref_entity_entity.dart';
 import 'package:vms_bernas/domain/entities/ref_location_entity.dart';
@@ -89,6 +90,11 @@ class _FakeReferenceRepository implements ReferenceRepository {
       validWorkingDateTo: '2026-12-31T00:00:00',
     );
   }
+
+  @override
+  Future<Uint8List?> getPermanentContractorImage({
+    required String contractorId,
+  }) async => null;
 }
 
 void main() {

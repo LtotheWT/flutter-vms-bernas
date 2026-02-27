@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:typed_data';
 import 'package:vms_bernas/domain/entities/permanent_contractor_info_entity.dart';
 import 'package:vms_bernas/domain/entities/ref_department_entity.dart';
 import 'package:vms_bernas/domain/entities/ref_entity_entity.dart';
@@ -58,6 +59,11 @@ class _FakeReferenceRepository implements ReferenceRepository {
 
   @override
   Future<List<RefVisitorTypeEntity>> getVisitorTypes() async => const [];
+
+  @override
+  Future<Uint8List?> getPermanentContractorImage({
+    required String contractorId,
+  }) async => null;
 }
 
 void main() {
