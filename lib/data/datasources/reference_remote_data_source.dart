@@ -6,6 +6,8 @@ import '../models/ref_department_dto.dart';
 import '../models/ref_entity_dto.dart';
 import '../models/ref_location_dto.dart';
 import '../models/permanent_contractor_info_dto.dart';
+import '../models/permanent_contractor_submit_request_dto.dart';
+import '../models/permanent_contractor_submit_response_dto.dart';
 import '../models/ref_personel_dto.dart';
 import '../models/ref_visitor_type_dto.dart';
 
@@ -281,6 +283,122 @@ class ReferenceRemoteDataSource {
     }
   }
 
+  Future<PermanentContractorSubmitResponseDto>
+  submitPermanentContractorCheckIn({
+    required String accessToken,
+    required String idempotencyKey,
+    required PermanentContractorSubmitRequestDto request,
+  }) async {
+    try {
+      final response = await _dio.post<dynamic>(
+        '/wmsws/Contractor/check-in',
+        data: request.toJson(),
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $accessToken',
+            'accept': '*/*',
+            'Idempotency-Key': idempotencyKey,
+          },
+        ),
+      );
+
+      final dto = PermanentContractorSubmitResponseDto.fromJson(
+        parseJsonMap(response.data),
+      );
+      if (!dto.status) {
+        throw ReferenceException(
+          _resolveBackendMessage(dto.message) ??
+              'Failed to submit permanent contractor check-in. Please try again.',
+        );
+      }
+      return dto;
+    } on DioException catch (error) {
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 401 || statusCode == 403) {
+        throw ReferenceException(
+          'Please login again to submit permanent contractor check-in.',
+        );
+      }
+
+      final backendMessage = _extractSubmitBackendMessage(error.response?.data);
+      if (backendMessage != null) {
+        throw ReferenceException(backendMessage);
+      }
+
+      if (isConnectivityIssue(error)) {
+        throw ReferenceException(
+          'Unable to submit permanent contractor check-in. Please try again.',
+        );
+      }
+
+      throw ReferenceException(
+        'Failed to submit permanent contractor check-in. Please try again.',
+      );
+    } on FormatException {
+      throw ReferenceException(
+        'Failed to submit permanent contractor check-in. Please try again.',
+      );
+    }
+  }
+
+  Future<PermanentContractorSubmitResponseDto>
+  submitPermanentContractorCheckOut({
+    required String accessToken,
+    required String idempotencyKey,
+    required PermanentContractorSubmitRequestDto request,
+  }) async {
+    try {
+      final response = await _dio.post<dynamic>(
+        '/wmsws/Contractor/check-out',
+        data: request.toJson(),
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $accessToken',
+            'accept': '*/*',
+            'Idempotency-Key': idempotencyKey,
+          },
+        ),
+      );
+
+      final dto = PermanentContractorSubmitResponseDto.fromJson(
+        parseJsonMap(response.data),
+      );
+      if (!dto.status) {
+        throw ReferenceException(
+          _resolveBackendMessage(dto.message) ??
+              'Failed to submit permanent contractor check-out. Please try again.',
+        );
+      }
+      return dto;
+    } on DioException catch (error) {
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 401 || statusCode == 403) {
+        throw ReferenceException(
+          'Please login again to submit permanent contractor check-out.',
+        );
+      }
+
+      final backendMessage = _extractSubmitBackendMessage(error.response?.data);
+      if (backendMessage != null) {
+        throw ReferenceException(backendMessage);
+      }
+
+      if (isConnectivityIssue(error)) {
+        throw ReferenceException(
+          'Unable to submit permanent contractor check-out. Please try again.',
+        );
+      }
+
+      throw ReferenceException(
+        'Failed to submit permanent contractor check-out. Please try again.',
+      );
+    } on FormatException {
+      throw ReferenceException(
+        'Failed to submit permanent contractor check-out. Please try again.',
+      );
+    }
+  }
+
   String? _resolveBackendMessage(dynamic message) {
     if (message == null) {
       return null;
@@ -290,6 +408,17 @@ class ReferenceRemoteDataSource {
       return null;
     }
     return normalized;
+  }
+
+  String? _extractSubmitBackendMessage(dynamic data) {
+    try {
+      final dto = PermanentContractorSubmitResponseDto.fromJson(
+        parseJsonMap(data),
+      );
+      return _resolveBackendMessage(dto.message);
+    } catch (_) {
+      return null;
+    }
   }
 }
 

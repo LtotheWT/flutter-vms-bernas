@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'mobile_scanner_page.dart';
 import '../state/permanent_contractor_check_providers.dart';
 import '../widgets/app_filled_button.dart';
+import '../widgets/app_snackbar.dart';
 import '../widgets/info_row.dart';
 import '../widgets/labeled_form_rows.dart';
 import '../widgets/remote_photo_slot.dart';
@@ -11,9 +13,11 @@ class PermanentContractorCheckPage extends ConsumerStatefulWidget {
   const PermanentContractorCheckPage({
     super.key,
     required this.initialCheckType,
+    this.scanLauncher,
   });
 
   final PermanentContractorCheckType initialCheckType;
+  final Future<String?> Function(BuildContext context)? scanLauncher;
 
   @override
   ConsumerState<PermanentContractorCheckPage> createState() =>
@@ -62,12 +66,59 @@ class _PermanentContractorCheckPageState
     super.dispose();
   }
 
-  Future<void> _search() async {
+  Future<void> _search({String? overrideCode}) async {
+    final value = overrideCode ?? _searchController.text;
     final controller = ref.read(
       permanentContractorCheckControllerProvider.notifier,
     );
-    controller.updateSearchInput(_searchController.text);
+    controller.updateSearchInput(value);
     await controller.search();
+  }
+
+  Future<void> _openScannerAndSearch() async {
+    final scannerResult =
+        await (widget.scanLauncher?.call(context) ??
+            Navigator.of(context).push<String>(
+              MaterialPageRoute(
+                builder: (_) => const MobileScannerPage(
+                  title: 'Scan QR Code',
+                  description: 'Align QR code inside the frame to scan.',
+                ),
+              ),
+            ));
+
+    final scanned = scannerResult?.trim() ?? '';
+    if (scanned.isEmpty || !mounted) {
+      return;
+    }
+    await _search(overrideCode: scanned);
+  }
+
+  Future<void> _confirm(PermanentContractorCheckState state) async {
+    final hasInfo = state.info?.contractorId.trim().isNotEmpty == true;
+    if (!hasInfo) {
+      showAppSnackBar(context, 'Please search contractor info before submit.');
+      return;
+    }
+
+    final controller = ref.read(
+      permanentContractorCheckControllerProvider.notifier,
+    );
+    final result = state.checkType == PermanentContractorCheckType.checkIn
+        ? await controller.submitCheckIn()
+        : await controller.submitCheckOut();
+    if (!mounted) {
+      return;
+    }
+
+    final fallbackMessage =
+        state.checkType == PermanentContractorCheckType.checkIn
+        ? 'Checked-in successfully.'
+        : 'Checked-out successfully.';
+    showAppSnackBar(
+      context,
+      result.message.trim().isEmpty ? fallbackMessage : result.message,
+    );
   }
 
   Future<void> _pickCheckType(PermanentContractorCheckState state) async {
@@ -195,11 +246,9 @@ class _PermanentContractorCheckPageState
                       ),
                       const SizedBox(width: 10),
                       IconButton(
-                        onPressed: state.isLoading
+                        onPressed: state.isLoading || state.isSubmitting
                             ? null
-                            : () {
-                                _searchFocusNode.requestFocus();
-                              },
+                            : _openScannerAndSearch,
                         tooltip: 'Scan QR',
                         icon: const Icon(Icons.qr_code_scanner),
                       ),
@@ -211,7 +260,9 @@ class _PermanentContractorCheckPageState
                     children: [
                       Expanded(
                         child: AppFilledButton(
-                          onPressed: state.isLoading ? null : _search,
+                          onPressed: state.isLoading || state.isSubmitting
+                              ? null
+                              : _search,
                           fullWidth: true,
                           child: state.isLoading
                               ? const SizedBox(
@@ -325,6 +376,28 @@ class _PermanentContractorCheckPageState
             ),
           ),
         ],
+      ),
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: AppFilledButton(
+          onPressed:
+              !state.isLoading &&
+                  !state.isSubmitting &&
+                  state.info?.contractorId.trim().isNotEmpty == true
+              ? () => _confirm(state)
+              : null,
+          child: state.isSubmitting
+              ? const SizedBox(
+                  height: 18,
+                  width: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(
+                  state.checkType == PermanentContractorCheckType.checkIn
+                      ? 'Confirm Check-In'
+                      : 'Confirm Check-Out',
+                ),
+        ),
       ),
     );
   }

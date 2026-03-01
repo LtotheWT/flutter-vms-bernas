@@ -2,12 +2,15 @@ import '../../domain/entities/ref_department_entity.dart';
 import '../../domain/entities/ref_entity_entity.dart';
 import '../../domain/entities/ref_location_entity.dart';
 import '../../domain/entities/permanent_contractor_info_entity.dart';
+import '../../domain/entities/permanent_contractor_submit_entity.dart';
+import '../../domain/entities/permanent_contractor_submit_result_entity.dart';
 import '../../domain/entities/ref_personel_entity.dart';
 import '../../domain/entities/ref_visitor_type_entity.dart';
 import '../../domain/repositories/reference_repository.dart';
 import 'dart:typed_data';
 import '../datasources/auth_local_data_source.dart';
 import '../datasources/reference_remote_data_source.dart';
+import '../models/permanent_contractor_submit_request_dto.dart';
 
 class ReferenceRepositoryImpl implements ReferenceRepository {
   ReferenceRepositoryImpl(this._remoteDataSource, this._authLocalDataSource);
@@ -104,6 +107,44 @@ class ReferenceRepositoryImpl implements ReferenceRepository {
       accessToken: accessToken,
       contractorId: contractorId,
     );
+  }
+
+  @override
+  Future<PermanentContractorSubmitResultEntity>
+  submitPermanentContractorCheckIn({
+    required PermanentContractorSubmitEntity submission,
+    required String idempotencyKey,
+  }) async {
+    final accessToken = await _getAccessTokenOrThrow(
+      missingMessage:
+          'Please login again to submit permanent contractor check-in.',
+    );
+
+    final dto = await _remoteDataSource.submitPermanentContractorCheckIn(
+      accessToken: accessToken,
+      idempotencyKey: idempotencyKey,
+      request: PermanentContractorSubmitRequestDto.fromEntity(submission),
+    );
+    return dto.toEntity();
+  }
+
+  @override
+  Future<PermanentContractorSubmitResultEntity>
+  submitPermanentContractorCheckOut({
+    required PermanentContractorSubmitEntity submission,
+    required String idempotencyKey,
+  }) async {
+    final accessToken = await _getAccessTokenOrThrow(
+      missingMessage:
+          'Please login again to submit permanent contractor check-out.',
+    );
+
+    final dto = await _remoteDataSource.submitPermanentContractorCheckOut(
+      accessToken: accessToken,
+      idempotencyKey: idempotencyKey,
+      request: PermanentContractorSubmitRequestDto.fromEntity(submission),
+    );
+    return dto.toEntity();
   }
 
   Future<String> _getAccessTokenOrThrow({

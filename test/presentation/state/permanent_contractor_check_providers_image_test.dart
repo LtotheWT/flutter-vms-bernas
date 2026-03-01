@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vms_bernas/domain/entities/permanent_contractor_info_entity.dart';
+import 'package:vms_bernas/domain/entities/permanent_contractor_submit_entity.dart';
+import 'package:vms_bernas/domain/entities/permanent_contractor_submit_result_entity.dart';
 import 'package:vms_bernas/domain/entities/ref_department_entity.dart';
 import 'package:vms_bernas/domain/entities/ref_entity_entity.dart';
 import 'package:vms_bernas/domain/entities/ref_location_entity.dart';
@@ -53,6 +55,24 @@ class _FakeReferenceRepository implements ReferenceRepository {
 
   @override
   Future<List<RefVisitorTypeEntity>> getVisitorTypes() async => const [];
+
+  @override
+  Future<PermanentContractorSubmitResultEntity>
+  submitPermanentContractorCheckIn({
+    required PermanentContractorSubmitEntity submission,
+    required String idempotencyKey,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<PermanentContractorSubmitResultEntity>
+  submitPermanentContractorCheckOut({
+    required PermanentContractorSubmitEntity submission,
+    required String idempotencyKey,
+  }) async {
+    throw UnimplementedError();
+  }
 }
 
 void main() {
