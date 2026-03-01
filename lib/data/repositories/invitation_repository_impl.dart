@@ -1,3 +1,4 @@
+import '../../core/date_time_formats.dart';
 import '../../domain/entities/invitation_list_item_entity.dart';
 import '../../domain/entities/invitation_listing_filter_entity.dart';
 import '../../domain/entities/invitation_submission_entity.dart';
@@ -122,8 +123,7 @@ class InvitationRepositoryImpl implements InvitationRepository {
 
   String _toIsoUtc(String value) {
     final text = value.trim();
-    final normalized = text.replaceFirst(' ', 'T');
-    final parsed = DateTime.tryParse(normalized);
+    final parsed = tryParseInvitationDateTime(text);
     if (parsed == null) {
       throw Exception('Invalid visit date/time format.');
     }

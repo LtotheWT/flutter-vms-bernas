@@ -121,48 +121,6 @@ class _PermanentContractorCheckPageState
     );
   }
 
-  Future<void> _pickCheckType(PermanentContractorCheckState state) async {
-    final selected = await showModalBottomSheet<String>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                title: const Text('Check-In'),
-                onTap: () => Navigator.of(context).pop('check_in'),
-              ),
-              ListTile(
-                title: const Text('Check-Out'),
-                onTap: () => Navigator.of(context).pop('check_out'),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-
-    if (!mounted || selected == null) {
-      return;
-    }
-
-    ref
-        .read(permanentContractorCheckControllerProvider.notifier)
-        .setCheckType(
-          selected == 'check_out'
-              ? PermanentContractorCheckType.checkOut
-              : PermanentContractorCheckType.checkIn,
-        );
-  }
-
-  String _checkTypeLabel(PermanentContractorCheckType type) {
-    return type == PermanentContractorCheckType.checkIn
-        ? 'Check-In'
-        : 'Check-Out';
-  }
-
   String _formatDate(String raw) {
     final value = raw.trim();
     if (value.isEmpty) {
@@ -219,12 +177,17 @@ class _PermanentContractorCheckPageState
                     ),
                   ),
                   const SizedBox(height: 10),
-                  LabeledSelectRow(
-                    label: 'Check Type',
-                    value: _checkTypeLabel(state.checkType),
-                    placeholder: 'Please select',
-                    onTap: () => _pickCheckType(state),
+                  _CheckTypeSegmentedControl(
+                    value: state.checkType,
+                    onChanged: (value) {
+                      ref
+                          .read(
+                            permanentContractorCheckControllerProvider.notifier,
+                          )
+                          .setCheckType(value);
+                    },
                   ),
+                  const SizedBox(height: 8),
                   LabeledTextInputRow(
                     label: 'Scan QR Code (ID)',
                     isRequired: true,
@@ -243,7 +206,6 @@ class _PermanentContractorCheckPageState
                       onTap: _openScannerAndSearch,
                     ),
                   ),
-                  const SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(
@@ -387,6 +349,92 @@ class _PermanentContractorCheckPageState
                 ),
         ),
       ),
+    );
+  }
+}
+
+class _CheckTypeSegmentedControl extends StatelessWidget {
+  const _CheckTypeSegmentedControl({
+    required this.value,
+    required this.onChanged,
+  });
+
+  final PermanentContractorCheckType value;
+  final ValueChanged<PermanentContractorCheckType> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    Widget buildOption({
+      required String label,
+      required bool selected,
+      required VoidCallback onTap,
+      required Color selectedColor,
+      required Color selectedTextColor,
+    }) {
+      return Expanded(
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            curve: Curves.easeOut,
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              color: selected ? selectedColor : Colors.transparent,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: selected ? selectedTextColor : colorScheme.onSurface,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const LabeledFieldLabel(label: 'Check Type', isRequired: true),
+        const SizedBox(height: 6),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(4),
+            child: Row(
+              children: [
+                buildOption(
+                  label: 'Check-In',
+                  selected: value == PermanentContractorCheckType.checkIn,
+                  onTap: () => onChanged(PermanentContractorCheckType.checkIn),
+                  selectedColor: Colors.green.shade600,
+                  selectedTextColor: Colors.white,
+                ),
+                const SizedBox(width: 6),
+                buildOption(
+                  label: 'Check-Out',
+                  selected: value == PermanentContractorCheckType.checkOut,
+                  onTap: () => onChanged(PermanentContractorCheckType.checkOut),
+                  selectedColor: colorScheme.error,
+                  selectedTextColor: colorScheme.onError,
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        const FormRowDivider(),
+      ],
     );
   }
 }

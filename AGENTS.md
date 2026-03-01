@@ -95,6 +95,7 @@
 - Simplicity first: make every change as simple as possible and impact minimal code.
 - No laziness: find root causes and avoid temporary fixes; maintain senior developer standards.
 - Minimal impact: touch only what is necessary and avoid introducing bugs.
+- Reuse first: when the same formatting/parsing/helper logic appears in 2+ files, extract a shared utility in `lib/core/` (or layer-appropriate shared module) instead of duplicating.
 
 ## UI row spacing rule
 - For dense form rows (e.g., scan/clear actions inside input rows), prefer `GestureDetector`/`InkWell` with tight constraints over `IconButton`.

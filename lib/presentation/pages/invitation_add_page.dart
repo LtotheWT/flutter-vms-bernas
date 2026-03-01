@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/date_time_formats.dart';
 import '../state/department_option.dart';
 import '../state/entity_option.dart';
 import '../state/host_option.dart';
@@ -78,22 +79,32 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
     final pickedTime = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(initial),
+      builder: (BuildContext context, Widget? child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            alwaysUse24HourFormat: false, // Force 12-hour format
+          ),
+          child: child!,
+        );
+      },
     );
     if (pickedTime == null) return;
 
-    final value =
-        '${picked.year}-${_two(picked.month)}-${_two(picked.day)} '
-        '${_two(pickedTime.hour)}:${_two(pickedTime.minute)}';
+    final selected = DateTime(
+      picked.year,
+      picked.month,
+      picked.day,
+      pickedTime.hour,
+      pickedTime.minute,
+    ).toLocal();
+    final value = _formatDateTimeDisplay(selected);
     controller.text = value;
     onSelected(value);
     setState(() {});
   }
 
   DateTime? _parseDateTime(String value) {
-    final text = value.trim();
-    if (text.isEmpty) return null;
-    final normalized = text.replaceFirst(' ', 'T');
-    return DateTime.tryParse(normalized);
+    return tryParseInvitationDateTime(value);
   }
 
   Future<String?> _pickOption({
@@ -109,7 +120,9 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
     );
   }
 
-  String _two(int value) => value.toString().padLeft(2, '0');
+  String _formatDateTimeDisplay(DateTime value) {
+    return invitationDateTimeDisplayFormat.format(value);
+  }
 
   String _toDisplayError(Object error, String fallback) {
     final text = error.toString().trim();

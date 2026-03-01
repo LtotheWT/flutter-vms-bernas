@@ -136,38 +136,32 @@ class AppTextInputField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Row(
-      children: [
-        Expanded(
-          child: TextFormField(
-            key: inputFieldKey,
-            enabled: enabled,
-            controller: controller,
-            focusNode: focusNode,
-            keyboardType: keyboardType,
-            onChanged: onChanged,
-            validator: validator,
-            autofocus: autofocus,
-            decoration: InputDecoration(
-              hintText: hintText,
-              border: InputBorder.none,
-              isCollapsed: true,
-              contentPadding: contentPadding,
-              hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
-              prefixIcon: prefixIcon,
-              prefixIconConstraints: const BoxConstraints(
-                minHeight: 24,
-                minWidth: 24,
-              ),
-              suffixIcon: suffixIcon,
-              suffixIconConstraints: const BoxConstraints(
-                minHeight: 24,
-                minWidth: 24,
-              ),
-            ),
-          ),
+    return TextFormField(
+      key: inputFieldKey,
+      enabled: enabled,
+      controller: controller,
+      focusNode: focusNode,
+      keyboardType: keyboardType,
+      onChanged: onChanged,
+      validator: validator,
+      autofocus: autofocus,
+      decoration: InputDecoration(
+        hintText: hintText,
+        border: InputBorder.none,
+        isCollapsed: true,
+        contentPadding: contentPadding,
+        hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+        prefixIcon: prefixIcon,
+        prefixIconConstraints: const BoxConstraints(
+          minHeight: 24,
+          minWidth: 24,
         ),
-      ],
+        suffixIcon: suffixIcon,
+        suffixIconConstraints: const BoxConstraints(
+          minHeight: 24,
+          minWidth: 24,
+        ),
+      ),
     );
   }
 }
