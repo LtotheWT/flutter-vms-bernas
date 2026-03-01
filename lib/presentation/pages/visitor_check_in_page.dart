@@ -404,11 +404,11 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
                             .read(visitorCheckControllerProvider.notifier)
                             .updateSearchInput,
                         focusNode: _scanFocusNode,
-                        suffixIcon: GestureDetector(
-                          onTap: state.isLoading || state.isSubmitting
-                              ? null
-                              : _openScannerAndSearch,
-                          child: const Icon(Icons.qr_code_scanner),
+                        suffixIcon: CompactSuffixTapIcon(
+                          key: const Key('visitor-scan-button'),
+                          icon: Icons.qr_code_scanner,
+                          enabled: !(state.isLoading || state.isSubmitting),
+                          onTap: _openScannerAndSearch,
                         ),
                       ),
                       Row(
@@ -837,24 +837,11 @@ class _PhysicalTagInputRow extends StatelessWidget {
       onChanged: onChanged,
       enabled: enabled,
       inputFieldKey: Key('physical-tag-input-$appId'),
-      suffixIcon: GestureDetector(
+      suffixIcon: CompactSuffixTapIcon(
         key: Key('physical-tag-scan-$appId'),
+        icon: Icons.qr_code_scanner,
+        enabled: enabled,
         onTap: onScanTap,
-        child: const Icon(Icons.qr_code_scanner),
-      ),
-    );
-    return LabeledTextInputRow(
-      label: 'Physical Tag',
-      hintText: 'Optional',
-      controller: controller,
-      onChanged: onChanged,
-      enabled: enabled,
-      inputFieldKey: Key('physical-tag-input-$appId'),
-      suffixIcon: IconButton(
-        key: Key('physical-tag-scan-$appId'),
-        onPressed: onScanTap,
-        icon: const Icon(Icons.qr_code_scanner),
-        visualDensity: VisualDensity.compact,
       ),
     );
   }

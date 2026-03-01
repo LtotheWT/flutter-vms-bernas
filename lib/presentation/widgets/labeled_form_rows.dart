@@ -172,6 +172,39 @@ class AppTextInputField extends StatelessWidget {
   }
 }
 
+class CompactSuffixTapIcon extends StatelessWidget {
+  const CompactSuffixTapIcon({
+    super.key,
+    required this.icon,
+    this.onTap,
+    this.enabled = true,
+    this.padding = const EdgeInsets.all(4),
+  });
+
+  final IconData icon;
+  final VoidCallback? onTap;
+  final bool enabled;
+  final EdgeInsets padding;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: enabled ? onTap : null,
+      child: Padding(
+        padding: padding,
+        child: Icon(
+          icon,
+          color: enabled
+              ? colorScheme.onSurfaceVariant
+              : colorScheme.onSurface.withValues(alpha: 0.38),
+        ),
+      ),
+    );
+  }
+}
+
 class LabeledSelectRow extends StatelessWidget {
   const LabeledSelectRow({
     super.key,

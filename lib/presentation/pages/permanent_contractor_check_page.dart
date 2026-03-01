@@ -225,36 +225,24 @@ class _PermanentContractorCheckPageState
                     placeholder: 'Please select',
                     onTap: () => _pickCheckType(state),
                   ),
-                  LabeledFieldLabel(
+                  LabeledTextInputRow(
                     label: 'Scan QR Code (ID)',
                     isRequired: true,
+                    controller: _searchController,
+                    focusNode: _searchFocusNode,
+                    hintText: 'Please input',
+                    onChanged: ref
+                        .read(
+                          permanentContractorCheckControllerProvider.notifier,
+                        )
+                        .updateSearchInput,
+                    suffixIcon: CompactSuffixTapIcon(
+                      key: const Key('permanent-contractor-scan-button'),
+                      icon: Icons.qr_code_scanner,
+                      enabled: !(state.isLoading || state.isSubmitting),
+                      onTap: _openScannerAndSearch,
+                    ),
                   ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: AppTextInputField(
-                          controller: _searchController,
-                          focusNode: _searchFocusNode,
-                          hintText: 'Please input',
-                          onChanged: ref
-                              .read(
-                                permanentContractorCheckControllerProvider
-                                    .notifier,
-                              )
-                              .updateSearchInput,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      IconButton(
-                        onPressed: state.isLoading || state.isSubmitting
-                            ? null
-                            : _openScannerAndSearch,
-                        tooltip: 'Scan QR',
-                        icon: const Icon(Icons.qr_code_scanner),
-                      ),
-                    ],
-                  ),
-                  const FormRowDivider(),
                   const SizedBox(height: 12),
                   Row(
                     children: [

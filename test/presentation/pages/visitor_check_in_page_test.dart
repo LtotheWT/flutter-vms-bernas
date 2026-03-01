@@ -17,6 +17,7 @@ import 'package:vms_bernas/domain/usecases/submit_visitor_check_out_usecase.dart
 import 'package:vms_bernas/presentation/pages/visitor_check_in_page.dart';
 import 'package:vms_bernas/presentation/state/auth_session_providers.dart';
 import 'package:vms_bernas/presentation/state/visitor_check_in_providers.dart';
+import 'package:vms_bernas/presentation/widgets/labeled_form_rows.dart';
 
 class _FakeVisitorAccessRepository implements VisitorAccessRepository {
   _FakeVisitorAccessRepository({
@@ -763,11 +764,12 @@ void main() {
           .enabled,
       isTrue,
     );
-    final scanButton = tester.widget<IconButton>(
-      find.byKey(const Key('physical-tag-scan-123456561231')),
+    final scanTagFinder = find.byKey(
+      const Key('physical-tag-scan-123456561231'),
     );
-    expect(scanButton.onPressed, isNotNull);
-    scanButton.onPressed!.call();
+    final scanButtonWidget = tester.widget<CompactSuffixTapIcon>(scanTagFinder);
+    expect(scanButtonWidget.onTap, isNotNull);
+    scanButtonWidget.onTap!.call();
     await tester.pumpAndSettle();
     expect(find.text('SCANNED-TAG'), findsOneWidget);
 
