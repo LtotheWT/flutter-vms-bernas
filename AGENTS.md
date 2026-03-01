@@ -95,3 +95,7 @@
 - Simplicity first: make every change as simple as possible and impact minimal code.
 - No laziness: find root causes and avoid temporary fixes; maintain senior developer standards.
 - Minimal impact: touch only what is necessary and avoid introducing bugs.
+
+## UI row spacing rule
+- For dense form rows (e.g., scan/clear actions inside input rows), prefer `GestureDetector`/`InkWell` with tight constraints over `IconButton`.
+- Reason: `IconButton` adds default tap target/padding that can change row height/baseline and break visual alignment.

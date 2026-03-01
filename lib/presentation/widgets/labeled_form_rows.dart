@@ -55,6 +55,10 @@ class LabeledTextInputRow extends StatelessWidget {
     this.focusNode,
     this.keyboardType,
     this.validator,
+    this.enabled = true,
+    this.inputFieldKey,
+    this.suffixIcon,
+    this.contentPadding = EdgeInsets.zero,
   });
 
   final String label;
@@ -65,6 +69,12 @@ class LabeledTextInputRow extends StatelessWidget {
   final FocusNode? focusNode;
   final TextInputType? keyboardType;
   final String? Function(String?)? validator;
+  final bool enabled;
+  final Key? inputFieldKey;
+  // For dense rows, prefer a compact trailing tap widget (GestureDetector/InkWell)
+  // instead of IconButton to avoid extra spacing that changes input row height.
+  final Widget? suffixIcon;
+  final EdgeInsets contentPadding;
 
   @override
   Widget build(BuildContext context) {
@@ -74,14 +84,18 @@ class LabeledTextInputRow extends StatelessWidget {
         LabeledFieldLabel(label: label, isRequired: isRequired),
         const SizedBox(height: 4),
         AppTextInputField(
+          inputFieldKey: inputFieldKey,
+          enabled: enabled,
           controller: controller,
           focusNode: focusNode,
           keyboardType: keyboardType,
           onChanged: onChanged,
           validator: validator,
           hintText: hintText,
+          suffixIcon: suffixIcon,
+          contentPadding: contentPadding,
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         const FormRowDivider(),
         const SizedBox(height: 8),
       ],
@@ -92,6 +106,7 @@ class LabeledTextInputRow extends StatelessWidget {
 class AppTextInputField extends StatelessWidget {
   const AppTextInputField({
     super.key,
+    this.inputFieldKey,
     required this.controller,
     this.hintText = 'Please input',
     this.onChanged,
@@ -102,8 +117,10 @@ class AppTextInputField extends StatelessWidget {
     this.prefixIcon,
     this.suffixIcon,
     this.contentPadding = EdgeInsets.zero,
+    this.enabled = true,
   });
 
+  final Key? inputFieldKey;
   final TextEditingController controller;
   final String hintText;
   final ValueChanged<String>? onChanged;
@@ -114,34 +131,43 @@ class AppTextInputField extends StatelessWidget {
   final Widget? prefixIcon;
   final Widget? suffixIcon;
   final EdgeInsets contentPadding;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return TextFormField(
-      controller: controller,
-      focusNode: focusNode,
-      keyboardType: keyboardType,
-      onChanged: onChanged,
-      validator: validator,
-      autofocus: autofocus,
-      decoration: InputDecoration(
-        hintText: hintText,
-        border: InputBorder.none,
-        isCollapsed: true,
-        contentPadding: contentPadding,
-        hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
-        prefixIcon: prefixIcon,
-        prefixIconConstraints: const BoxConstraints(
-          minHeight: 24,
-          minWidth: 24,
+    return Row(
+      children: [
+        Expanded(
+          child: TextFormField(
+            key: inputFieldKey,
+            enabled: enabled,
+            controller: controller,
+            focusNode: focusNode,
+            keyboardType: keyboardType,
+            onChanged: onChanged,
+            validator: validator,
+            autofocus: autofocus,
+            decoration: InputDecoration(
+              hintText: hintText,
+              border: InputBorder.none,
+              isCollapsed: true,
+              contentPadding: contentPadding,
+              hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+              prefixIcon: prefixIcon,
+              prefixIconConstraints: const BoxConstraints(
+                minHeight: 24,
+                minWidth: 24,
+              ),
+              suffixIcon: suffixIcon,
+              suffixIconConstraints: const BoxConstraints(
+                minHeight: 24,
+                minWidth: 24,
+              ),
+            ),
+          ),
         ),
-        suffixIcon: suffixIcon,
-        suffixIconConstraints: const BoxConstraints(
-          minHeight: 24,
-          minWidth: 24,
-        ),
-      ),
+      ],
     );
   }
 }

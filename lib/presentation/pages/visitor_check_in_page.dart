@@ -396,21 +396,21 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      _FlatInputField(
+                      LabeledTextInputRow(
                         controller: _scanController,
                         label: 'Scan QR Code',
                         hintText: 'Please input',
-                        trailingIcon: Icons.qr_code_scanner,
                         onChanged: ref
                             .read(visitorCheckControllerProvider.notifier)
                             .updateSearchInput,
-                        onTrailingTap: state.isLoading || state.isSubmitting
-                            ? null
-                            : _openScannerAndSearch,
                         focusNode: _scanFocusNode,
+                        suffixIcon: GestureDetector(
+                          onTap: state.isLoading || state.isSubmitting
+                              ? null
+                              : _openScannerAndSearch,
+                          child: const Icon(Icons.qr_code_scanner),
+                        ),
                       ),
-                      FormRowDivider(),
-                      const SizedBox(height: 8),
                       Row(
                         children: [
                           Expanded(
@@ -830,18 +830,31 @@ class _PhysicalTagInputRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: _FlatInputField(
-        label: 'Physical Tag',
-        hintText: 'Optional',
-        controller: controller,
-        onChanged: onChanged,
-        trailingIcon: Icons.qr_code_scanner,
-        onTrailingTap: onScanTap,
-        enabled: enabled,
-        inputFieldKey: Key('physical-tag-input-$appId'),
-        trailingButtonKey: Key('physical-tag-scan-$appId'),
+    return LabeledTextInputRow(
+      label: 'Physical Tag',
+      hintText: 'Optional',
+      controller: controller,
+      onChanged: onChanged,
+      enabled: enabled,
+      inputFieldKey: Key('physical-tag-input-$appId'),
+      suffixIcon: GestureDetector(
+        key: Key('physical-tag-scan-$appId'),
+        onTap: onScanTap,
+        child: const Icon(Icons.qr_code_scanner),
+      ),
+    );
+    return LabeledTextInputRow(
+      label: 'Physical Tag',
+      hintText: 'Optional',
+      controller: controller,
+      onChanged: onChanged,
+      enabled: enabled,
+      inputFieldKey: Key('physical-tag-input-$appId'),
+      suffixIcon: IconButton(
+        key: Key('physical-tag-scan-$appId'),
+        onPressed: onScanTap,
+        icon: const Icon(Icons.qr_code_scanner),
+        visualDensity: VisualDensity.compact,
       ),
     );
   }
@@ -1069,98 +1082,6 @@ class _PhotoThumb extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _FlatInputField extends StatelessWidget {
-  const _FlatInputField({
-    required this.label,
-    required this.hintText,
-    this.controller,
-    this.trailingIcon,
-    this.onTrailingTap,
-    this.onChanged,
-    this.focusNode,
-    this.enabled = true,
-    this.inputFieldKey,
-    this.trailingButtonKey,
-  });
-
-  final String label;
-  final String hintText;
-  final TextEditingController? controller;
-  final IconData? trailingIcon;
-  final VoidCallback? onTrailingTap;
-  final ValueChanged<String>? onChanged;
-  final FocusNode? focusNode;
-  final bool enabled;
-  final Key? inputFieldKey;
-  final Key? trailingButtonKey;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          label,
-          style: textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: colorScheme.onSurfaceVariant,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Row(
-          children: [
-            Expanded(
-              child: TextFormField(
-                key: inputFieldKey,
-                enabled: enabled,
-                controller: controller,
-                focusNode: focusNode,
-                onChanged: onChanged,
-                decoration: InputDecoration(
-                  hintText: hintText,
-                  border: InputBorder.none,
-                  isCollapsed: true,
-                  contentPadding: EdgeInsets.zero,
-                  hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
-                ),
-              ),
-            ),
-            if (trailingIcon != null) ...[
-              const SizedBox(width: 8),
-              IconButton(
-                key: trailingButtonKey,
-                onPressed: onTrailingTap,
-                icon: Icon(trailingIcon),
-                visualDensity: VisualDensity.compact,
-              ),
-            ],
-          ],
-        ),
-        const SizedBox(height: 6),
-        const _FieldRowDivider(),
-      ],
-    );
-  }
-}
-
-class _FieldRowDivider extends StatelessWidget {
-  const _FieldRowDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Divider(
-      height: 1,
-      thickness: 0.6,
-      color: colorScheme.outline.withValues(alpha: 0.25),
     );
   }
 }
