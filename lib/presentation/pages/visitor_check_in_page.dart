@@ -832,40 +832,16 @@ class _PhysicalTagInputRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              'Physical Tag',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: Colors.grey[700]),
-            ),
-          ),
-          Expanded(
-            child: TextFormField(
-              key: Key('physical-tag-input-$appId'),
-              enabled: enabled,
-              controller: controller,
-              onChanged: onChanged,
-              decoration: const InputDecoration(
-                hintText: 'Optional',
-                isDense: true,
-                border: UnderlineInputBorder(),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          IconButton(
-            key: Key('physical-tag-scan-$appId'),
-            tooltip: 'Scan physical tag',
-            onPressed: onScanTap,
-            icon: const Icon(Icons.qr_code_scanner),
-            visualDensity: VisualDensity.compact,
-          ),
-        ],
+      child: _FlatInputField(
+        label: 'Physical Tag',
+        hintText: 'Optional',
+        controller: controller,
+        onChanged: onChanged,
+        trailingIcon: Icons.qr_code_scanner,
+        onTrailingTap: onScanTap,
+        enabled: enabled,
+        inputFieldKey: Key('physical-tag-input-$appId'),
+        trailingButtonKey: Key('physical-tag-scan-$appId'),
       ),
     );
   }
@@ -1106,6 +1082,9 @@ class _FlatInputField extends StatelessWidget {
     this.onTrailingTap,
     this.onChanged,
     this.focusNode,
+    this.enabled = true,
+    this.inputFieldKey,
+    this.trailingButtonKey,
   });
 
   final String label;
@@ -1115,6 +1094,9 @@ class _FlatInputField extends StatelessWidget {
   final VoidCallback? onTrailingTap;
   final ValueChanged<String>? onChanged;
   final FocusNode? focusNode;
+  final bool enabled;
+  final Key? inputFieldKey;
+  final Key? trailingButtonKey;
 
   @override
   Widget build(BuildContext context) {
@@ -1122,6 +1104,7 @@ class _FlatInputField extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
@@ -1136,6 +1119,8 @@ class _FlatInputField extends StatelessWidget {
           children: [
             Expanded(
               child: TextFormField(
+                key: inputFieldKey,
+                enabled: enabled,
                 controller: controller,
                 focusNode: focusNode,
                 onChanged: onChanged,
@@ -1151,6 +1136,7 @@ class _FlatInputField extends StatelessWidget {
             if (trailingIcon != null) ...[
               const SizedBox(width: 8),
               IconButton(
+                key: trailingButtonKey,
                 onPressed: onTrailingTap,
                 icon: Icon(trailingIcon),
                 visualDensity: VisualDensity.compact,
