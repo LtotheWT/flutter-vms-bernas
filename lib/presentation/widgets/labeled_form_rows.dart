@@ -59,6 +59,8 @@ class LabeledTextInputRow extends StatelessWidget {
     this.inputFieldKey,
     this.suffixIcon,
     this.contentPadding = EdgeInsets.zero,
+    this.obscureText = false,
+    this.textInputAction,
   });
 
   final String label;
@@ -75,6 +77,8 @@ class LabeledTextInputRow extends StatelessWidget {
   // instead of IconButton to avoid extra spacing that changes input row height.
   final Widget? suffixIcon;
   final EdgeInsets contentPadding;
+  final bool obscureText;
+  final TextInputAction? textInputAction;
 
   @override
   Widget build(BuildContext context) {
@@ -89,6 +93,8 @@ class LabeledTextInputRow extends StatelessWidget {
           controller: controller,
           focusNode: focusNode,
           keyboardType: keyboardType,
+          textInputAction: textInputAction,
+          obscureText: obscureText,
           onChanged: onChanged,
           validator: validator,
           hintText: hintText,
@@ -118,6 +124,8 @@ class AppTextInputField extends StatelessWidget {
     this.suffixIcon,
     this.contentPadding = EdgeInsets.zero,
     this.enabled = true,
+    this.obscureText = false,
+    this.textInputAction,
   });
 
   final Key? inputFieldKey;
@@ -132,6 +140,8 @@ class AppTextInputField extends StatelessWidget {
   final Widget? suffixIcon;
   final EdgeInsets contentPadding;
   final bool enabled;
+  final bool obscureText;
+  final TextInputAction? textInputAction;
 
   @override
   Widget build(BuildContext context) {
@@ -142,6 +152,8 @@ class AppTextInputField extends StatelessWidget {
       controller: controller,
       focusNode: focusNode,
       keyboardType: keyboardType,
+      textInputAction: textInputAction,
+      obscureText: obscureText,
       onChanged: onChanged,
       validator: validator,
       autofocus: autofocus,

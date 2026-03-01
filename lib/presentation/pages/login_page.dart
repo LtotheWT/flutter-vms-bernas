@@ -7,7 +7,7 @@ import '../app/router.dart';
 import '../state/auth_session_providers.dart';
 import '../state/login_providers.dart';
 import '../widgets/app_filled_button.dart';
-import '../widgets/app_text_form_field.dart';
+import '../widgets/labeled_form_rows.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -69,35 +69,39 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
-                  const SizedBox(height: 32),
-                  AppTextFormField(
-                    controller: _userIdController,
-                    label: 'User ID',
-                    textInputAction: TextInputAction.next,
-                  ),
-                  const SizedBox(height: 16),
-                  AppTextFormField(
-                    controller: _passwordController,
-                    obscureText: _obscurePassword,
-                    textInputAction: TextInputAction.done,
-                    label: 'Password',
-                    suffixIcon: IconButton(
-                      tooltip: _obscurePassword
-                          ? 'Show password'
-                          : 'Hide password',
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
+                  const SizedBox(height: 24),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          LabeledTextInputRow(
+                            controller: _userIdController,
+                            label: 'User ID',
+                            textInputAction: TextInputAction.next,
+                          ),
+                          LabeledTextInputRow(
+                            controller: _passwordController,
+                            label: 'Password',
+                            obscureText: _obscurePassword,
+                            textInputAction: TextInputAction.done,
+                            suffixIcon: CompactSuffixTapIcon(
+                              icon: _obscurePassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                              onTap: () {
+                                setState(() {
+                                  _obscurePassword = !_obscurePassword;
+                                });
+                              },
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
                   AppFilledButton(
                     onPressed: loginState.isLoading
                         ? null
