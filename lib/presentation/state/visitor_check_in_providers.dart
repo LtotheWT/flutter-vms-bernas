@@ -6,6 +6,7 @@ import '../../data/datasources/visitor_access_remote_data_source.dart';
 import '../../data/repositories/visitor_access_repository_impl.dart';
 import '../../domain/entities/visitor_check_in_result_entity.dart';
 import '../../domain/entities/visitor_check_in_submission_entity.dart';
+import '../../domain/entities/visitor_gallery_item_entity.dart';
 import '../../domain/entities/visitor_lookup_entity.dart';
 import '../../domain/repositories/visitor_access_repository.dart';
 import '../../domain/usecases/get_visitor_lookup_usecase.dart';
@@ -235,5 +236,50 @@ final visitorApplicantImageProvider = FutureProvider.autoDispose
           invitationId: invitationId,
           appId: appId,
         ),
+      );
+    });
+
+@immutable
+class VisitorGalleryPhotoKey extends Equatable {
+  const VisitorGalleryPhotoKey({required this.photoId});
+
+  final int photoId;
+
+  String get cacheKey => 'gallery-photo-$photoId';
+
+  @override
+  List<Object?> get props => [photoId];
+}
+
+final visitorGalleryListProvider = FutureProvider.autoDispose
+    .family<List<VisitorGalleryItemEntity>, String>((ref, invitationId) async {
+      final normalizedInvitationId = invitationId.trim();
+      if (normalizedInvitationId.isEmpty) {
+        return const <VisitorGalleryItemEntity>[];
+      }
+      final repository = ref.read(visitorAccessRepositoryProvider);
+      return repository.getVisitorGalleryList(
+        invitationId: normalizedInvitationId,
+      );
+    });
+
+final visitorGalleryPhotoCacheProvider = Provider<Map<String, Uint8List?>>((
+  ref,
+) {
+  return <String, Uint8List?>{};
+});
+
+final visitorGalleryPhotoProvider = FutureProvider.autoDispose
+    .family<Uint8List?, VisitorGalleryPhotoKey>((ref, key) async {
+      if (key.photoId <= 0) {
+        return null;
+      }
+
+      final cache = ref.read(visitorGalleryPhotoCacheProvider);
+      final repository = ref.read(visitorAccessRepositoryProvider);
+      return fetchPhotoWithMemoryCache(
+        cache: cache,
+        cacheKey: key.cacheKey,
+        loader: () => repository.getVisitorGalleryPhoto(photoId: key.photoId),
       );
     });

@@ -8,6 +8,7 @@ import 'package:vms_bernas/data/datasources/auth_local_data_source.dart';
 import 'package:vms_bernas/data/models/auth_session_dto.dart';
 import 'package:vms_bernas/domain/entities/visitor_check_in_result_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_check_in_submission_entity.dart';
+import 'package:vms_bernas/domain/entities/visitor_gallery_item_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_lookup_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_lookup_item_entity.dart';
 import 'package:vms_bernas/domain/repositories/visitor_access_repository.dart';
@@ -35,6 +36,13 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
   final Uint8List? imageBytes;
   final Duration? imageDelay;
   final Object? imageError;
+  final List<VisitorGalleryItemEntity> galleryItems = const [
+    VisitorGalleryItemEntity(
+      photoId: 29,
+      photoDesc: 'Sample',
+      url: '/visitor/photo/29',
+    ),
+  ];
   bool? lastIsCheckIn;
   VisitorCheckInSubmissionEntity? lastCheckInSubmission;
   VisitorCheckInSubmissionEntity? lastCheckOutSubmission;
@@ -124,6 +132,18 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
     }
     return imageBytes;
   }
+
+  @override
+  Future<List<VisitorGalleryItemEntity>> getVisitorGalleryList({
+    required String invitationId,
+  }) async {
+    return galleryItems;
+  }
+
+  @override
+  Future<Uint8List?> getVisitorGalleryPhoto({required int photoId}) async {
+    return imageBytes;
+  }
 }
 
 class _FakeAuthLocalDataSource extends AuthLocalDataSource {
@@ -192,6 +212,29 @@ void main() {
     expect(find.text('History'), findsOneWidget);
     expect(find.text('IN'), findsOneWidget);
     expect(find.text('KAK -V036'), findsOneWidget);
+  });
+
+  testWidgets('history button returns to summary gallery without modal', (
+    tester,
+  ) async {
+    final repository = _FakeVisitorAccessRepository();
+    await tester.pumpWidget(_buildApp(repository: repository, isCheckIn: true));
+
+    await tester.enterText(find.byType(TextFormField).first, 'VIS|IV|A|F');
+    await tester.tap(find.widgetWithText(FilledButton, 'Search'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Visitor List (1)'));
+    await tester.pumpAndSettle();
+    expect(find.text('Visitor Summary'), findsNothing);
+
+    final historyFinder = find.byKey(const Key('visitor-history-12345656123'));
+    await tester.ensureVisible(historyFinder);
+    await tester.tap(historyFinder);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Visitor Summary'), findsOneWidget);
+    expect(find.byType(BottomSheet), findsNothing);
   });
 
   testWidgets('check-out page searches with O', (tester) async {

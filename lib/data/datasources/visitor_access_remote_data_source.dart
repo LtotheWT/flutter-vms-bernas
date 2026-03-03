@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import '../models/visitor_check_in_request_dto.dart';
 import '../models/visitor_check_in_response_dto.dart';
+import '../models/visitor_gallery_item_dto.dart';
 import '../models/visitor_lookup_dto.dart';
 import '../models/visitor_lookup_response_dto.dart';
 import 'network/remote_parsers.dart';
@@ -226,6 +227,101 @@ class VisitorAccessRemoteDataSource {
     } on FormatException {
       throw VisitorAccessException(
         'Failed to load visitor image. Please try again.',
+      );
+    }
+  }
+
+  Future<List<VisitorGalleryItemDto>> getVisitorGalleryList({
+    required String accessToken,
+    required String invitationId,
+  }) async {
+    final encodedInvitationId = Uri.encodeComponent(invitationId.trim());
+
+    try {
+      final response = await _dio.get<dynamic>(
+        '/wmsws/Visitor/gallery-list/$encodedInvitationId',
+        options: Options(
+          headers: {'Authorization': 'Bearer $accessToken', 'accept': '*/*'},
+        ),
+      );
+
+      final list = parseJsonList(response.data);
+      return list
+          .whereType<Map>()
+          .map(
+            (item) => VisitorGalleryItemDto.fromJson(
+              item.map((key, value) => MapEntry(key.toString(), value)),
+            ),
+          )
+          .toList(growable: false);
+    } on DioException catch (error) {
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 401 || statusCode == 403) {
+        throw VisitorAccessException(
+          'Please login again to load visitor gallery.',
+        );
+      }
+
+      if (isConnectivityIssue(error)) {
+        throw VisitorAccessException(
+          'Unable to load visitor gallery. Please try again.',
+        );
+      }
+
+      throw VisitorAccessException(
+        'Failed to load visitor gallery. Please try again.',
+      );
+    } on FormatException {
+      throw VisitorAccessException(
+        'Failed to load visitor gallery. Please try again.',
+      );
+    }
+  }
+
+  Future<Uint8List?> getVisitorGalleryPhoto({
+    required String accessToken,
+    required int photoId,
+  }) async {
+    try {
+      final response = await _dio.get<dynamic>(
+        '/wmsws/Visitor/photo/$photoId',
+        options: Options(
+          headers: {'Authorization': 'Bearer $accessToken', 'accept': '*/*'},
+          responseType: ResponseType.bytes,
+        ),
+      );
+
+      final data = response.data;
+      if (data is Uint8List) {
+        return data.isEmpty ? null : data;
+      }
+      if (data is List<int>) {
+        return data.isEmpty ? null : Uint8List.fromList(data);
+      }
+      return null;
+    } on DioException catch (error) {
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 404) {
+        return null;
+      }
+      if (statusCode == 401 || statusCode == 403) {
+        throw VisitorAccessException(
+          'Please login again to load gallery photo.',
+        );
+      }
+
+      if (isConnectivityIssue(error)) {
+        throw VisitorAccessException(
+          'Unable to load gallery photo. Please try again.',
+        );
+      }
+
+      throw VisitorAccessException(
+        'Failed to load gallery photo. Please try again.',
+      );
+    } on FormatException {
+      throw VisitorAccessException(
+        'Failed to load gallery photo. Please try again.',
       );
     }
   }

@@ -4,6 +4,7 @@ import 'package:vms_bernas/presentation/widgets/labeled_form_rows.dart';
 
 import '../../domain/entities/visitor_check_in_submission_entity.dart';
 import '../../domain/entities/visitor_check_in_submission_item_entity.dart';
+import '../../domain/entities/visitor_gallery_item_entity.dart';
 import '../../domain/entities/visitor_lookup_item_entity.dart';
 import 'mobile_scanner_page.dart';
 import '../state/auth_session_providers.dart';
@@ -33,6 +34,7 @@ class VisitorCheckInPage extends ConsumerStatefulWidget {
 class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
   final _scanController = TextEditingController();
   final _scanFocusNode = FocusNode();
+  final _gallerySectionKey = GlobalKey();
   final Set<int> _selectedIndexes = <int>{};
   final Map<String, String> _physicalTagDraftByAppId = <String, String>{};
   final Map<String, TextEditingController> _physicalTagControllerByAppId =
@@ -190,6 +192,27 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
   void _clear() {
     _lastLookupCode = '';
     ref.read(visitorCheckControllerProvider.notifier).clearAll();
+  }
+
+  Future<void> _goToGallerySection() async {
+    if (_resultTabIndex != 0) {
+      setState(() => _resultTabIndex = 0);
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      final targetContext = _gallerySectionKey.currentContext;
+      if (targetContext == null) {
+        return;
+      }
+      Scrollable.ensureVisible(
+        targetContext,
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOut,
+        alignment: 0.1,
+      );
+    });
   }
 
   Future<void> _confirmSubmit({
@@ -622,12 +645,14 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
                             });
                           }
                         : null,
+                    onHistoryTap: _goToGallerySection,
                   );
                 }, childCount: visitors.length),
               ),
             ),
-          if (hasResult)
+          if (hasResult && _resultTabIndex == 0)
             SliverToBoxAdapter(
+              key: _gallerySectionKey,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                 child: Card(
@@ -649,14 +674,8 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
                           label: const Text('Camera'),
                         ),
                         const SizedBox(height: 12),
-                        const Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            _PhotoThumb(hasPhoto: true),
-                            _PhotoThumb(hasPhoto: false),
-                            _PhotoThumb(hasPhoto: true),
-                          ],
+                        _VisitorGallerySection(
+                          invitationId: lookup.invitationId,
                         ),
                       ],
                     ),
@@ -710,6 +729,7 @@ class _VisitorCard extends StatelessWidget {
     required this.onPhysicalTagChanged,
     required this.onPhysicalTagScanTap,
     required this.onSelected,
+    required this.onHistoryTap,
   });
 
   final String invitationId;
@@ -725,6 +745,7 @@ class _VisitorCard extends StatelessWidget {
   final ValueChanged<String>? onPhysicalTagChanged;
   final VoidCallback? onPhysicalTagScanTap;
   final ValueChanged<bool?>? onSelected;
+  final Future<void> Function() onHistoryTap;
 
   String _displayOrDash(String value) {
     final text = value.trim();
@@ -801,7 +822,8 @@ class _VisitorCard extends StatelessWidget {
             Align(
               alignment: Alignment.centerRight,
               child: AppOutlinedButtonIcon(
-                onPressed: () {},
+                key: Key('visitor-history-${visitor.icPassport.trim()}'),
+                onPressed: onHistoryTap,
                 icon: const Icon(Icons.history),
                 label: const Text('History'),
               ),
@@ -1001,30 +1023,6 @@ class _ResultTabChip extends StatelessWidget {
   }
 }
 
-class _PhotoMock extends StatelessWidget {
-  const _PhotoMock({required this.hasPhoto});
-
-  final bool hasPhoto;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        height: 72,
-        width: 72,
-        color: hasPhoto ? colorScheme.primaryContainer : Colors.grey.shade300,
-        child: Icon(
-          hasPhoto ? Icons.check_circle : Icons.person,
-          size: 30,
-          color: hasPhoto ? colorScheme.onPrimaryContainer : Colors.black54,
-        ),
-      ),
-    );
-  }
-}
-
 class _VisitorPhotoSlot extends ConsumerWidget {
   const _VisitorPhotoSlot({required this.invitationId, required this.appId});
 
@@ -1042,33 +1040,88 @@ class _VisitorPhotoSlot extends ConsumerWidget {
   }
 }
 
-class _PhotoThumb extends StatelessWidget {
-  const _PhotoThumb({required this.hasPhoto});
+class _VisitorGallerySection extends ConsumerWidget {
+  const _VisitorGallerySection({required this.invitationId});
 
-  final bool hasPhoto;
+  final String invitationId;
 
   @override
-  Widget build(BuildContext context) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        _PhotoMock(hasPhoto: hasPhoto),
-        Positioned(
-          top: -6,
-          right: -6,
-          child: Material(
-            color: Colors.white,
-            shape: const CircleBorder(),
-            elevation: 2,
-            child: IconButton(
-              onPressed: () {},
-              icon: const Icon(Icons.close, size: 12),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minHeight: 20, minWidth: 20),
-            ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final galleryAsync = ref.watch(visitorGalleryListProvider(invitationId));
+    final colorScheme = Theme.of(context).colorScheme;
+    return galleryAsync.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
           ),
         ),
-      ],
+      ),
+      error: (error, _) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            _toErrorMessage(error),
+            style: TextStyle(color: colorScheme.error),
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: AppOutlinedButton(
+              onPressed: () =>
+                  ref.invalidate(visitorGalleryListProvider(invitationId)),
+              child: const Text('Retry'),
+            ),
+          ),
+        ],
+      ),
+      data: (items) {
+        if (items.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 6),
+            child: Text('No uploaded photos found.'),
+          );
+        }
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: items.length,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+            childAspectRatio: 1,
+          ),
+          itemBuilder: (context, index) => _GalleryThumb(item: items[index]),
+        );
+      },
     );
+  }
+
+  String _toErrorMessage(Object error) {
+    final text = error.toString().trim();
+    if (text.startsWith('Exception:')) {
+      return text.replaceFirst('Exception:', '').trim();
+    }
+    return text.isEmpty ? 'Failed to load gallery photos.' : text;
+  }
+}
+
+class _GalleryThumb extends ConsumerWidget {
+  const _GalleryThumb({required this.item});
+
+  final VisitorGalleryItemEntity item;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final photoAsync = ref.watch(
+      visitorGalleryPhotoProvider(
+        VisitorGalleryPhotoKey(photoId: item.photoId),
+      ),
+    );
+    return RemotePhotoSlot(asyncBytes: photoAsync, size: 72);
   }
 }

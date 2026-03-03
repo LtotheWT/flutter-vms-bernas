@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vms_bernas/domain/entities/visitor_check_in_result_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_check_in_submission_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_check_in_submission_item_entity.dart';
+import 'package:vms_bernas/domain/entities/visitor_gallery_item_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_lookup_entity.dart';
 import 'package:vms_bernas/domain/repositories/visitor_access_repository.dart';
 import 'package:vms_bernas/domain/usecases/submit_visitor_check_out_usecase.dart';
@@ -42,6 +43,18 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
     required String invitationId,
     required String appId,
   }) async {
+    return null;
+  }
+
+  @override
+  Future<List<VisitorGalleryItemEntity>> getVisitorGalleryList({
+    required String invitationId,
+  }) async {
+    return const <VisitorGalleryItemEntity>[];
+  }
+
+  @override
+  Future<Uint8List?> getVisitorGalleryPhoto({required int photoId}) async {
     return null;
   }
 }

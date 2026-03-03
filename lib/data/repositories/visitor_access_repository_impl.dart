@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import '../../domain/entities/visitor_check_in_result_entity.dart';
 import '../../domain/entities/visitor_check_in_submission_entity.dart';
+import '../../domain/entities/visitor_gallery_item_entity.dart';
 import '../../domain/entities/visitor_lookup_entity.dart';
 import '../../domain/repositories/visitor_access_repository.dart';
 import '../datasources/auth_local_data_source.dart';
@@ -85,6 +86,37 @@ class VisitorAccessRepositoryImpl implements VisitorAccessRepository {
       accessToken: accessToken,
       invitationId: invitationId,
       appId: appId,
+    );
+  }
+
+  @override
+  Future<List<VisitorGalleryItemEntity>> getVisitorGalleryList({
+    required String invitationId,
+  }) async {
+    final session = await _authLocalDataSource.getSession();
+    final accessToken = session?.accessToken.trim() ?? '';
+    if (accessToken.isEmpty) {
+      throw Exception('Please login again to load visitor gallery.');
+    }
+
+    final dtos = await _remoteDataSource.getVisitorGalleryList(
+      accessToken: accessToken,
+      invitationId: invitationId,
+    );
+    return dtos.map((dto) => dto.toEntity()).toList(growable: false);
+  }
+
+  @override
+  Future<Uint8List?> getVisitorGalleryPhoto({required int photoId}) async {
+    final session = await _authLocalDataSource.getSession();
+    final accessToken = session?.accessToken.trim() ?? '';
+    if (accessToken.isEmpty) {
+      throw Exception('Please login again to load gallery photo.');
+    }
+
+    return _remoteDataSource.getVisitorGalleryPhoto(
+      accessToken: accessToken,
+      photoId: photoId,
     );
   }
 }
