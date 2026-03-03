@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'dart:typed_data';
+import 'package:image_picker/image_picker.dart';
 import 'package:vms_bernas/data/datasources/auth_local_data_source.dart';
 import 'package:vms_bernas/data/models/auth_session_dto.dart';
 import 'package:vms_bernas/domain/entities/visitor_check_in_result_entity.dart';
@@ -16,6 +17,7 @@ import 'package:vms_bernas/domain/usecases/get_visitor_lookup_usecase.dart';
 import 'package:vms_bernas/domain/usecases/submit_visitor_check_in_usecase.dart';
 import 'package:vms_bernas/domain/usecases/submit_visitor_check_out_usecase.dart';
 import 'package:vms_bernas/presentation/pages/visitor_check_in_page.dart';
+import 'package:vms_bernas/presentation/services/camera_capture_service.dart';
 import 'package:vms_bernas/presentation/state/auth_session_providers.dart';
 import 'package:vms_bernas/presentation/state/visitor_check_in_providers.dart';
 import 'package:vms_bernas/presentation/widgets/labeled_form_rows.dart';
@@ -161,6 +163,7 @@ Widget _buildApp({
   AuthLocalDataSource? authLocalDataSource,
   Future<String?> Function(BuildContext context)? scanLauncher,
   Future<String?> Function(BuildContext context)? physicalTagScanLauncher,
+  Future<XFile?> Function(BuildContext context)? cameraLauncher,
 }) {
   return ProviderScope(
     overrides: [
@@ -182,6 +185,7 @@ Widget _buildApp({
         isCheckIn: isCheckIn,
         scanLauncher: scanLauncher,
         physicalTagScanLauncher: physicalTagScanLauncher,
+        cameraLauncher: cameraLauncher,
       ),
     ),
   );
@@ -284,6 +288,69 @@ void main() {
 
     expect(repository.lastIsCheckIn, isNull);
     expect(find.text('IV20260200038'), findsNothing);
+  });
+
+  testWidgets('camera button triggers launcher and shows success message', (
+    tester,
+  ) async {
+    final repository = _FakeVisitorAccessRepository();
+    await tester.pumpWidget(
+      _buildApp(
+        repository: repository,
+        isCheckIn: true,
+        cameraLauncher: (_) async => XFile('/tmp/camera.jpg'),
+      ),
+    );
+
+    await tester.enterText(find.byType(TextFormField).first, 'VIS|IV|A|F');
+    await tester.tap(find.widgetWithText(FilledButton, 'Search'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Camera'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Photo captured.'), findsOneWidget);
+  });
+
+  testWidgets('camera cancel does not show success message', (tester) async {
+    final repository = _FakeVisitorAccessRepository();
+    await tester.pumpWidget(
+      _buildApp(
+        repository: repository,
+        isCheckIn: true,
+        cameraLauncher: (_) async => null,
+      ),
+    );
+
+    await tester.enterText(find.byType(TextFormField).first, 'VIS|IV|A|F');
+    await tester.tap(find.widgetWithText(FilledButton, 'Search'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Camera'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Photo captured.'), findsNothing);
+  });
+
+  testWidgets('camera error shows failure message', (tester) async {
+    final repository = _FakeVisitorAccessRepository();
+    await tester.pumpWidget(
+      _buildApp(
+        repository: repository,
+        isCheckIn: true,
+        cameraLauncher: (_) async =>
+            throw const CameraCaptureException('Camera unavailable.'),
+      ),
+    );
+
+    await tester.enterText(find.byType(TextFormField).first, 'VIS|IV|A|F');
+    await tester.tap(find.widgetWithText(FilledButton, 'Search'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Camera'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Camera unavailable.'), findsOneWidget);
   });
 
   testWidgets('error state is shown on failed search', (tester) async {

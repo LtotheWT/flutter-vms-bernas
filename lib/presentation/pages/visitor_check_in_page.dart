@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:vms_bernas/presentation/widgets/labeled_form_rows.dart';
 
 import '../../domain/entities/visitor_check_in_submission_entity.dart';
@@ -8,12 +9,14 @@ import '../../domain/entities/visitor_gallery_item_entity.dart';
 import '../../domain/entities/visitor_lookup_item_entity.dart';
 import 'mobile_scanner_page.dart';
 import '../state/auth_session_providers.dart';
+import '../state/device_service_providers.dart';
 import '../state/visitor_check_in_providers.dart';
 import '../widgets/app_filled_button.dart';
 import '../widgets/app_outlined_button.dart';
 import '../widgets/info_row.dart';
 import '../widgets/remote_photo_slot.dart';
 import '../widgets/app_snackbar.dart';
+import '../services/camera_capture_service.dart';
 
 class VisitorCheckInPage extends ConsumerStatefulWidget {
   const VisitorCheckInPage({
@@ -21,11 +24,13 @@ class VisitorCheckInPage extends ConsumerStatefulWidget {
     required this.isCheckIn,
     this.scanLauncher,
     this.physicalTagScanLauncher,
+    this.cameraLauncher,
   });
 
   final bool isCheckIn;
   final Future<String?> Function(BuildContext context)? scanLauncher;
   final Future<String?> Function(BuildContext context)? physicalTagScanLauncher;
+  final Future<XFile?> Function(BuildContext context)? cameraLauncher;
 
   @override
   ConsumerState<VisitorCheckInPage> createState() => _VisitorCheckInPageState();
@@ -46,6 +51,7 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
   @override
   void initState() {
     super.initState();
+
     _stateSubscription = ref.listenManual<VisitorCheckState>(
       visitorCheckControllerProvider,
       (previous, next) {
@@ -76,6 +82,7 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
       },
       fireImmediately: true,
     );
+    _scanController.text = "VIS|IV20260300016|AGYTEK|FACTORY1";
   }
 
   @override
@@ -148,6 +155,27 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
       );
     }
     setState(() {});
+  }
+
+  Future<void> _captureFromCamera() async {
+    try {
+      final capturedFile =
+          await (widget.cameraLauncher?.call(context) ??
+              ref.read(cameraCaptureServiceProvider).capturePhoto());
+      if (!mounted || capturedFile == null) {
+        return;
+      }
+      showAppSnackBar(context, 'Photo captured.');
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      final message = switch (error) {
+        CameraCaptureException e => e.message,
+        _ => 'Unable to open camera. Please try again.',
+      };
+      showAppSnackBar(context, message);
+    }
   }
 
   String _physicalTagFor(VisitorLookupItemEntity visitor) {
@@ -669,7 +697,9 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
                         ),
                         const SizedBox(height: 8),
                         AppOutlinedButtonIcon(
-                          onPressed: () {},
+                          onPressed: state.isLoading || state.isSubmitting
+                              ? null
+                              : _captureFromCamera,
                           icon: const Icon(Icons.camera_alt_outlined),
                           label: const Text('Camera'),
                         ),
