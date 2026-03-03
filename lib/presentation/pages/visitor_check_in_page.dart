@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -6,7 +9,9 @@ import 'package:vms_bernas/presentation/widgets/labeled_form_rows.dart';
 import '../../domain/entities/visitor_check_in_submission_entity.dart';
 import '../../domain/entities/visitor_check_in_submission_item_entity.dart';
 import '../../domain/entities/visitor_gallery_item_entity.dart';
+import '../../domain/entities/visitor_lookup_entity.dart';
 import '../../domain/entities/visitor_lookup_item_entity.dart';
+import '../../domain/entities/visitor_save_photo_submission_entity.dart';
 import 'mobile_scanner_page.dart';
 import '../state/auth_session_providers.dart';
 import '../state/device_service_providers.dart';
@@ -158,6 +163,27 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
   }
 
   Future<void> _captureFromCamera() async {
+    final state = ref.read(visitorCheckControllerProvider);
+    final lookup = state.lookup;
+    if (lookup == null || lookup.invitationId.trim().isEmpty) {
+      showAppSnackBar(context, 'Please search visitor data first.');
+      return;
+    }
+
+    final session = await ref.read(authLocalDataSourceProvider).getSession();
+    final uploadedBy = session?.username.trim() ?? '';
+    final entity = session?.entity.trim() ?? '';
+    final site = session?.defaultSite.trim() ?? '';
+    if (uploadedBy.isEmpty || entity.isEmpty || site.isEmpty) {
+      if (mounted) {
+        showAppSnackBar(context, 'Please login again to upload photo.');
+      }
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+
     try {
       final capturedFile =
           await (widget.cameraLauncher?.call(context) ??
@@ -165,7 +191,47 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
       if (!mounted || capturedFile == null) {
         return;
       }
-      showAppSnackBar(context, 'Photo captured.');
+
+      final bytes = await capturedFile.readAsBytes();
+      if (!mounted || bytes.isEmpty) {
+        return;
+      }
+
+      final uploaded = await _showUploadPhotoSheet(
+        imageBytes: bytes,
+        lookup: lookup,
+        uploadedBy: uploadedBy,
+        entity: entity,
+        site: site,
+      );
+      if (!mounted || uploaded == null) {
+        return;
+      }
+
+      showAppSnackBar(
+        context,
+        uploaded.message.isEmpty
+            ? 'Photo saved successfully.'
+            : uploaded.message,
+      );
+      if (uploaded.photoId != null && uploaded.photoId! > 0) {
+        ref
+            .read(visitorGalleryLocalItemsProvider.notifier)
+            .append(
+              invitationId: lookup.invitationId,
+              item: VisitorGalleryItemEntity(
+                photoId: uploaded.photoId!,
+                photoDesc: uploaded.photoDescription,
+                url: '/visitor/photo/${uploaded.photoId}',
+              ),
+            );
+        ref.invalidate(visitorGalleryListProvider(lookup.invitationId));
+        seedVisitorGalleryPhotoCache(
+          ref,
+          photoId: uploaded.photoId!,
+          bytes: bytes,
+        );
+      }
     } catch (error) {
       if (!mounted) {
         return;
@@ -176,6 +242,148 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
       };
       showAppSnackBar(context, message);
     }
+  }
+
+  Future<_UploadedPhotoResult?> _showUploadPhotoSheet({
+    required Uint8List imageBytes,
+    required VisitorLookupEntity lookup,
+    required String uploadedBy,
+    required String entity,
+    required String site,
+  }) {
+    return showModalBottomSheet<_UploadedPhotoResult>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        final descriptionController = TextEditingController();
+        String? errorText;
+        bool isUploading = false;
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            Future<void> upload() async {
+              final submission = VisitorSavePhotoSubmissionEntity(
+                imageBase64: base64Encode(imageBytes),
+                photoDescription: descriptionController.text.trim(),
+                invitationId: lookup.invitationId.trim(),
+                entity: entity,
+                site: site,
+                uploadedBy: uploadedBy,
+              );
+
+              setSheetState(() {
+                isUploading = true;
+                errorText = null;
+              });
+
+              final result = await ref
+                  .read(visitorCheckControllerProvider.notifier)
+                  .savePhoto(submission: submission);
+
+              if (!mounted || !context.mounted) {
+                return;
+              }
+
+              if (!result.success) {
+                setSheetState(() {
+                  isUploading = false;
+                  errorText = result.message.isEmpty
+                      ? 'Failed to upload visitor photo.'
+                      : result.message;
+                });
+                return;
+              }
+
+              Navigator.of(sheetContext).pop(
+                _UploadedPhotoResult(
+                  message: result.message,
+                  photoId: result.photoId,
+                  photoDescription: descriptionController.text.trim(),
+                ),
+              );
+            }
+
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  16,
+                  16,
+                  16 + MediaQuery.of(context).viewInsets.bottom,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Upload Photo',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.memory(
+                        imageBytes,
+                        height: 220,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: descriptionController,
+                      enabled: !isUploading,
+                      textInputAction: TextInputAction.done,
+                      decoration: const InputDecoration(
+                        labelText: 'Photo Description (Optional)',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    if (errorText != null) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        errorText!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: AppOutlinedButton(
+                            onPressed: isUploading
+                                ? null
+                                : () => Navigator.of(sheetContext).pop(),
+                            child: const Text('Cancel'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: AppFilledButton(
+                            onPressed: isUploading ? null : upload,
+                            child: isUploading
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Text('Upload'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   String _physicalTagFor(VisitorLookupItemEntity visitor) {
@@ -697,7 +905,10 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
                         ),
                         const SizedBox(height: 8),
                         AppOutlinedButtonIcon(
-                          onPressed: state.isLoading || state.isSubmitting
+                          onPressed:
+                              state.isLoading ||
+                                  state.isSubmitting ||
+                                  state.isUploadingPhoto
                               ? null
                               : _captureFromCamera,
                           icon: const Icon(Icons.camera_alt_outlined),
@@ -721,6 +932,7 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
         child: AppFilledButton(
           onPressed:
               !state.isSubmitting &&
+                  !state.isUploadingPhoto &&
                   !state.isLoading &&
                   selectedEligibleCount > 0
               ? () => _confirmSubmit(
@@ -1138,6 +1350,18 @@ class _VisitorGallerySection extends ConsumerWidget {
     }
     return text.isEmpty ? 'Failed to load gallery photos.' : text;
   }
+}
+
+class _UploadedPhotoResult {
+  const _UploadedPhotoResult({
+    required this.message,
+    required this.photoId,
+    required this.photoDescription,
+  });
+
+  final String message;
+  final int? photoId;
+  final String photoDescription;
 }
 
 class _GalleryThumb extends ConsumerWidget {

@@ -6,6 +6,8 @@ import 'package:vms_bernas/domain/entities/visitor_check_in_result_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_check_in_submission_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_gallery_item_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_lookup_entity.dart';
+import 'package:vms_bernas/domain/entities/visitor_save_photo_result_entity.dart';
+import 'package:vms_bernas/domain/entities/visitor_save_photo_submission_entity.dart';
 import 'package:vms_bernas/domain/repositories/visitor_access_repository.dart';
 import 'package:vms_bernas/presentation/state/visitor_check_in_providers.dart';
 
@@ -60,6 +62,15 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
   Future<VisitorCheckInResultEntity> submitVisitorCheckOut({
     required VisitorCheckInSubmissionEntity submission,
   }) async => throw UnimplementedError();
+
+  @override
+  Future<VisitorSavePhotoResultEntity> saveVisitorPhoto({
+    required VisitorSavePhotoSubmissionEntity submission,
+  }) async => const VisitorSavePhotoResultEntity(
+    success: true,
+    message: 'ok',
+    photoId: 1,
+  );
 }
 
 void main() {
@@ -74,10 +85,15 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      final items = await container.read(
-        visitorGalleryListProvider(' ').future,
+      final sub = container.listen<AsyncValue<List<VisitorGalleryItemEntity>>>(
+        visitorGalleryListProvider(' '),
+        (_, __) {},
+        fireImmediately: true,
       );
-      expect(items, isEmpty);
+      addTearDown(sub.close);
+
+      await Future<void>.delayed(Duration.zero);
+      expect(sub.read().value, isEmpty);
       expect(repository.galleryListCallCount, 0);
     },
   );
@@ -135,4 +151,28 @@ void main() {
       expect(repository.galleryPhotoCallCount, 1);
     },
   );
+
+  test('gallery list controller appends uploaded item locally', () async {
+    final repository = _FakeVisitorAccessRepository();
+    final container = ProviderContainer(
+      overrides: [
+        visitorAccessRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(visitorGalleryListProvider('IV1').future);
+    container.read(visitorGalleryLocalItemsProvider.notifier).append(
+      invitationId: 'IV1',
+      item: const VisitorGalleryItemEntity(
+        photoId: 99,
+        photoDesc: 'new',
+        url: '/visitor/photo/99',
+      ),
+    );
+    container.invalidate(visitorGalleryListProvider('IV1'));
+
+    final items = await container.read(visitorGalleryListProvider('IV1').future);
+    expect(items.first.photoId, 99);
+  });
 }

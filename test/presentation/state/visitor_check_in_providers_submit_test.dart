@@ -6,7 +6,10 @@ import 'package:vms_bernas/domain/entities/visitor_check_in_submission_entity.da
 import 'package:vms_bernas/domain/entities/visitor_check_in_submission_item_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_gallery_item_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_lookup_entity.dart';
+import 'package:vms_bernas/domain/entities/visitor_save_photo_result_entity.dart';
+import 'package:vms_bernas/domain/entities/visitor_save_photo_submission_entity.dart';
 import 'package:vms_bernas/domain/repositories/visitor_access_repository.dart';
+import 'package:vms_bernas/domain/usecases/save_visitor_photo_usecase.dart';
 import 'package:vms_bernas/domain/usecases/submit_visitor_check_in_usecase.dart';
 import 'package:vms_bernas/domain/usecases/submit_visitor_check_out_usecase.dart';
 import 'package:vms_bernas/presentation/state/visitor_check_in_providers.dart';
@@ -18,6 +21,7 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
   final Duration? submitDelay;
   VisitorCheckInSubmissionEntity? capturedCheckInSubmission;
   VisitorCheckInSubmissionEntity? capturedCheckOutSubmission;
+  VisitorSavePhotoSubmissionEntity? capturedSavePhotoSubmission;
 
   @override
   Future<VisitorCheckInResultEntity> submitVisitorCheckIn({
@@ -79,6 +83,24 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
   @override
   Future<Uint8List?> getVisitorGalleryPhoto({required int photoId}) async {
     return null;
+  }
+
+  @override
+  Future<VisitorSavePhotoResultEntity> saveVisitorPhoto({
+    required VisitorSavePhotoSubmissionEntity submission,
+  }) async {
+    capturedSavePhotoSubmission = submission;
+    if (submitDelay != null) {
+      await Future<void>.delayed(submitDelay!);
+    }
+    if (error != null) {
+      throw error!;
+    }
+    return const VisitorSavePhotoResultEntity(
+      success: true,
+      message: 'Photo saved successfully',
+      photoId: 29,
+    );
   }
 }
 
@@ -272,5 +294,38 @@ void main() {
     expect(firstResult.status, isTrue);
     expect(secondResult.status, isFalse);
     expect(secondResult.message, 'Check-out is currently submitting.');
+  });
+
+  test('save photo success toggles loading and returns result', () async {
+    final repository = _FakeVisitorAccessRepository();
+    final container = ProviderContainer(
+      overrides: [
+        saveVisitorPhotoUseCaseProvider.overrideWithValue(
+          SaveVisitorPhotoUseCase(repository),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final controller = container.read(visitorCheckControllerProvider.notifier);
+    final result = await controller.savePhoto(
+      submission: const VisitorSavePhotoSubmissionEntity(
+        imageBase64: 'abc',
+        photoDescription: 'desc',
+        invitationId: 'IV20260300016',
+        entity: 'AGYTEK',
+        site: 'FACTORY1',
+        uploadedBy: 'Ryan',
+      ),
+    );
+
+    final state = container.read(visitorCheckControllerProvider);
+    expect(
+      repository.capturedSavePhotoSubmission?.invitationId,
+      'IV20260300016',
+    );
+    expect(result.success, isTrue);
+    expect(result.photoId, 29);
+    expect(state.isUploadingPhoto, isFalse);
   });
 }

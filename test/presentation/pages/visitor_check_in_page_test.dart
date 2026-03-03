@@ -12,12 +12,13 @@ import 'package:vms_bernas/domain/entities/visitor_check_in_submission_entity.da
 import 'package:vms_bernas/domain/entities/visitor_gallery_item_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_lookup_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_lookup_item_entity.dart';
+import 'package:vms_bernas/domain/entities/visitor_save_photo_result_entity.dart';
+import 'package:vms_bernas/domain/entities/visitor_save_photo_submission_entity.dart';
 import 'package:vms_bernas/domain/repositories/visitor_access_repository.dart';
 import 'package:vms_bernas/domain/usecases/get_visitor_lookup_usecase.dart';
 import 'package:vms_bernas/domain/usecases/submit_visitor_check_in_usecase.dart';
 import 'package:vms_bernas/domain/usecases/submit_visitor_check_out_usecase.dart';
 import 'package:vms_bernas/presentation/pages/visitor_check_in_page.dart';
-import 'package:vms_bernas/presentation/services/camera_capture_service.dart';
 import 'package:vms_bernas/presentation/state/auth_session_providers.dart';
 import 'package:vms_bernas/presentation/state/visitor_check_in_providers.dart';
 import 'package:vms_bernas/presentation/widgets/labeled_form_rows.dart';
@@ -38,6 +39,13 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
   final Uint8List? imageBytes;
   final Duration? imageDelay;
   final Object? imageError;
+  VisitorSavePhotoResultEntity savePhotoResult =
+      const VisitorSavePhotoResultEntity(
+        success: true,
+        message: 'Photo saved successfully',
+        photoId: 45,
+      );
+  Object? savePhotoError;
   final List<VisitorGalleryItemEntity> galleryItems = const [
     VisitorGalleryItemEntity(
       photoId: 29,
@@ -48,6 +56,7 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
   bool? lastIsCheckIn;
   VisitorCheckInSubmissionEntity? lastCheckInSubmission;
   VisitorCheckInSubmissionEntity? lastCheckOutSubmission;
+  VisitorSavePhotoSubmissionEntity? lastSavePhotoSubmission;
   int lookupCalls = 0;
 
   @override
@@ -146,6 +155,17 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
   Future<Uint8List?> getVisitorGalleryPhoto({required int photoId}) async {
     return imageBytes;
   }
+
+  @override
+  Future<VisitorSavePhotoResultEntity> saveVisitorPhoto({
+    required VisitorSavePhotoSubmissionEntity submission,
+  }) async {
+    lastSavePhotoSubmission = submission;
+    if (savePhotoError != null) {
+      throw savePhotoError!;
+    }
+    return savePhotoResult;
+  }
 }
 
 class _FakeAuthLocalDataSource extends AuthLocalDataSource {
@@ -233,6 +253,8 @@ void main() {
     expect(find.text('Visitor Summary'), findsNothing);
 
     final historyFinder = find.byKey(const Key('visitor-history-12345656123'));
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -240));
+    await tester.pumpAndSettle();
     await tester.ensureVisible(historyFinder);
     await tester.tap(historyFinder);
     await tester.pumpAndSettle();
@@ -290,15 +312,34 @@ void main() {
     expect(find.text('IV20260200038'), findsNothing);
   });
 
-  testWidgets('camera button triggers launcher and shows success message', (
+  testWidgets('camera capture opens upload modal and uploads successfully', (
     tester,
   ) async {
-    final repository = _FakeVisitorAccessRepository();
+    final repository = _FakeVisitorAccessRepository(
+      imageBytes: base64Decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5WcMsAAAAASUVORK5CYII=',
+      ),
+    );
     await tester.pumpWidget(
       _buildApp(
         repository: repository,
         isCheckIn: true,
-        cameraLauncher: (_) async => XFile('/tmp/camera.jpg'),
+        authLocalDataSource: _FakeAuthLocalDataSource(
+          const AuthSessionDto(
+            username: 'Ryan',
+            fullname: 'Ryan',
+            entity: 'AGYTEK',
+            accessToken: 'token',
+            defaultSite: 'FACTORY1',
+            defaultGate: 'F1_A',
+          ),
+        ),
+        cameraLauncher: (_) async => XFile.fromData(
+          base64Decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5WcMsAAAAASUVORK5CYII=',
+          ),
+          name: 'photo.png',
+        ),
       ),
     );
 
@@ -306,18 +347,44 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Search'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Camera'));
+    await tester.dragUntilVisible(
+      find.text('Camera'),
+      find.byType(CustomScrollView),
+      const Offset(0, -300),
+    );
+    await tester.tap(find.text('Camera'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Photo captured.'), findsOneWidget);
+    expect(find.text('Upload Photo'), findsOneWidget);
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Photo Description (Optional)'),
+      'Gate camera',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Upload'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Photo saved successfully'), findsOneWidget);
+    expect(repository.lastSavePhotoSubmission?.invitationId, 'IV20260200038');
+    expect(repository.lastSavePhotoSubmission?.photoDescription, 'Gate camera');
+    expect(repository.lastSavePhotoSubmission?.uploadedBy, 'Ryan');
   });
 
-  testWidgets('camera cancel does not show success message', (tester) async {
+  testWidgets('camera cancel does not open upload modal', (tester) async {
     final repository = _FakeVisitorAccessRepository();
     await tester.pumpWidget(
       _buildApp(
         repository: repository,
         isCheckIn: true,
+        authLocalDataSource: _FakeAuthLocalDataSource(
+          const AuthSessionDto(
+            username: 'Ryan',
+            fullname: 'Ryan',
+            entity: 'AGYTEK',
+            accessToken: 'token',
+            defaultSite: 'FACTORY1',
+            defaultGate: 'F1_A',
+          ),
+        ),
         cameraLauncher: (_) async => null,
       ),
     );
@@ -326,20 +393,89 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Search'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Camera'));
+    await tester.dragUntilVisible(
+      find.text('Camera'),
+      find.byType(CustomScrollView),
+      const Offset(0, -300),
+    );
+    await tester.tap(find.text('Camera'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Photo captured.'), findsNothing);
+    expect(find.text('Upload Photo'), findsNothing);
+    expect(repository.lastSavePhotoSubmission, isNull);
   });
 
-  testWidgets('camera error shows failure message', (tester) async {
+  testWidgets('camera upload failure keeps modal open with error', (
+    tester,
+  ) async {
     final repository = _FakeVisitorAccessRepository();
     await tester.pumpWidget(
       _buildApp(
         repository: repository,
         isCheckIn: true,
-        cameraLauncher: (_) async =>
-            throw const CameraCaptureException('Camera unavailable.'),
+        authLocalDataSource: _FakeAuthLocalDataSource(
+          const AuthSessionDto(
+            username: 'Ryan',
+            fullname: 'Ryan',
+            entity: 'AGYTEK',
+            accessToken: 'token',
+            defaultSite: 'FACTORY1',
+            defaultGate: 'F1_A',
+          ),
+        ),
+        cameraLauncher: (_) async => XFile.fromData(
+          base64Decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5WcMsAAAAASUVORK5CYII=',
+          ),
+          name: 'photo.png',
+        ),
+      ),
+    );
+    repository.savePhotoError = Exception('Upload failed');
+
+    await tester.enterText(find.byType(TextFormField).first, 'VIS|IV|A|F');
+    await tester.tap(find.widgetWithText(FilledButton, 'Search'));
+    await tester.pumpAndSettle();
+
+    await tester.dragUntilVisible(
+      find.text('Camera'),
+      find.byType(CustomScrollView),
+      const Offset(0, -300),
+    );
+    await tester.tap(find.text('Camera'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Upload'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Upload failed'), findsOneWidget);
+    expect(find.text('Upload Photo'), findsOneWidget);
+  });
+
+  testWidgets('camera upload blocks when required session values missing', (
+    tester,
+  ) async {
+    final repository = _FakeVisitorAccessRepository();
+    await tester.pumpWidget(
+      _buildApp(
+        repository: repository,
+        isCheckIn: true,
+        authLocalDataSource: _FakeAuthLocalDataSource(
+          const AuthSessionDto(
+            username: '',
+            fullname: 'Ryan',
+            entity: '',
+            accessToken: 'token',
+            defaultSite: '',
+            defaultGate: 'F1_A',
+          ),
+        ),
+        cameraLauncher: (_) async => XFile.fromData(
+          base64Decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5WcMsAAAAASUVORK5CYII=',
+          ),
+          name: 'photo.png',
+        ),
       ),
     );
 
@@ -347,10 +483,16 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Search'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Camera'));
+    await tester.dragUntilVisible(
+      find.text('Camera'),
+      find.byType(CustomScrollView),
+      const Offset(0, -300),
+    );
+    await tester.tap(find.text('Camera'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Camera unavailable.'), findsOneWidget);
+    expect(find.text('Please login again to upload photo.'), findsOneWidget);
+    expect(repository.lastSavePhotoSubmission, isNull);
   });
 
   testWidgets('error state is shown on failed search', (tester) async {

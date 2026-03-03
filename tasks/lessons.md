@@ -8,3 +8,4 @@
 
 ## 2026-03-04
 - If requirement says "in-page only", avoid adding modal behavior even as temporary UX; wire existing action buttons (e.g., History) to the in-page section directly.
+- For new Riverpod state changes, default to latest `NotifierProvider`/`AsyncNotifierProvider` APIs and avoid `legacy.dart` imports unless explicitly justified.

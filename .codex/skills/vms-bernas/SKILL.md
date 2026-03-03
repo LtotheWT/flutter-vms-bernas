@@ -258,6 +258,22 @@ description: "Workflows and engineering patterns for the vms_bernas Flutter app:
 ## Skill: searchable_dropdown_menu_anchor
 **Title:** Searchable Dropdown (MenuAnchor + TextField)
 
+## Skill: riverpod_state_conventions
+**Title:** Riverpod State Conventions (Latest API)
+
+- Purpose:
+  Keep provider/state code aligned with current Riverpod APIs and avoid regressions from legacy patterns.
+
+- Rules:
+  - Prefer `NotifierProvider` / `AsyncNotifierProvider` (`.autoDispose` / `.family`) for new state logic.
+  - Do not introduce `legacy.dart` imports for new implementations.
+  - If local mutable state is needed for UI merge logic (for example local gallery append), use `NotifierProvider.autoDispose` state and compose with fetch providers.
+  - Keep async network fetch as `FutureProvider`/`AsyncNotifier` and isolate local transient state separately when it avoids over-complicated family notifiers.
+
+- Must NOT:
+  - Add new `StateNotifierProvider` usages unless explicitly required for backward compatibility and approved in task notes.
+  - Mix legacy and latest provider styles in the same new feature without a documented compatibility reason.
+
 - Purpose:
   Provide searchable dropdowns that avoid keyboard overlap and support custom menu layout.
 

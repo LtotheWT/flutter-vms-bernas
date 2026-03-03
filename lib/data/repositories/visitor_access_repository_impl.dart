@@ -4,10 +4,13 @@ import '../../domain/entities/visitor_check_in_result_entity.dart';
 import '../../domain/entities/visitor_check_in_submission_entity.dart';
 import '../../domain/entities/visitor_gallery_item_entity.dart';
 import '../../domain/entities/visitor_lookup_entity.dart';
+import '../../domain/entities/visitor_save_photo_result_entity.dart';
+import '../../domain/entities/visitor_save_photo_submission_entity.dart';
 import '../../domain/repositories/visitor_access_repository.dart';
 import '../datasources/auth_local_data_source.dart';
 import '../datasources/visitor_access_remote_data_source.dart';
 import '../models/visitor_check_in_request_dto.dart';
+import '../models/visitor_save_photo_request_dto.dart';
 
 class VisitorAccessRepositoryImpl implements VisitorAccessRepository {
   VisitorAccessRepositoryImpl(
@@ -118,5 +121,22 @@ class VisitorAccessRepositoryImpl implements VisitorAccessRepository {
       accessToken: accessToken,
       photoId: photoId,
     );
+  }
+
+  @override
+  Future<VisitorSavePhotoResultEntity> saveVisitorPhoto({
+    required VisitorSavePhotoSubmissionEntity submission,
+  }) async {
+    final session = await _authLocalDataSource.getSession();
+    final accessToken = session?.accessToken.trim() ?? '';
+    if (accessToken.isEmpty) {
+      throw Exception('Please login again to upload photo.');
+    }
+
+    final dto = await _remoteDataSource.saveVisitorPhoto(
+      accessToken: accessToken,
+      request: VisitorSavePhotoRequestDto.fromEntity(submission),
+    );
+    return dto.toEntity();
   }
 }

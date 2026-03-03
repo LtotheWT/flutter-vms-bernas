@@ -4,6 +4,8 @@ import '../entities/visitor_check_in_result_entity.dart';
 import '../entities/visitor_check_in_submission_entity.dart';
 import '../entities/visitor_gallery_item_entity.dart';
 import '../entities/visitor_lookup_entity.dart';
+import '../entities/visitor_save_photo_result_entity.dart';
+import '../entities/visitor_save_photo_submission_entity.dart';
 
 abstract class VisitorAccessRepository {
   Future<VisitorLookupEntity> getVisitorLookup({
@@ -29,4 +31,8 @@ abstract class VisitorAccessRepository {
   });
 
   Future<Uint8List?> getVisitorGalleryPhoto({required int photoId});
+
+  Future<VisitorSavePhotoResultEntity> saveVisitorPhoto({
+    required VisitorSavePhotoSubmissionEntity submission,
+  });
 }

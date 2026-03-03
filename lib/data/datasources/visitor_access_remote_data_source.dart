@@ -6,6 +6,8 @@ import '../models/visitor_check_in_response_dto.dart';
 import '../models/visitor_gallery_item_dto.dart';
 import '../models/visitor_lookup_dto.dart';
 import '../models/visitor_lookup_response_dto.dart';
+import '../models/visitor_save_photo_request_dto.dart';
+import '../models/visitor_save_photo_response_dto.dart';
 import 'network/remote_parsers.dart';
 
 class VisitorAccessRemoteDataSource {
@@ -326,6 +328,62 @@ class VisitorAccessRemoteDataSource {
     }
   }
 
+  Future<VisitorSavePhotoResponseDto> saveVisitorPhoto({
+    required String accessToken,
+    required VisitorSavePhotoRequestDto request,
+  }) async {
+    try {
+      final response = await _dio.post<dynamic>(
+        '/wmsws/Visitor/save-photo',
+        data: request.toJson(),
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $accessToken',
+            'accept': '*/*',
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+
+      final dto = VisitorSavePhotoResponseDto.fromJson(
+        parseJsonMap(response.data),
+      );
+      if (!dto.success) {
+        throw VisitorAccessException(
+          _resolveBackendMessage(dto.message) ??
+              'Failed to upload visitor photo. Please try again.',
+        );
+      }
+      return dto;
+    } on DioException catch (error) {
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 401 || statusCode == 403) {
+        throw VisitorAccessException('Please login again to upload photo.');
+      }
+
+      final backendMessage = _extractSavePhotoBackendMessage(
+        error.response?.data,
+      );
+      if (backendMessage != null) {
+        throw VisitorAccessException(backendMessage);
+      }
+
+      if (isConnectivityIssue(error)) {
+        throw VisitorAccessException(
+          'Unable to upload visitor photo. Please try again.',
+        );
+      }
+
+      throw VisitorAccessException(
+        'Failed to upload visitor photo. Please try again.',
+      );
+    } on FormatException {
+      throw VisitorAccessException(
+        'Failed to upload visitor photo. Please try again.',
+      );
+    }
+  }
+
   String? _extractBackendMessage(dynamic data) {
     try {
       final dto = VisitorLookupResponseDto.fromJson(parseJsonMap(data));
@@ -343,6 +401,15 @@ class VisitorAccessRemoteDataSource {
   String? _extractCheckInBackendMessage(dynamic data) {
     try {
       final dto = VisitorCheckInResponseDto.fromJson(parseJsonMap(data));
+      return _resolveBackendMessage(dto.message);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String? _extractSavePhotoBackendMessage(dynamic data) {
+    try {
+      final dto = VisitorSavePhotoResponseDto.fromJson(parseJsonMap(data));
       return _resolveBackendMessage(dto.message);
     } catch (_) {
       return null;

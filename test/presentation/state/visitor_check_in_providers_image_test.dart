@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vms_bernas/domain/entities/visitor_check_in_result_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_check_in_submission_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_gallery_item_entity.dart';
+import 'package:vms_bernas/domain/entities/visitor_save_photo_result_entity.dart';
+import 'package:vms_bernas/domain/entities/visitor_save_photo_submission_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_lookup_entity.dart';
 import 'package:vms_bernas/domain/repositories/visitor_access_repository.dart';
 import 'package:vms_bernas/presentation/state/visitor_check_in_providers.dart';
@@ -54,6 +56,17 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
   @override
   Future<Uint8List?> getVisitorGalleryPhoto({required int photoId}) async {
     return null;
+  }
+
+  @override
+  Future<VisitorSavePhotoResultEntity> saveVisitorPhoto({
+    required VisitorSavePhotoSubmissionEntity submission,
+  }) async {
+    return const VisitorSavePhotoResultEntity(
+      success: true,
+      message: 'ok',
+      photoId: 1,
+    );
   }
 }
 

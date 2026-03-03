@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import '../../domain/entities/visitor_check_in_result_entity.dart';
 
 class VisitorCheckInResponseDto {
