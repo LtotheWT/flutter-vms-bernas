@@ -4,11 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vms_bernas/domain/entities/visitor_check_in_result_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_check_in_submission_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_check_in_submission_item_entity.dart';
+import 'package:vms_bernas/domain/entities/visitor_delete_photo_result_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_gallery_item_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_lookup_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_save_photo_result_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_save_photo_submission_entity.dart';
 import 'package:vms_bernas/domain/repositories/visitor_access_repository.dart';
+import 'package:vms_bernas/domain/usecases/delete_visitor_gallery_photo_usecase.dart';
 import 'package:vms_bernas/domain/usecases/save_visitor_photo_usecase.dart';
 import 'package:vms_bernas/domain/usecases/submit_visitor_check_in_usecase.dart';
 import 'package:vms_bernas/domain/usecases/submit_visitor_check_out_usecase.dart';
@@ -22,6 +24,7 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
   VisitorCheckInSubmissionEntity? capturedCheckInSubmission;
   VisitorCheckInSubmissionEntity? capturedCheckOutSubmission;
   VisitorSavePhotoSubmissionEntity? capturedSavePhotoSubmission;
+  int? capturedDeletedPhotoId;
 
   @override
   Future<VisitorCheckInResultEntity> submitVisitorCheckIn({
@@ -100,6 +103,20 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
       success: true,
       message: 'Photo saved successfully',
       photoId: 29,
+    );
+  }
+
+  @override
+  Future<VisitorDeletePhotoResultEntity> deleteVisitorGalleryPhoto({
+    required int photoId,
+  }) async {
+    capturedDeletedPhotoId = photoId;
+    if (error != null) {
+      throw error!;
+    }
+    return const VisitorDeletePhotoResultEntity(
+      success: true,
+      message: 'deleted',
     );
   }
 }
@@ -327,5 +344,26 @@ void main() {
     expect(result.success, isTrue);
     expect(result.photoId, 29);
     expect(state.isUploadingPhoto, isFalse);
+  });
+
+  test('delete photo success toggles deleting flags and returns result', () async {
+    final repository = _FakeVisitorAccessRepository();
+    final container = ProviderContainer(
+      overrides: [
+        deleteVisitorGalleryPhotoUseCaseProvider.overrideWithValue(
+          DeleteVisitorGalleryPhotoUseCase(repository),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final controller = container.read(visitorCheckControllerProvider.notifier);
+    final result = await controller.deletePhoto(photoId: 32);
+
+    final state = container.read(visitorCheckControllerProvider);
+    expect(repository.capturedDeletedPhotoId, 32);
+    expect(result.success, isTrue);
+    expect(state.isDeletingPhoto, isFalse);
+    expect(state.deletingPhotoId, isNull);
   });
 }

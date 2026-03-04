@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import '../models/visitor_check_in_request_dto.dart';
 import '../models/visitor_check_in_response_dto.dart';
+import '../models/visitor_delete_photo_response_dto.dart';
 import '../models/visitor_gallery_item_dto.dart';
 import '../models/visitor_lookup_dto.dart';
 import '../models/visitor_lookup_response_dto.dart';
@@ -384,6 +385,58 @@ class VisitorAccessRemoteDataSource {
     }
   }
 
+  Future<VisitorDeletePhotoResponseDto> deleteVisitorGalleryPhoto({
+    required String accessToken,
+    required int photoId,
+  }) async {
+    try {
+      final response = await _dio.delete<dynamic>(
+        '/wmsws/Visitor/photo/$photoId/delete',
+        options: Options(
+          headers: {'Authorization': 'Bearer $accessToken', 'accept': '*/*'},
+        ),
+      );
+      final dto = VisitorDeletePhotoResponseDto.fromJson(
+        parseJsonMap(response.data),
+      );
+      if (!dto.status) {
+        throw VisitorAccessException(
+          _resolveBackendMessage(dto.message) ??
+              'Failed to delete gallery photo. Please try again.',
+        );
+      }
+      return dto;
+    } on DioException catch (error) {
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 401 || statusCode == 403) {
+        throw VisitorAccessException(
+          'Please login again to delete gallery photo.',
+        );
+      }
+
+      final backendMessage = _extractDeletePhotoBackendMessage(
+        error.response?.data,
+      );
+      if (backendMessage != null) {
+        throw VisitorAccessException(backendMessage);
+      }
+
+      if (isConnectivityIssue(error)) {
+        throw VisitorAccessException(
+          'Unable to delete gallery photo. Please try again.',
+        );
+      }
+
+      throw VisitorAccessException(
+        'Failed to delete gallery photo. Please try again.',
+      );
+    } on FormatException {
+      throw VisitorAccessException(
+        'Failed to delete gallery photo. Please try again.',
+      );
+    }
+  }
+
   String? _extractBackendMessage(dynamic data) {
     try {
       final dto = VisitorLookupResponseDto.fromJson(parseJsonMap(data));
@@ -410,6 +463,15 @@ class VisitorAccessRemoteDataSource {
   String? _extractSavePhotoBackendMessage(dynamic data) {
     try {
       final dto = VisitorSavePhotoResponseDto.fromJson(parseJsonMap(data));
+      return _resolveBackendMessage(dto.message);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String? _extractDeletePhotoBackendMessage(dynamic data) {
+    try {
+      final dto = VisitorDeletePhotoResponseDto.fromJson(parseJsonMap(data));
       return _resolveBackendMessage(dto.message);
     } catch (_) {
       return null;

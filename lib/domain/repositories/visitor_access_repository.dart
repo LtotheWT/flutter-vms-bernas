@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import '../entities/visitor_check_in_result_entity.dart';
 import '../entities/visitor_check_in_submission_entity.dart';
+import '../entities/visitor_delete_photo_result_entity.dart';
 import '../entities/visitor_gallery_item_entity.dart';
 import '../entities/visitor_lookup_entity.dart';
 import '../entities/visitor_save_photo_result_entity.dart';
@@ -34,5 +35,9 @@ abstract class VisitorAccessRepository {
 
   Future<VisitorSavePhotoResultEntity> saveVisitorPhoto({
     required VisitorSavePhotoSubmissionEntity submission,
+  });
+
+  Future<VisitorDeletePhotoResultEntity> deleteVisitorGalleryPhoto({
+    required int photoId,
   });
 }

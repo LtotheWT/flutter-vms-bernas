@@ -6,6 +6,7 @@ import 'package:vms_bernas/domain/entities/visitor_lookup_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_lookup_item_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_check_in_result_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_check_in_submission_entity.dart';
+import 'package:vms_bernas/domain/entities/visitor_delete_photo_result_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_gallery_item_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_save_photo_result_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_save_photo_submission_entity.dart';
@@ -107,6 +108,13 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
       message: 'ok',
       photoId: 1,
     );
+  }
+
+  @override
+  Future<VisitorDeletePhotoResultEntity> deleteVisitorGalleryPhoto({
+    required int photoId,
+  }) async {
+    return const VisitorDeletePhotoResultEntity(success: true, message: 'ok');
   }
 }
 

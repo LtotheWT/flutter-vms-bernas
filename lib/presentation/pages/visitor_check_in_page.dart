@@ -225,7 +225,6 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
                 url: '/visitor/photo/${uploaded.photoId}',
               ),
             );
-        ref.invalidate(visitorGalleryListProvider(lookup.invitationId));
         seedVisitorGalleryPhotoCache(
           ref,
           photoId: uploaded.photoId!,
@@ -1290,6 +1289,22 @@ class _VisitorGallerySection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final galleryAsync = ref.watch(visitorGalleryListProvider(invitationId));
+    final localItems = ref.watch(
+      visitorGalleryLocalItemsProvider.select(
+        (map) => map[invitationId.trim()] ?? const <VisitorGalleryItemEntity>[],
+      ),
+    );
+    final deletedPhotoIds = ref.watch(
+      visitorGalleryDeletedPhotoIdsProvider.select(
+        (map) => map[invitationId.trim()] ?? const <int>{},
+      ),
+    );
+    final isDeletingPhoto = ref.watch(
+      visitorCheckControllerProvider.select((state) => state.isDeletingPhoto),
+    );
+    final deletingPhotoId = ref.watch(
+      visitorCheckControllerProvider.select((state) => state.deletingPhotoId),
+    );
     final colorScheme = Theme.of(context).colorScheme;
     return galleryAsync.when(
       loading: () => const Padding(
@@ -1321,7 +1336,12 @@ class _VisitorGallerySection extends ConsumerWidget {
         ],
       ),
       data: (items) {
-        if (items.isEmpty) {
+        final mergedItems = _mergeGalleryItems(
+          remoteItems: items,
+          localItems: localItems,
+          deletedPhotoIds: deletedPhotoIds,
+        );
+        if (mergedItems.isEmpty) {
           return const Padding(
             padding: EdgeInsets.symmetric(vertical: 6),
             child: Text('No uploaded photos found.'),
@@ -1330,17 +1350,43 @@ class _VisitorGallerySection extends ConsumerWidget {
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          itemCount: items.length,
+          itemCount: mergedItems.length,
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 3,
             mainAxisSpacing: 8,
             crossAxisSpacing: 8,
             childAspectRatio: 1,
           ),
-          itemBuilder: (context, index) => _GalleryThumb(item: items[index]),
+          itemBuilder: (context, index) => _GalleryThumb(
+            invitationId: invitationId,
+            item: mergedItems[index],
+            isDeleting:
+                isDeletingPhoto &&
+                deletingPhotoId == mergedItems[index].photoId,
+          ),
         );
       },
     );
+  }
+
+  List<VisitorGalleryItemEntity> _mergeGalleryItems({
+    required List<VisitorGalleryItemEntity> remoteItems,
+    required List<VisitorGalleryItemEntity> localItems,
+    required Set<int> deletedPhotoIds,
+  }) {
+    final seen = <int>{};
+    final merged = <VisitorGalleryItemEntity>[];
+    for (final item in [...localItems, ...remoteItems]) {
+      if (deletedPhotoIds.contains(item.photoId)) {
+        continue;
+      }
+      if (seen.add(item.photoId)) {
+        merged.add(item);
+      }
+    }
+    // Keep newer photos at the back for consistent gallery ordering.
+    merged.sort((a, b) => a.photoId.compareTo(b.photoId));
+    return merged;
   }
 
   String _toErrorMessage(Object error) {
@@ -1365,9 +1411,15 @@ class _UploadedPhotoResult {
 }
 
 class _GalleryThumb extends ConsumerWidget {
-  const _GalleryThumb({required this.item});
+  const _GalleryThumb({
+    required this.invitationId,
+    required this.item,
+    required this.isDeleting,
+  });
 
+  final String invitationId;
   final VisitorGalleryItemEntity item;
+  final bool isDeleting;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1376,6 +1428,84 @@ class _GalleryThumb extends ConsumerWidget {
         VisitorGalleryPhotoKey(photoId: item.photoId),
       ),
     );
-    return RemotePhotoSlot(asyncBytes: photoAsync, size: 72);
+    Future<void> deletePhoto() async {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Delete photo?'),
+          content: const Text('This action cannot be undone.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Delete'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !context.mounted) {
+        return;
+      }
+
+      final result = await ref
+          .read(visitorCheckControllerProvider.notifier)
+          .deletePhoto(photoId: item.photoId);
+      if (!context.mounted) {
+        return;
+      }
+      if (!result.success) {
+        showAppSnackBar(
+          context,
+          result.message.isEmpty
+              ? 'Failed to delete gallery photo. Please try again.'
+              : result.message,
+        );
+        return;
+      }
+
+      ref
+          .read(visitorGalleryLocalItemsProvider.notifier)
+          .remove(invitationId: invitationId, photoId: item.photoId);
+      ref
+          .read(visitorGalleryDeletedPhotoIdsProvider.notifier)
+          .markDeleted(invitationId: invitationId, photoId: item.photoId);
+      removeVisitorGalleryPhotoCache(ref, photoId: item.photoId);
+      showAppSnackBar(
+        context,
+        result.message.isEmpty ? 'Photo deleted successfully.' : result.message,
+      );
+    }
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        RemotePhotoSlot(asyncBytes: photoAsync, size: 72),
+        Positioned(
+          top: 2,
+          right: 2,
+          child: GestureDetector(
+            key: Key('gallery-delete-${item.photoId}'),
+            onTap: isDeleting ? null : deletePhoto,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: isDeleting ? Colors.black38 : Colors.black54,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Icon(
+                  isDeleting ? Icons.hourglass_top : Icons.delete_outline,
+                  size: 14,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }

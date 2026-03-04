@@ -9,20 +9,19 @@ import 'package:vms_bernas/domain/entities/visitor_lookup_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_save_photo_result_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_save_photo_submission_entity.dart';
 import 'package:vms_bernas/domain/repositories/visitor_access_repository.dart';
-import 'package:vms_bernas/domain/usecases/save_visitor_photo_usecase.dart';
+import 'package:vms_bernas/domain/usecases/delete_visitor_gallery_photo_usecase.dart';
 
 class _FakeVisitorAccessRepository implements VisitorAccessRepository {
-  VisitorSavePhotoSubmissionEntity? capturedSubmission;
+  int? capturedPhotoId;
 
   @override
-  Future<VisitorSavePhotoResultEntity> saveVisitorPhoto({
-    required VisitorSavePhotoSubmissionEntity submission,
+  Future<VisitorDeletePhotoResultEntity> deleteVisitorGalleryPhoto({
+    required int photoId,
   }) async {
-    capturedSubmission = submission;
-    return const VisitorSavePhotoResultEntity(
+    capturedPhotoId = photoId;
+    return const VisitorDeletePhotoResultEntity(
       success: true,
-      message: 'Photo saved successfully',
-      photoId: 29,
+      message: 'Deleted',
     );
   }
 
@@ -69,31 +68,20 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
   }
 
   @override
-  Future<VisitorDeletePhotoResultEntity> deleteVisitorGalleryPhoto({
-    required int photoId,
+  Future<VisitorSavePhotoResultEntity> saveVisitorPhoto({
+    required VisitorSavePhotoSubmissionEntity submission,
   }) {
     throw UnimplementedError();
   }
 }
 
 void main() {
-  test('forwards save-photo submission to repository', () async {
+  test('forwards photo id to repository', () async {
     final repository = _FakeVisitorAccessRepository();
-    final useCase = SaveVisitorPhotoUseCase(repository);
+    final useCase = DeleteVisitorGalleryPhotoUseCase(repository);
 
-    final result = await useCase(
-      submission: const VisitorSavePhotoSubmissionEntity(
-        imageBase64: 'abc',
-        photoDescription: 'desc',
-        invitationId: 'IV20260300016',
-        entity: 'AGYTEK',
-        site: 'FACTORY1',
-        uploadedBy: 'Ryan',
-      ),
-    );
-
-    expect(repository.capturedSubmission?.uploadedBy, 'Ryan');
+    final result = await useCase(photoId: 32);
+    expect(repository.capturedPhotoId, 32);
     expect(result.success, isTrue);
-    expect(result.photoId, 29);
   });
 }

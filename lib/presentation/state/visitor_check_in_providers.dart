@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,11 +8,13 @@ import '../../data/datasources/visitor_access_remote_data_source.dart';
 import '../../data/repositories/visitor_access_repository_impl.dart';
 import '../../domain/entities/visitor_check_in_result_entity.dart';
 import '../../domain/entities/visitor_check_in_submission_entity.dart';
+import '../../domain/entities/visitor_delete_photo_result_entity.dart';
 import '../../domain/entities/visitor_gallery_item_entity.dart';
 import '../../domain/entities/visitor_lookup_entity.dart';
 import '../../domain/entities/visitor_save_photo_result_entity.dart';
 import '../../domain/entities/visitor_save_photo_submission_entity.dart';
 import '../../domain/repositories/visitor_access_repository.dart';
+import '../../domain/usecases/delete_visitor_gallery_photo_usecase.dart';
 import '../../domain/usecases/get_visitor_lookup_usecase.dart';
 import '../../domain/usecases/save_visitor_photo_usecase.dart';
 import '../../domain/usecases/submit_visitor_check_in_usecase.dart';
@@ -58,6 +62,12 @@ final saveVisitorPhotoUseCaseProvider = Provider<SaveVisitorPhotoUseCase>((
   return SaveVisitorPhotoUseCase(repository);
 });
 
+final deleteVisitorGalleryPhotoUseCaseProvider =
+    Provider<DeleteVisitorGalleryPhotoUseCase>((ref) {
+      final repository = ref.read(visitorAccessRepositoryProvider);
+      return DeleteVisitorGalleryPhotoUseCase(repository);
+    });
+
 @immutable
 class VisitorCheckState {
   const VisitorCheckState({
@@ -65,6 +75,8 @@ class VisitorCheckState {
     this.isLoading = false,
     this.isSubmitting = false,
     this.isUploadingPhoto = false,
+    this.isDeletingPhoto = false,
+    this.deletingPhotoId,
     this.errorMessage,
     this.lookup,
   });
@@ -73,6 +85,8 @@ class VisitorCheckState {
   final bool isLoading;
   final bool isSubmitting;
   final bool isUploadingPhoto;
+  final bool isDeletingPhoto;
+  final int? deletingPhotoId;
   final String? errorMessage;
   final VisitorLookupEntity? lookup;
 
@@ -81,6 +95,8 @@ class VisitorCheckState {
     bool? isLoading,
     bool? isSubmitting,
     bool? isUploadingPhoto,
+    bool? isDeletingPhoto,
+    Object? deletingPhotoId = _unset,
     Object? errorMessage = _unset,
     Object? lookup = _unset,
   }) {
@@ -89,6 +105,10 @@ class VisitorCheckState {
       isLoading: isLoading ?? this.isLoading,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       isUploadingPhoto: isUploadingPhoto ?? this.isUploadingPhoto,
+      isDeletingPhoto: isDeletingPhoto ?? this.isDeletingPhoto,
+      deletingPhotoId: identical(deletingPhotoId, _unset)
+          ? this.deletingPhotoId
+          : deletingPhotoId as int?,
       errorMessage: identical(errorMessage, _unset)
           ? this.errorMessage
           : errorMessage as String?,
@@ -246,6 +266,47 @@ class VisitorCheckController extends Notifier<VisitorCheckState> {
       );
     }
   }
+
+  Future<VisitorDeletePhotoResultEntity> deletePhoto({
+    required int photoId,
+  }) async {
+    if (photoId <= 0) {
+      return const VisitorDeletePhotoResultEntity(
+        success: false,
+        message: 'Invalid photo id.',
+      );
+    }
+    if (state.isDeletingPhoto && state.deletingPhotoId == photoId) {
+      return const VisitorDeletePhotoResultEntity(
+        success: false,
+        message: 'Photo deletion is currently in progress.',
+      );
+    }
+
+    state = state.copyWith(
+      isDeletingPhoto: true,
+      deletingPhotoId: photoId,
+      errorMessage: null,
+    );
+
+    try {
+      final useCase = ref.read(deleteVisitorGalleryPhotoUseCaseProvider);
+      final result = await useCase(photoId: photoId);
+      state = state.copyWith(isDeletingPhoto: false, deletingPhotoId: null);
+      return result;
+    } catch (error) {
+      final text = error.toString().trim();
+      final message = text.startsWith('Exception:')
+          ? text.replaceFirst('Exception:', '').trim()
+          : (text.isEmpty ? 'Failed to delete gallery photo.' : text);
+      state = state.copyWith(
+        isDeletingPhoto: false,
+        deletingPhotoId: null,
+        errorMessage: message,
+      );
+      return VisitorDeletePhotoResultEntity(success: false, message: message);
+    }
+  }
 }
 
 @immutable
@@ -323,6 +384,29 @@ class VisitorGalleryLocalItemsController
     next[key] = <VisitorGalleryItemEntity>[item, ...current];
     state = next;
   }
+
+  void remove({required String invitationId, required int photoId}) {
+    final key = invitationId.trim();
+    if (key.isEmpty || photoId <= 0) {
+      return;
+    }
+
+    final current = state[key];
+    if (current == null || current.isEmpty) {
+      return;
+    }
+
+    final filtered = current
+        .where((item) => item.photoId != photoId)
+        .toList(growable: false);
+    final next = <String, List<VisitorGalleryItemEntity>>{...state};
+    if (filtered.isEmpty) {
+      next.remove(key);
+    } else {
+      next[key] = filtered;
+    }
+    state = next;
+  }
 }
 
 final visitorGalleryListProvider = FutureProvider.autoDispose
@@ -333,29 +417,34 @@ final visitorGalleryListProvider = FutureProvider.autoDispose
       }
 
       final repository = ref.read(visitorAccessRepositoryProvider);
-      final remoteItems = await repository.getVisitorGalleryList(
+      return repository.getVisitorGalleryList(
         invitationId: normalizedInvitationId,
       );
-      final localItems = ref.watch(
-        visitorGalleryLocalItemsProvider.select(
-          (map) =>
-              map[normalizedInvitationId] ?? const <VisitorGalleryItemEntity>[],
-        ),
-      );
-
-      if (localItems.isEmpty) {
-        return remoteItems;
-      }
-
-      final seen = <int>{};
-      final merged = <VisitorGalleryItemEntity>[];
-      for (final item in [...localItems, ...remoteItems]) {
-        if (seen.add(item.photoId)) {
-          merged.add(item);
-        }
-      }
-      return merged;
     });
+
+final visitorGalleryDeletedPhotoIdsProvider =
+    NotifierProvider.autoDispose<
+      VisitorGalleryDeletedPhotoIdsController,
+      Map<String, Set<int>>
+    >(VisitorGalleryDeletedPhotoIdsController.new);
+
+class VisitorGalleryDeletedPhotoIdsController
+    extends Notifier<Map<String, Set<int>>> {
+  @override
+  Map<String, Set<int>> build() => <String, Set<int>>{};
+
+  void markDeleted({required String invitationId, required int photoId}) {
+    final key = invitationId.trim();
+    if (key.isEmpty || photoId <= 0) {
+      return;
+    }
+    final next = <String, Set<int>>{...state};
+    final current = <int>{...(next[key] ?? const <int>{})};
+    current.add(photoId);
+    next[key] = current;
+    state = next;
+  }
+}
 
 final visitorGalleryPhotoCacheProvider = Provider<Map<String, Uint8List?>>((
   ref,
@@ -388,4 +477,12 @@ void seedVisitorGalleryPhotoCache(
   }
   final cache = ref.read(visitorGalleryPhotoCacheProvider);
   cache['gallery-photo-$photoId'] = bytes;
+}
+
+void removeVisitorGalleryPhotoCache(WidgetRef ref, {required int photoId}) {
+  if (photoId <= 0) {
+    return;
+  }
+  final cache = ref.read(visitorGalleryPhotoCacheProvider);
+  cache.remove('gallery-photo-$photoId');
 }

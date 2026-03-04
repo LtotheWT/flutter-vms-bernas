@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vms_bernas/domain/entities/visitor_check_in_result_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_check_in_submission_entity.dart';
+import 'package:vms_bernas/domain/entities/visitor_delete_photo_result_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_gallery_item_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_lookup_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_save_photo_result_entity.dart';
@@ -70,6 +71,14 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
     success: true,
     message: 'ok',
     photoId: 1,
+  );
+
+  @override
+  Future<VisitorDeletePhotoResultEntity> deleteVisitorGalleryPhoto({
+    required int photoId,
+  }) async => const VisitorDeletePhotoResultEntity(
+    success: true,
+    message: 'deleted',
   );
 }
 
@@ -152,16 +161,10 @@ void main() {
     },
   );
 
-  test('gallery list controller appends uploaded item locally', () async {
-    final repository = _FakeVisitorAccessRepository();
-    final container = ProviderContainer(
-      overrides: [
-        visitorAccessRepositoryProvider.overrideWithValue(repository),
-      ],
-    );
+  test('gallery local items append/remove updates local state', () {
+    final container = ProviderContainer();
     addTearDown(container.dispose);
 
-    await container.read(visitorGalleryListProvider('IV1').future);
     container.read(visitorGalleryLocalItemsProvider.notifier).append(
       invitationId: 'IV1',
       item: const VisitorGalleryItemEntity(
@@ -170,9 +173,14 @@ void main() {
         url: '/visitor/photo/99',
       ),
     );
-    container.invalidate(visitorGalleryListProvider('IV1'));
+    var map = container.read(visitorGalleryLocalItemsProvider);
+    expect(map['IV1']?.first.photoId, 99);
 
-    final items = await container.read(visitorGalleryListProvider('IV1').future);
-    expect(items.first.photoId, 99);
+    container.read(visitorGalleryLocalItemsProvider.notifier).remove(
+      invitationId: 'IV1',
+      photoId: 99,
+    );
+    map = container.read(visitorGalleryLocalItemsProvider);
+    expect(map['IV1'], isNull);
   });
 }

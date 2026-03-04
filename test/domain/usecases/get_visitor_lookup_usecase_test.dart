@@ -5,6 +5,7 @@ import 'package:vms_bernas/domain/entities/visitor_lookup_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_lookup_item_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_check_in_result_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_check_in_submission_entity.dart';
+import 'package:vms_bernas/domain/entities/visitor_delete_photo_result_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_gallery_item_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_save_photo_result_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_save_photo_submission_entity.dart';
@@ -93,6 +94,13 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
   @override
   Future<VisitorSavePhotoResultEntity> saveVisitorPhoto({
     required VisitorSavePhotoSubmissionEntity submission,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<VisitorDeletePhotoResultEntity> deleteVisitorGalleryPhoto({
+    required int photoId,
   }) async {
     throw UnimplementedError();
   }

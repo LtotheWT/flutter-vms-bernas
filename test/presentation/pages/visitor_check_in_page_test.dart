@@ -9,6 +9,7 @@ import 'package:vms_bernas/data/datasources/auth_local_data_source.dart';
 import 'package:vms_bernas/data/models/auth_session_dto.dart';
 import 'package:vms_bernas/domain/entities/visitor_check_in_result_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_check_in_submission_entity.dart';
+import 'package:vms_bernas/domain/entities/visitor_delete_photo_result_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_gallery_item_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_lookup_entity.dart';
 import 'package:vms_bernas/domain/entities/visitor_lookup_item_entity.dart';
@@ -46,18 +47,22 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
         photoId: 45,
       );
   Object? savePhotoError;
-  final List<VisitorGalleryItemEntity> galleryItems = const [
-    VisitorGalleryItemEntity(
-      photoId: 29,
-      photoDesc: 'Sample',
-      url: '/visitor/photo/29',
-    ),
-  ];
+  final List<VisitorGalleryItemEntity> galleryItems =
+      <VisitorGalleryItemEntity>[
+        VisitorGalleryItemEntity(
+          photoId: 29,
+          photoDesc: 'Sample',
+          url: '/visitor/photo/29',
+        ),
+      ];
   bool? lastIsCheckIn;
   VisitorCheckInSubmissionEntity? lastCheckInSubmission;
   VisitorCheckInSubmissionEntity? lastCheckOutSubmission;
   VisitorSavePhotoSubmissionEntity? lastSavePhotoSubmission;
+  int? lastDeletedPhotoId;
+  Object? deletePhotoError;
   int lookupCalls = 0;
+  int galleryListCalls = 0;
 
   @override
   Future<VisitorLookupEntity> getVisitorLookup({
@@ -148,6 +153,7 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
   Future<List<VisitorGalleryItemEntity>> getVisitorGalleryList({
     required String invitationId,
   }) async {
+    galleryListCalls += 1;
     return galleryItems;
   }
 
@@ -165,6 +171,21 @@ class _FakeVisitorAccessRepository implements VisitorAccessRepository {
       throw savePhotoError!;
     }
     return savePhotoResult;
+  }
+
+  @override
+  Future<VisitorDeletePhotoResultEntity> deleteVisitorGalleryPhoto({
+    required int photoId,
+  }) async {
+    lastDeletedPhotoId = photoId;
+    if (deletePhotoError != null) {
+      throw deletePhotoError!;
+    }
+    galleryItems.removeWhere((item) => item.photoId == photoId);
+    return const VisitorDeletePhotoResultEntity(
+      success: true,
+      message: 'Photo deleted successfully',
+    );
   }
 }
 
@@ -493,6 +514,61 @@ void main() {
 
     expect(find.text('Please login again to upload photo.'), findsOneWidget);
     expect(repository.lastSavePhotoSubmission, isNull);
+  });
+
+  testWidgets('gallery delete success removes item locally without refetch', (
+    tester,
+  ) async {
+    final repository = _FakeVisitorAccessRepository();
+    await tester.pumpWidget(_buildApp(repository: repository, isCheckIn: true));
+
+    await tester.enterText(find.byType(TextFormField).first, 'VIS|IV|A|F');
+    await tester.tap(find.widgetWithText(FilledButton, 'Search'));
+    await tester.pumpAndSettle();
+    await tester.dragUntilVisible(
+      find.byKey(const Key('gallery-delete-29')),
+      find.byType(CustomScrollView),
+      const Offset(0, -280),
+    );
+    expect(find.byKey(const Key('gallery-delete-29')), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.delete_outline).first);
+    await tester.pumpAndSettle();
+    expect(find.text('Delete photo?'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+    await tester.pumpAndSettle();
+
+    expect(repository.lastDeletedPhotoId, 29);
+    expect(repository.galleryListCalls, 1);
+    expect(find.byKey(const Key('gallery-delete-29')), findsNothing);
+    expect(find.text('Photo deleted successfully'), findsOneWidget);
+  });
+
+  testWidgets('gallery delete failure keeps item and shows error', (
+    tester,
+  ) async {
+    final repository = _FakeVisitorAccessRepository()
+      ..deletePhotoError = Exception('Delete failed');
+    await tester.pumpWidget(_buildApp(repository: repository, isCheckIn: true));
+
+    await tester.enterText(find.byType(TextFormField).first, 'VIS|IV|A|F');
+    await tester.tap(find.widgetWithText(FilledButton, 'Search'));
+    await tester.pumpAndSettle();
+    await tester.dragUntilVisible(
+      find.byKey(const Key('gallery-delete-29')),
+      find.byType(CustomScrollView),
+      const Offset(0, -280),
+    );
+    expect(find.byKey(const Key('gallery-delete-29')), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.delete_outline).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('gallery-delete-29')), findsOneWidget);
+    expect(find.text('Delete failed'), findsOneWidget);
   });
 
   testWidgets('error state is shown on failed search', (tester) async {

@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import '../../domain/entities/visitor_check_in_result_entity.dart';
 import '../../domain/entities/visitor_check_in_submission_entity.dart';
+import '../../domain/entities/visitor_delete_photo_result_entity.dart';
 import '../../domain/entities/visitor_gallery_item_entity.dart';
 import '../../domain/entities/visitor_lookup_entity.dart';
 import '../../domain/entities/visitor_save_photo_result_entity.dart';
@@ -136,6 +137,23 @@ class VisitorAccessRepositoryImpl implements VisitorAccessRepository {
     final dto = await _remoteDataSource.saveVisitorPhoto(
       accessToken: accessToken,
       request: VisitorSavePhotoRequestDto.fromEntity(submission),
+    );
+    return dto.toEntity();
+  }
+
+  @override
+  Future<VisitorDeletePhotoResultEntity> deleteVisitorGalleryPhoto({
+    required int photoId,
+  }) async {
+    final session = await _authLocalDataSource.getSession();
+    final accessToken = session?.accessToken.trim() ?? '';
+    if (accessToken.isEmpty) {
+      throw Exception('Please login again to delete gallery photo.');
+    }
+
+    final dto = await _remoteDataSource.deleteVisitorGalleryPhoto(
+      accessToken: accessToken,
+      photoId: photoId,
     );
     return dto.toEntity();
   }
