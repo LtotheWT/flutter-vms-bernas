@@ -12,6 +12,7 @@ import '../pages/report_page.dart';
 import '../pages/splash_page.dart';
 import '../pages/visitor_walk_in_page.dart';
 import '../pages/visitor_check_in_page.dart';
+import '../pages/whitelist_check_page.dart';
 import '../pages/visitor_log_page.dart';
 import '../pages/employee_log_page.dart';
 import '../pages/permanent_contractor_log_page.dart';
@@ -49,6 +50,10 @@ const String visitorCheckInRouteName = 'visitor_check_in';
 const String visitorCheckInRoutePath = '/visitor/check-in';
 const String visitorCheckOutRouteName = 'visitor_check_out';
 const String visitorCheckOutRoutePath = '/visitor/check-out';
+const String whitelistCheckInRouteName = 'whitelist_check_in';
+const String whitelistCheckInRoutePath = '/whitelist/check-in';
+const String whitelistCheckOutRouteName = 'whitelist_check_out';
+const String whitelistCheckOutRoutePath = '/whitelist/check-out';
 const String permanentContractorCheckRouteName = 'permanent_contractor_check';
 const String permanentContractorCheckRoutePath =
     '/workforce/permanent-contractor-check';
@@ -112,6 +117,16 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         name: visitorCheckOutRouteName,
         path: visitorCheckOutRoutePath,
         builder: (context, state) => const VisitorCheckInPage(isCheckIn: false),
+      ),
+      GoRoute(
+        name: whitelistCheckInRouteName,
+        path: whitelistCheckInRoutePath,
+        builder: (context, state) => const WhitelistCheckPage(isCheckIn: true),
+      ),
+      GoRoute(
+        name: whitelistCheckOutRouteName,
+        path: whitelistCheckOutRoutePath,
+        builder: (context, state) => const WhitelistCheckPage(isCheckIn: false),
       ),
       GoRoute(
         name: permanentContractorCheckRouteName,

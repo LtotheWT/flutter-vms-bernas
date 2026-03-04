@@ -82,9 +82,15 @@ class HomePage extends StatelessWidget {
                   title: 'Whitelist',
                   icon: Icons.verified_user_outlined,
                   color: colorScheme.primaryContainer,
-                  children: const [
-                    _MenuTile(title: 'Whitelist Check-In'),
-                    _MenuTile(title: 'Whitelist Check-Out'),
+                  children: [
+                    _MenuTile(
+                      title: 'Whitelist Check-In',
+                      onTap: () => context.push(whitelistCheckInRoutePath),
+                    ),
+                    _MenuTile(
+                      title: 'Whitelist Check-Out',
+                      onTap: () => context.push(whitelistCheckOutRoutePath),
+                    ),
                   ],
                 ),
               ],
