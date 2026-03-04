@@ -76,7 +76,7 @@ class _PhotoPlaceholder extends StatelessWidget {
         width: size,
         child: ColoredBox(
           color: Colors.grey.shade300,
-          child: const Icon(Icons.person, size: 30, color: Colors.black54),
+          child: const Icon(Icons.photo, size: 30, color: Colors.black54),
         ),
       ),
     );
