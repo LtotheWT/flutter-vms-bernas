@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vms_bernas/domain/entities/whitelist_detail_entity.dart';
 import 'package:vms_bernas/domain/entities/whitelist_search_filter_entity.dart';
 import 'package:vms_bernas/domain/entities/whitelist_search_item_entity.dart';
+import 'package:vms_bernas/domain/entities/whitelist_submit_entity.dart';
+import 'package:vms_bernas/domain/entities/whitelist_submit_result_entity.dart';
 import 'package:vms_bernas/domain/repositories/whitelist_repository.dart';
 import 'package:vms_bernas/domain/usecases/search_whitelist_usecase.dart';
 import 'package:vms_bernas/presentation/state/whitelist_check_providers.dart';
@@ -41,6 +43,22 @@ class _FakeWhitelistRepository implements WhitelistRepository {
   Future<WhitelistDetailEntity> getWhitelistDetail({
     required String entity,
     required String vehiclePlate,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<WhitelistSubmitResultEntity> submitWhitelistCheckIn({
+    required WhitelistSubmitEntity submission,
+    required String idempotencyKey,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<WhitelistSubmitResultEntity> submitWhitelistCheckOut({
+    required WhitelistSubmitEntity submission,
+    required String idempotencyKey,
   }) {
     throw UnimplementedError();
   }

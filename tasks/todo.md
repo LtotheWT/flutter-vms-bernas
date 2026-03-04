@@ -53,3 +53,22 @@
 - Verification:
   - Targeted `flutter analyze` passed for all touched whitelist detail/list files.
   - Targeted whitelist `flutter test` suite passed (data/domain/state/page coverage).
+
+## 2026-03-05 - Whitelist detail submit integration (check-in/check-out)
+- [x] Add whitelist submit domain entities and use cases.
+- [x] Extend whitelist repository interface and implementation for submit check-in/check-out with idempotency support.
+- [x] Add whitelist submit request/response DTOs.
+- [x] Extend whitelist remote datasource for `/wmsws/Whitelist/check-in` and `/wmsws/Whitelist/check-out`.
+- [x] Add whitelist detail controller submit flow with session validation and stable idempotency key lifecycle.
+- [x] Update whitelist detail page confirm action to call real submit API with mode-based label and snackbar.
+- [x] Add/extend tests for DTOs, datasource, repository, usecases, providers, and details page submit behavior.
+- [x] Run verification (`flutter analyze` + targeted `flutter test` suites).
+
+## Review (Whitelist Detail Submit)
+- Confirm on whitelist details now calls real submit endpoint by mode (`I` -> check-in, `O` -> check-out).
+- Payload uses session fields (`entity`, `defaultSite`, `defaultGate`, `username`) plus detail `vehiclePlate`.
+- Idempotency key is reused for retries of the same payload signature and reset when signature changes.
+- Success/failure feedback is shown with snackbar while staying on the details page.
+- Verification:
+  - `flutter analyze lib/presentation/pages/whitelist_detail_page.dart lib/presentation/state/whitelist_detail_providers.dart lib/data/datasources/whitelist_remote_data_source.dart lib/data/repositories/whitelist_repository_impl.dart lib/domain/repositories/whitelist_repository.dart`
+  - `flutter test test/data/models/whitelist_submit_request_dto_test.dart test/data/models/whitelist_submit_response_dto_test.dart test/domain/usecases/submit_whitelist_check_in_usecase_test.dart test/domain/usecases/submit_whitelist_check_out_usecase_test.dart test/data/datasources/whitelist_remote_data_source_test.dart test/data/repositories/whitelist_repository_impl_test.dart test/presentation/state/whitelist_detail_providers_test.dart test/presentation/pages/whitelist_detail_page_test.dart test/presentation/pages/whitelist_check_page_test.dart test/presentation/state/whitelist_check_providers_test.dart test/domain/usecases/search_whitelist_usecase_test.dart test/domain/usecases/get_whitelist_detail_usecase_test.dart`

@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vms_bernas/data/datasources/whitelist_remote_data_source.dart';
 import 'package:vms_bernas/data/models/whitelist_search_request_dto.dart';
+import 'package:vms_bernas/data/models/whitelist_submit_request_dto.dart';
 
 void main() {
   test('posts to whitelist search endpoint with payload', () async {
@@ -222,4 +223,183 @@ void main() {
       ),
     );
   });
+
+  test('submits whitelist check-in with idempotency header', () async {
+    final dio = Dio();
+    Uri? capturedUri;
+    dynamic capturedBody;
+    String? capturedIdempotencyKey;
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          capturedUri = options.uri;
+          capturedBody = options.data;
+          capturedIdempotencyKey = options.headers['Idempotency-Key']
+              ?.toString();
+          handler.resolve(
+            Response<dynamic>(
+              requestOptions: options,
+              data: {
+                'Status': true,
+                'Message': 'Whitelist checked IN successfully.',
+                'Details': null,
+              },
+            ),
+          );
+        },
+      ),
+    );
+
+    final dataSource = WhitelistRemoteDataSource(dio);
+    final result = await dataSource.submitWhitelistCheckIn(
+      accessToken: 'token',
+      idempotencyKey: 'abc-123',
+      request: const WhitelistSubmitRequestDto(
+        entity: 'AGYTEK',
+        site: 'FACTORY1',
+        gate: 'F1_A',
+        vehiclePlate: 'RYAN1234',
+        createdBy: 'Ryan',
+      ),
+    );
+
+    expect(capturedUri.toString(), contains('/wmsws/Whitelist/check-in'));
+    expect(capturedIdempotencyKey, 'abc-123');
+    expect(capturedBody, {
+      'Entity': 'AGYTEK',
+      'Site': 'FACTORY1',
+      'Gate': 'F1_A',
+      'VehiclePlate': 'RYAN1234',
+      'CreatedBy': 'Ryan',
+    });
+    expect(result.status, isTrue);
+  });
+
+  test('submits whitelist check-out with idempotency header', () async {
+    final dio = Dio();
+    Uri? capturedUri;
+    String? capturedIdempotencyKey;
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          capturedUri = options.uri;
+          capturedIdempotencyKey = options.headers['Idempotency-Key']
+              ?.toString();
+          handler.resolve(
+            Response<dynamic>(
+              requestOptions: options,
+              data: {
+                'Status': true,
+                'Message': 'Whitelist checked OUT successfully.',
+                'Details': null,
+              },
+            ),
+          );
+        },
+      ),
+    );
+
+    final dataSource = WhitelistRemoteDataSource(dio);
+    final result = await dataSource.submitWhitelistCheckOut(
+      accessToken: 'token',
+      idempotencyKey: 'def-456',
+      request: const WhitelistSubmitRequestDto(
+        entity: 'AGYTEK',
+        site: 'FACTORY1',
+        gate: 'F1_A',
+        vehiclePlate: 'RYAN1234',
+        createdBy: 'Ryan',
+      ),
+    );
+
+    expect(capturedUri.toString(), contains('/wmsws/Whitelist/check-out'));
+    expect(capturedIdempotencyKey, 'def-456');
+    expect(result.status, isTrue);
+  });
+
+  test('submit maps auth failure for check-in', () async {
+    final dio = Dio();
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          handler.reject(
+            DioException(
+              requestOptions: options,
+              response: Response<dynamic>(
+                requestOptions: options,
+                statusCode: 401,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+    final dataSource = WhitelistRemoteDataSource(dio);
+
+    expect(
+      () => dataSource.submitWhitelistCheckIn(
+        accessToken: 'token',
+        idempotencyKey: 'id',
+        request: const WhitelistSubmitRequestDto(
+          entity: 'AGYTEK',
+          site: 'FACTORY1',
+          gate: 'F1_A',
+          vehiclePlate: 'RYAN1234',
+          createdBy: 'Ryan',
+        ),
+      ),
+      throwsA(
+        isA<WhitelistException>().having(
+          (e) => e.message,
+          'message',
+          'Please login again to submit whitelist check-in.',
+        ),
+      ),
+    );
+  });
+
+  test(
+    'submit check-out propagates backend message on failed status',
+    () async {
+      final dio = Dio();
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            handler.resolve(
+              Response<dynamic>(
+                requestOptions: options,
+                data: {
+                  'Status': false,
+                  'Message': 'Vehicle already checked OUT.',
+                  'Details': null,
+                },
+              ),
+            );
+          },
+        ),
+      );
+      final dataSource = WhitelistRemoteDataSource(dio);
+
+      expect(
+        () => dataSource.submitWhitelistCheckOut(
+          accessToken: 'token',
+          idempotencyKey: 'id',
+          request: const WhitelistSubmitRequestDto(
+            entity: 'AGYTEK',
+            site: 'FACTORY1',
+            gate: 'F1_A',
+            vehiclePlate: 'RYAN1234',
+            createdBy: 'Ryan',
+          ),
+        ),
+        throwsA(
+          isA<WhitelistException>().having(
+            (e) => e.message,
+            'message',
+            'Vehicle already checked OUT.',
+          ),
+        ),
+      );
+    },
+  );
 }

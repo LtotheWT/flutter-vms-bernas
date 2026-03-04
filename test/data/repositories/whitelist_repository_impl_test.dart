@@ -7,8 +7,11 @@ import 'package:vms_bernas/data/models/auth_session_dto.dart';
 import 'package:vms_bernas/data/models/whitelist_detail_response_dto.dart';
 import 'package:vms_bernas/data/models/whitelist_search_item_dto.dart';
 import 'package:vms_bernas/data/models/whitelist_search_request_dto.dart';
+import 'package:vms_bernas/data/models/whitelist_submit_request_dto.dart';
+import 'package:vms_bernas/data/models/whitelist_submit_response_dto.dart';
 import 'package:vms_bernas/data/repositories/whitelist_repository_impl.dart';
 import 'package:vms_bernas/domain/entities/whitelist_search_filter_entity.dart';
+import 'package:vms_bernas/domain/entities/whitelist_submit_entity.dart';
 
 class _FakeAuthLocalDataSource extends AuthLocalDataSource {
   _FakeAuthLocalDataSource(this._session) : super(const FlutterSecureStorage());
@@ -26,6 +29,8 @@ class _FakeWhitelistRemoteDataSource extends WhitelistRemoteDataSource {
   WhitelistSearchRequestDto? capturedRequest;
   String? capturedDetailEntity;
   String? capturedDetailVehiclePlate;
+  String? capturedIdempotencyKey;
+  WhitelistSubmitRequestDto? capturedSubmitRequest;
 
   @override
   Future<List<WhitelistSearchItemDto>> searchWhitelist({
@@ -72,6 +77,36 @@ class _FakeWhitelistRemoteDataSource extends WhitelistRemoteDataSource {
         updateBy: 'admin',
         updateDate: '2026-01-13 11:46:40',
       ),
+    );
+  }
+
+  @override
+  Future<WhitelistSubmitResponseDto> submitWhitelistCheckIn({
+    required String accessToken,
+    required String idempotencyKey,
+    required WhitelistSubmitRequestDto request,
+  }) async {
+    capturedToken = accessToken;
+    capturedIdempotencyKey = idempotencyKey;
+    capturedSubmitRequest = request;
+    return const WhitelistSubmitResponseDto(
+      status: true,
+      message: 'Whitelist checked IN successfully.',
+    );
+  }
+
+  @override
+  Future<WhitelistSubmitResponseDto> submitWhitelistCheckOut({
+    required String accessToken,
+    required String idempotencyKey,
+    required WhitelistSubmitRequestDto request,
+  }) async {
+    capturedToken = accessToken;
+    capturedIdempotencyKey = idempotencyKey;
+    capturedSubmitRequest = request;
+    return const WhitelistSubmitResponseDto(
+      status: true,
+      message: 'Whitelist checked OUT successfully.',
     );
   }
 }
@@ -149,5 +184,92 @@ void main() {
     expect(remote.capturedDetailVehiclePlate, 'RYAN1234');
     expect(detail.name, 'Ryan Name');
     expect(detail.status, 'ACTIVE');
+  });
+
+  test('submit check-in maps request and response', () async {
+    final remote = _FakeWhitelistRemoteDataSource();
+    final repository = WhitelistRepositoryImpl(
+      remote,
+      _FakeAuthLocalDataSource(
+        const AuthSessionDto(
+          username: 'Ryan',
+          fullname: 'Ryan',
+          entity: 'AGYTEK',
+          accessToken: 'token123',
+          defaultSite: 'FACTORY1',
+          defaultGate: 'F1_A',
+        ),
+      ),
+    );
+
+    final result = await repository.submitWhitelistCheckIn(
+      submission: const WhitelistSubmitEntity(
+        entity: 'AGYTEK',
+        site: 'FACTORY1',
+        gate: 'F1_A',
+        vehiclePlate: 'RYAN1234',
+        createdBy: 'Ryan',
+      ),
+      idempotencyKey: 'idem-1',
+    );
+
+    expect(remote.capturedToken, 'token123');
+    expect(remote.capturedIdempotencyKey, 'idem-1');
+    expect(remote.capturedSubmitRequest?.vehiclePlate, 'RYAN1234');
+    expect(result.status, isTrue);
+  });
+
+  test('submit check-out throws when token missing', () async {
+    final repository = WhitelistRepositoryImpl(
+      _FakeWhitelistRemoteDataSource(),
+      _FakeAuthLocalDataSource(null),
+    );
+
+    expect(
+      () => repository.submitWhitelistCheckOut(
+        submission: const WhitelistSubmitEntity(
+          entity: 'AGYTEK',
+          site: 'FACTORY1',
+          gate: 'F1_A',
+          vehiclePlate: 'RYAN1234',
+          createdBy: 'Ryan',
+        ),
+        idempotencyKey: 'idem-2',
+      ),
+      throwsA(isA<Exception>()),
+    );
+  });
+
+  test('submit check-out maps request and response', () async {
+    final remote = _FakeWhitelistRemoteDataSource();
+    final repository = WhitelistRepositoryImpl(
+      remote,
+      _FakeAuthLocalDataSource(
+        const AuthSessionDto(
+          username: 'Ryan',
+          fullname: 'Ryan',
+          entity: 'AGYTEK',
+          accessToken: 'token123',
+          defaultSite: 'FACTORY1',
+          defaultGate: 'F1_A',
+        ),
+      ),
+    );
+
+    final result = await repository.submitWhitelistCheckOut(
+      submission: const WhitelistSubmitEntity(
+        entity: 'AGYTEK',
+        site: 'FACTORY1',
+        gate: 'F1_A',
+        vehiclePlate: 'RYAN1234',
+        createdBy: 'Ryan',
+      ),
+      idempotencyKey: 'idem-3',
+    );
+
+    expect(remote.capturedToken, 'token123');
+    expect(remote.capturedIdempotencyKey, 'idem-3');
+    expect(remote.capturedSubmitRequest?.vehiclePlate, 'RYAN1234');
+    expect(result.status, isTrue);
   });
 }

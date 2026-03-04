@@ -54,35 +54,47 @@ class _WhitelistDetailPageState extends ConsumerState<WhitelistDetailPage> {
     return text.isEmpty ? '-' : text;
   }
 
-  void _onConfirm() {
-    final message = _normalizedCheckType == 'O'
-        ? 'Check-Out API is not available yet.'
-        : 'Check-In API is not available yet.';
-    showAppSnackBar(context, message);
-  }
+  String get _submitSuccessFallback => _normalizedCheckType == 'O'
+      ? 'Whitelist checked OUT successfully.'
+      : 'Whitelist checked IN successfully.';
 
-  Future<void> _retry() {
-    return ref
+  Future<void> _onConfirm() async {
+    final result = await ref
         .read(whitelistDetailControllerProvider.notifier)
-        .load(
-          entity: widget.args.entity,
-          vehiclePlate: widget.args.vehiclePlate,
-          checkType: widget.args.checkType,
-        );
+        .submit();
+    if (!mounted) {
+      return;
+    }
+    final message = result.message.trim().isEmpty
+        ? (result.status
+              ? _submitSuccessFallback
+              : 'Failed to submit whitelist.')
+        : result.message.trim();
+    showAppSnackBar(context, message);
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(whitelistDetailControllerProvider);
     final detail = state.detail;
+    final canSubmit = detail != null && !state.isLoading && !state.isSubmitting;
+    final submitLabel = _normalizedCheckType == 'O'
+        ? 'Confirm Check-Out'
+        : 'Confirm Check-In';
 
     return Scaffold(
       appBar: AppBar(title: const Text('Whitelist Details')),
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
         child: AppFilledButton(
-          onPressed: _onConfirm,
-          child: const Text('Confirm'),
+          onPressed: canSubmit ? _onConfirm : null,
+          child: state.isSubmitting
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(submitLabel),
         ),
       ),
       body: ListView(
@@ -94,28 +106,6 @@ class _WhitelistDetailPageState extends ConsumerState<WhitelistDetailPage> {
               child: Center(child: CircularProgressIndicator()),
             )
           else ...[
-            if (state.errorMessage?.trim().isNotEmpty == true)
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        state.errorMessage!,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      AppFilledButton(
-                        onPressed: _retry,
-                        child: const Text('Retry'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(12),

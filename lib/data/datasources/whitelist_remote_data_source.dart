@@ -4,6 +4,8 @@ import '../models/whitelist_detail_response_dto.dart';
 import '../models/whitelist_search_item_dto.dart';
 import '../models/whitelist_search_request_dto.dart';
 import '../models/whitelist_search_response_dto.dart';
+import '../models/whitelist_submit_request_dto.dart';
+import '../models/whitelist_submit_response_dto.dart';
 import 'network/remote_parsers.dart';
 
 class WhitelistRemoteDataSource {
@@ -129,6 +131,93 @@ class WhitelistRemoteDataSource {
     }
   }
 
+  Future<WhitelistSubmitResponseDto> submitWhitelistCheckIn({
+    required String accessToken,
+    required String idempotencyKey,
+    required WhitelistSubmitRequestDto request,
+  }) {
+    return _submitWhitelist(
+      accessToken: accessToken,
+      idempotencyKey: idempotencyKey,
+      request: request,
+      endpoint: '/wmsws/Whitelist/check-in',
+      unauthorizedMessage: 'Please login again to submit whitelist check-in.',
+      connectivityMessage:
+          'Unable to submit whitelist check-in. Please try again.',
+      fallbackMessage: 'Failed to submit whitelist check-in. Please try again.',
+    );
+  }
+
+  Future<WhitelistSubmitResponseDto> submitWhitelistCheckOut({
+    required String accessToken,
+    required String idempotencyKey,
+    required WhitelistSubmitRequestDto request,
+  }) {
+    return _submitWhitelist(
+      accessToken: accessToken,
+      idempotencyKey: idempotencyKey,
+      request: request,
+      endpoint: '/wmsws/Whitelist/check-out',
+      unauthorizedMessage: 'Please login again to submit whitelist check-out.',
+      connectivityMessage:
+          'Unable to submit whitelist check-out. Please try again.',
+      fallbackMessage:
+          'Failed to submit whitelist check-out. Please try again.',
+    );
+  }
+
+  Future<WhitelistSubmitResponseDto> _submitWhitelist({
+    required String accessToken,
+    required String idempotencyKey,
+    required WhitelistSubmitRequestDto request,
+    required String endpoint,
+    required String unauthorizedMessage,
+    required String connectivityMessage,
+    required String fallbackMessage,
+  }) async {
+    try {
+      final response = await _dio.post<dynamic>(
+        endpoint,
+        data: request.toJson(),
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $accessToken',
+            'accept': '*/*',
+            'Idempotency-Key': idempotencyKey,
+          },
+        ),
+      );
+
+      final dto = WhitelistSubmitResponseDto.fromJson(
+        parseJsonMap(response.data),
+      );
+      if (!dto.status) {
+        throw WhitelistException(
+          dto.message.isNotEmpty ? dto.message : fallbackMessage,
+        );
+      }
+      return dto;
+    } on DioException catch (error) {
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 401 || statusCode == 403) {
+        throw WhitelistException(unauthorizedMessage);
+      }
+
+      final backendMessage = _extractSubmitBackendMessage(error.response?.data);
+      if (backendMessage != null) {
+        throw WhitelistException(backendMessage);
+      }
+
+      if (isConnectivityIssue(error)) {
+        throw WhitelistException(connectivityMessage);
+      }
+
+      throw WhitelistException(fallbackMessage);
+    } on FormatException {
+      throw WhitelistException(fallbackMessage);
+    }
+  }
+
   String? _extractBackendMessage(dynamic data) {
     try {
       final dto = WhitelistSearchResponseDto.fromJson(parseJsonMap(data));
@@ -147,6 +236,19 @@ class WhitelistRemoteDataSource {
       final dto = WhitelistDetailResponseDto.fromJson(parseJsonMap(data));
       final message = dto.message?.trim();
       if (message != null && message.isNotEmpty) {
+        return message;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String? _extractSubmitBackendMessage(dynamic data) {
+    try {
+      final dto = WhitelistSubmitResponseDto.fromJson(parseJsonMap(data));
+      final message = dto.message.trim();
+      if (message.isNotEmpty) {
         return message;
       }
       return null;
