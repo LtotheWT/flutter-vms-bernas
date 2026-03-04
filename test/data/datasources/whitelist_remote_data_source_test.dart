@@ -141,4 +141,85 @@ void main() {
       ),
     );
   });
+
+  test('gets whitelist detail with encoded path', () async {
+    final dio = Dio();
+    Uri? capturedUri;
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          capturedUri = options.uri;
+          handler.resolve(
+            Response<dynamic>(
+              requestOptions: options,
+              data: {
+                'Status': true,
+                'Message': 'ok',
+                'Details': {
+                  'ENTITY': 'AGYTEK',
+                  'WL_VEHICLE_PLATE': 'www9233G',
+                  'WL_IC': '123456789012',
+                  'WL_NAME': 'John',
+                  'STATUS': 'A',
+                  'CREATE_BY': 'admin',
+                  'CREATE_DATE': '2025-12-03 10:23:10',
+                  'UPDATE_BY': 'admin',
+                  'UPDATE_DATE': '2025-12-03 10:48:15',
+                },
+              },
+            ),
+          );
+        },
+      ),
+    );
+
+    final dataSource = WhitelistRemoteDataSource(dio);
+    final result = await dataSource.getWhitelistDetail(
+      accessToken: 'token',
+      entity: 'AGYTEK',
+      vehiclePlate: 'www9233G',
+    );
+
+    expect(
+      capturedUri.toString(),
+      contains('/wmsws/Whitelist/AGYTEK/www9233G'),
+    );
+    expect(result.status, isTrue);
+    expect(result.details?.status, 'ACTIVE');
+  });
+
+  test('detail endpoint maps auth failure', () async {
+    final dio = Dio();
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          handler.reject(
+            DioException(
+              requestOptions: options,
+              response: Response<dynamic>(
+                requestOptions: options,
+                statusCode: 403,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+
+    final dataSource = WhitelistRemoteDataSource(dio);
+    expect(
+      () => dataSource.getWhitelistDetail(
+        accessToken: 'token',
+        entity: 'AGYTEK',
+        vehiclePlate: 'www9233G',
+      ),
+      throwsA(
+        isA<WhitelistException>().having(
+          (e) => e.message,
+          'message',
+          'Please login again to load whitelist detail.',
+        ),
+      ),
+    );
+  });
 }

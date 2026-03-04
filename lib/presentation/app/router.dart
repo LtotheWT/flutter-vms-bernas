@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -13,6 +13,7 @@ import '../pages/splash_page.dart';
 import '../pages/visitor_walk_in_page.dart';
 import '../pages/visitor_check_in_page.dart';
 import '../pages/whitelist_check_page.dart';
+import '../pages/whitelist_detail_page.dart';
 import '../pages/visitor_log_page.dart';
 import '../pages/employee_log_page.dart';
 import '../pages/permanent_contractor_log_page.dart';
@@ -54,6 +55,8 @@ const String whitelistCheckInRouteName = 'whitelist_check_in';
 const String whitelistCheckInRoutePath = '/whitelist/check-in';
 const String whitelistCheckOutRouteName = 'whitelist_check_out';
 const String whitelistCheckOutRoutePath = '/whitelist/check-out';
+const String whitelistDetailRouteName = 'whitelist_detail';
+const String whitelistDetailRoutePath = '/whitelist/detail';
 const String permanentContractorCheckRouteName = 'permanent_contractor_check';
 const String permanentContractorCheckRoutePath =
     '/workforce/permanent-contractor-check';
@@ -127,6 +130,19 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         name: whitelistCheckOutRouteName,
         path: whitelistCheckOutRoutePath,
         builder: (context, state) => const WhitelistCheckPage(isCheckIn: false),
+      ),
+      GoRoute(
+        name: whitelistDetailRouteName,
+        path: whitelistDetailRoutePath,
+        builder: (context, state) {
+          final args = state.extra as WhitelistDetailRouteArgs?;
+          if (args == null) {
+            return const Scaffold(
+              body: Center(child: Text('Whitelist detail arguments missing.')),
+            );
+          }
+          return WhitelistDetailPage(args: args);
+        },
       ),
       GoRoute(
         name: permanentContractorCheckRouteName,

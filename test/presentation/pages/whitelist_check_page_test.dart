@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:vms_bernas/domain/entities/whitelist_detail_entity.dart';
 import 'package:vms_bernas/domain/entities/whitelist_search_filter_entity.dart';
 import 'package:vms_bernas/domain/entities/whitelist_search_item_entity.dart';
 import 'package:vms_bernas/domain/repositories/whitelist_repository.dart';
 import 'package:vms_bernas/domain/usecases/search_whitelist_usecase.dart';
+import 'package:vms_bernas/presentation/app/router.dart';
 import 'package:vms_bernas/presentation/pages/whitelist_check_page.dart';
+import 'package:vms_bernas/presentation/pages/whitelist_detail_page.dart';
 import 'package:vms_bernas/presentation/state/entity_option.dart';
 import 'package:vms_bernas/presentation/state/reference_providers.dart';
 import 'package:vms_bernas/presentation/state/whitelist_check_providers.dart';
@@ -42,12 +46,50 @@ class _FakeWhitelistRepository implements WhitelistRepository {
     }
     return items;
   }
+
+  @override
+  Future<WhitelistDetailEntity> getWhitelistDetail({
+    required String entity,
+    required String vehiclePlate,
+  }) async {
+    return WhitelistDetailEntity(
+      entity: entity,
+      vehiclePlate: vehiclePlate,
+      ic: 'IC',
+      name: 'NAME',
+      status: 'ACTIVE',
+      createBy: 'admin',
+      createDate: '2026-01-13 11:46:40',
+      updateBy: 'admin',
+      updateDate: '2026-01-13 11:46:40',
+    );
+  }
 }
 
 Widget _buildApp({
   required _FakeWhitelistRepository repository,
   required bool isCheckIn,
+  void Function(WhitelistDetailRouteArgs args)? onDetailOpened,
 }) {
+  final router = GoRouter(
+    initialLocation: '/',
+    routes: [
+      GoRoute(
+        path: '/',
+        builder: (context, state) => WhitelistCheckPage(isCheckIn: isCheckIn),
+      ),
+      GoRoute(
+        name: whitelistDetailRouteName,
+        path: whitelistDetailRoutePath,
+        builder: (context, state) {
+          final args = state.extra as WhitelistDetailRouteArgs;
+          onDetailOpened?.call(args);
+          return const Scaffold(body: Text('Detail Route Opened'));
+        },
+      ),
+    ],
+  );
+
   return ProviderScope(
     overrides: [
       searchWhitelistUseCaseProvider.overrideWithValue(
@@ -60,7 +102,7 @@ Widget _buildApp({
         ],
       ),
     ],
-    child: MaterialApp(home: WhitelistCheckPage(isCheckIn: isCheckIn)),
+    child: MaterialApp.router(routerConfig: router),
   );
 }
 
@@ -178,6 +220,31 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('CAR222'), findsNothing);
+  });
+
+  testWidgets('row tap navigates to detail route with args', (tester) async {
+    final repository = _FakeWhitelistRepository();
+    WhitelistDetailRouteArgs? capturedArgs;
+
+    await tester.pumpWidget(
+      _buildApp(
+        repository: repository,
+        isCheckIn: true,
+        onDetailOpened: (args) => capturedArgs = args,
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(find.byType(ExpansionTile), findsNothing);
+    await tester.tap(find.text('Details').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Detail Route Opened'), findsOneWidget);
+    expect(capturedArgs, isNotNull);
+    expect(capturedArgs?.entity, 'AGYTEK');
+    expect(capturedArgs?.vehiclePlate, 'RYAN1234');
+    expect(capturedArgs?.checkType, 'I');
   });
 
   testWidgets('does not show select-all bulk action bar', (tester) async {

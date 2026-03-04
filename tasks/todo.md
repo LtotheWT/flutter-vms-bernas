@@ -34,3 +34,22 @@
 - Verification:
   - `flutter analyze` passed for all touched whitelist files.
   - `flutter test` passed for new whitelist model/datasource/repository/usecase/state/page tests.
+
+## 2026-03-05 - Whitelist detail navigation refactor
+- [x] Add whitelist detail domain entity and repository/usecase contract.
+- [x] Add whitelist detail response DTO and remote datasource GET method for `/wmsws/Whitelist/{entity}/{vehiclePlate}`.
+- [x] Extend whitelist repository implementation with detail retrieval and token guard.
+- [x] Add whitelist detail providers/controller for fetch lifecycle.
+- [x] Add dedicated whitelist detail page with required fields and placeholder confirm action.
+- [x] Refactor whitelist list cards from `ExpansionTile` to tappable cards navigating to detail page.
+- [x] Add router detail route with typed `state.extra` args and hook list navigation.
+- [x] Extend/add tests for detail DTO/datasource/repository/usecase/providers/pages and rerun verification.
+
+## Review (Whitelist Detail)
+- Whitelist list rows now open a dedicated details screen; expansion interaction is removed.
+- Details screen always fetches latest record via detail API on open.
+- Confirm button is visible and enabled for both modes, showing mode-specific placeholder snackbar until submit API is provided.
+- Row tap guards missing identifiers (`entity`/`vehiclePlate`) and shows a brief snackbar instead of navigating.
+- Verification:
+  - Targeted `flutter analyze` passed for all touched whitelist detail/list files.
+  - Targeted whitelist `flutter test` suite passed (data/domain/state/page coverage).

@@ -1,3 +1,4 @@
+import '../../domain/entities/whitelist_detail_entity.dart';
 import '../../domain/entities/whitelist_search_filter_entity.dart';
 import '../../domain/entities/whitelist_search_item_entity.dart';
 import '../../domain/repositories/whitelist_repository.dart';
@@ -27,5 +28,28 @@ class WhitelistRepositoryImpl implements WhitelistRepository {
       request: requestDto,
     );
     return dtos.map((dto) => dto.toEntity()).toList(growable: false);
+  }
+
+  @override
+  Future<WhitelistDetailEntity> getWhitelistDetail({
+    required String entity,
+    required String vehiclePlate,
+  }) async {
+    final session = await _authLocalDataSource.getSession();
+    final accessToken = session?.accessToken.trim() ?? '';
+    if (accessToken.isEmpty) {
+      throw Exception('Please login again to load whitelist detail.');
+    }
+
+    final response = await _remoteDataSource.getWhitelistDetail(
+      accessToken: accessToken,
+      entity: entity,
+      vehiclePlate: vehiclePlate,
+    );
+    final detail = response.details;
+    if (detail == null) {
+      throw Exception('Failed to load whitelist detail.');
+    }
+    return detail.toEntity();
   }
 }

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../models/whitelist_detail_response_dto.dart';
 import '../models/whitelist_search_item_dto.dart';
 import '../models/whitelist_search_request_dto.dart';
 import '../models/whitelist_search_response_dto.dart';
@@ -68,9 +69,82 @@ class WhitelistRemoteDataSource {
     }
   }
 
+  Future<WhitelistDetailResponseDto> getWhitelistDetail({
+    required String accessToken,
+    required String entity,
+    required String vehiclePlate,
+  }) async {
+    final encodedEntity = Uri.encodeComponent(entity.trim());
+    final encodedVehiclePlate = Uri.encodeComponent(vehiclePlate.trim());
+
+    try {
+      final response = await _dio.get<dynamic>(
+        '/wmsws/Whitelist/$encodedEntity/$encodedVehiclePlate',
+        options: Options(
+          headers: {'Authorization': 'Bearer $accessToken', 'accept': '*/*'},
+        ),
+      );
+
+      final root = parseJsonMap(response.data);
+      final dto = WhitelistDetailResponseDto.fromJson(root);
+      if (!dto.status) {
+        throw WhitelistException(
+          dto.message?.trim().isNotEmpty == true
+              ? dto.message!.trim()
+              : 'Failed to load whitelist detail. Please try again.',
+        );
+      }
+      if (dto.details == null) {
+        throw WhitelistException(
+          'Failed to load whitelist detail. Please try again.',
+        );
+      }
+      return dto;
+    } on DioException catch (error) {
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 401 || statusCode == 403) {
+        throw WhitelistException(
+          'Please login again to load whitelist detail.',
+        );
+      }
+
+      final backendMessage = _extractDetailBackendMessage(error.response?.data);
+      if (backendMessage != null) {
+        throw WhitelistException(backendMessage);
+      }
+
+      if (isConnectivityIssue(error)) {
+        throw WhitelistException(
+          'Unable to load whitelist detail. Please try again.',
+        );
+      }
+
+      throw WhitelistException(
+        'Failed to load whitelist detail. Please try again.',
+      );
+    } on FormatException {
+      throw WhitelistException(
+        'Failed to load whitelist detail. Please try again.',
+      );
+    }
+  }
+
   String? _extractBackendMessage(dynamic data) {
     try {
       final dto = WhitelistSearchResponseDto.fromJson(parseJsonMap(data));
+      final message = dto.message?.trim();
+      if (message != null && message.isNotEmpty) {
+        return message;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String? _extractDetailBackendMessage(dynamic data) {
+    try {
+      final dto = WhitelistDetailResponseDto.fromJson(parseJsonMap(data));
       final message = dto.message?.trim();
       if (message != null && message.isNotEmpty) {
         return message;

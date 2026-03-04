@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../core/date_time_formats.dart';
 import '../../domain/entities/whitelist_search_filter_entity.dart';
 import '../../domain/entities/whitelist_search_item_entity.dart';
+import '../app/router.dart';
+import '../pages/whitelist_detail_page.dart';
 import '../state/async_option_helpers.dart';
 import '../state/entity_option.dart';
 import '../state/reference_providers.dart';
 import '../state/whitelist_check_providers.dart';
 import '../widgets/app_filled_button.dart';
+import '../widgets/app_snackbar.dart';
 import '../widgets/info_row.dart';
 import '../widgets/labeled_form_rows.dart';
 import '../widgets/searchable_option_sheet.dart';
@@ -230,8 +233,29 @@ class _WhitelistCheckPageState extends ConsumerState<WhitelistCheckPage> {
                   : ListView.builder(
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                       itemCount: state.items.length,
-                      itemBuilder: (context, index) =>
-                          _WhitelistCard(item: state.items[index]),
+                      itemBuilder: (context, index) => _WhitelistCard(
+                        item: state.items[index],
+                        checkType: _currentType,
+                        onOpenDetail: (item) {
+                          final entity = item.entity.trim();
+                          final vehiclePlate = item.vehiclePlate.trim();
+                          if (entity.isEmpty || vehiclePlate.isEmpty) {
+                            showAppSnackBar(
+                              context,
+                              'Missing entity or vehicle plate for detail.',
+                            );
+                            return;
+                          }
+                          context.pushNamed(
+                            whitelistDetailRouteName,
+                            extra: WhitelistDetailRouteArgs(
+                              entity: entity,
+                              vehiclePlate: vehiclePlate,
+                              checkType: _currentType,
+                            ),
+                          );
+                        },
+                      ),
                     ),
             ),
           ],
@@ -242,82 +266,72 @@ class _WhitelistCheckPageState extends ConsumerState<WhitelistCheckPage> {
 }
 
 class _WhitelistCard extends StatelessWidget {
-  const _WhitelistCard({required this.item});
+  const _WhitelistCard({
+    required this.item,
+    required this.checkType,
+    required this.onOpenDetail,
+  });
 
   final WhitelistSearchItemEntity item;
+  final String checkType;
+  final ValueChanged<WhitelistSearchItemEntity> onOpenDetail;
 
   String _displayOrDash(String value) {
     final text = value.trim();
     return text.isEmpty ? '-' : text;
   }
 
-  String _formatDateTime(String value) {
-    final text = value.trim();
-    if (text.isEmpty) {
-      return '-';
-    }
-
-    final parsed = DateTime.tryParse(text.replaceFirst(' ', 'T'));
-    if (parsed == null) {
-      return text;
-    }
-    return invitationDateTimeDisplayFormat.format(parsed);
-  }
-
   @override
   Widget build(BuildContext context) {
+    final isOpenable =
+        item.entity.trim().isNotEmpty && item.vehiclePlate.trim().isNotEmpty;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      child: ExpansionTile(
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                _displayOrDash(item.ic),
-                style: Theme.of(
-                  context,
-                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-              ),
-            ),
-            const SizedBox(width: 8),
-            WhitelistStatusBadge(statusCode: item.status),
-          ],
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 6),
-            InfoRow(
-              label: 'Vehicle Plate',
-              value: _displayOrDash(item.vehiclePlate),
-            ),
-          ],
-        ),
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      child: InkWell(
+        onTap: () => onOpenDetail(item),
+        borderRadius: BorderRadius.circular(12),
+        child: Opacity(
+          opacity: isOpenable ? 1 : 0.6,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _displayOrDash(item.name.isEmpty ? item.ic : item.name),
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    WhitelistStatusBadge(statusCode: item.status),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.chevron_right),
+                  ],
+                ),
+                const SizedBox(height: 8),
                 InfoRow(
-                  label: 'Create By',
-                  value: _displayOrDash(item.createBy),
+                  label: 'Check Type',
+                  value: checkType == 'O' ? 'Out' : 'In',
                 ),
                 InfoRow(
-                  label: 'Create Date',
-                  value: _formatDateTime(item.createDate),
+                  label: 'Vehicle Plate',
+                  value: _displayOrDash(item.vehiclePlate),
                 ),
+                InfoRow(label: 'IC', value: _displayOrDash(item.ic)),
                 InfoRow(
-                  label: 'Update By',
-                  value: _displayOrDash(item.updateBy),
-                ),
-                InfoRow(
-                  label: 'Update Date',
-                  value: _formatDateTime(item.updateDate),
+                  label: 'View',
+                  value: isOpenable ? 'Details' : 'Unavailable',
                 ),
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }

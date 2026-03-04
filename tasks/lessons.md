@@ -9,3 +9,7 @@
 ## 2026-03-04
 - If requirement says "in-page only", avoid adding modal behavior even as temporary UX; wire existing action buttons (e.g., History) to the in-page section directly.
 - For new Riverpod state changes, default to latest `NotifierProvider`/`AsyncNotifierProvider` APIs and avoid `legacy.dart` imports unless explicitly justified.
+
+## 2026-03-05
+- If the primary action is "open details then act", do not force `ExpansionTile`; use direct row navigation and keep details/actions on a dedicated page.
+- When list item taps depend on identifiers, validate identifiers at tap time and fail with concise snackbar rather than navigating to a broken screen.
