@@ -6,6 +6,7 @@ import '../../domain/entities/permanent_contractor_submit_entity.dart';
 import '../../domain/entities/permanent_contractor_submit_result_entity.dart';
 import '../../domain/entities/ref_personel_entity.dart';
 import '../../domain/entities/ref_visitor_type_entity.dart';
+import '../../domain/entities/dashboard_summary_entity.dart';
 import '../../domain/repositories/reference_repository.dart';
 import 'dart:typed_data';
 import '../datasources/auth_local_data_source.dart';
@@ -80,6 +81,20 @@ class ReferenceRepositoryImpl implements ReferenceRepository {
       accessToken: accessToken,
     );
     return items.map((item) => item.toEntity()).toList(growable: false);
+  }
+
+  @override
+  Future<DashboardSummaryEntity> getDashboardSummary({
+    required String entity,
+  }) async {
+    final accessToken = await _getAccessTokenOrThrow(
+      missingMessage: 'Please login again to load dashboard data.',
+    );
+    final dto = await _remoteDataSource.getDashboardSummary(
+      accessToken: accessToken,
+      entity: entity,
+    );
+    return dto.toEntity();
   }
 
   @override

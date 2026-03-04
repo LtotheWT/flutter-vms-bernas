@@ -4,6 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'dart:typed_data';
 import 'dart:convert';
+import 'package:vms_bernas/domain/entities/dashboard_summary_entity.dart';
 import 'package:vms_bernas/domain/entities/permanent_contractor_info_entity.dart';
 import 'package:vms_bernas/domain/entities/permanent_contractor_submit_entity.dart';
 import 'package:vms_bernas/domain/entities/permanent_contractor_submit_result_entity.dart';
@@ -72,6 +73,13 @@ class _FakeReferenceRepository implements ReferenceRepository {
 
   @override
   Future<List<RefVisitorTypeEntity>> getVisitorTypes() async => const [];
+
+  @override
+  Future<DashboardSummaryEntity> getDashboardSummary({
+    required String entity,
+  }) async {
+    throw UnimplementedError();
+  }
 
   @override
   Future<Uint8List?> getPermanentContractorImage({

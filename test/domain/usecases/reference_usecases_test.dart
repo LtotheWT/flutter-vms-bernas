@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'dart:typed_data';
+import 'package:vms_bernas/domain/entities/dashboard_summary_entity.dart';
 import 'package:vms_bernas/domain/entities/ref_department_entity.dart';
 import 'package:vms_bernas/domain/entities/ref_entity_entity.dart';
 import 'package:vms_bernas/domain/entities/ref_location_entity.dart';
@@ -75,6 +76,13 @@ class _FakeReferenceRepository implements ReferenceRepository {
         typeDescription: 'Visitor/Vendor/Forwarder',
       ),
     ];
+  }
+
+  @override
+  Future<DashboardSummaryEntity> getDashboardSummary({
+    required String entity,
+  }) async {
+    throw UnimplementedError();
   }
 
   @override

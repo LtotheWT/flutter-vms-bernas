@@ -6,6 +6,7 @@ import '../entities/ref_visitor_type_entity.dart';
 import '../entities/permanent_contractor_info_entity.dart';
 import '../entities/permanent_contractor_submit_entity.dart';
 import '../entities/permanent_contractor_submit_result_entity.dart';
+import '../entities/dashboard_summary_entity.dart';
 import 'dart:typed_data';
 
 abstract class ReferenceRepository {
@@ -22,6 +23,8 @@ abstract class ReferenceRepository {
   });
 
   Future<List<RefVisitorTypeEntity>> getVisitorTypes();
+
+  Future<DashboardSummaryEntity> getDashboardSummary({required String entity});
 
   Future<PermanentContractorInfoEntity> getPermanentContractorInfo({
     required String code,

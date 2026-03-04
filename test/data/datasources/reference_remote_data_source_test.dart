@@ -82,4 +82,98 @@ void main() {
       ),
     );
   });
+
+  test('gets dashboard summary with entity query', () async {
+    final dio = Dio();
+    Uri? capturedUri;
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          capturedUri = options.uri;
+          handler.resolve(
+            Response<dynamic>(
+              requestOptions: options,
+              data: {
+                'Status': true,
+                'Message': null,
+                'Details': {
+                  'VisitorIO': [
+                    {
+                      'Entity': 'AGYTEK',
+                      'TotalInRecords': 839,
+                      'TotalOutRecords': 661,
+                      'StillInCount': 178,
+                    },
+                  ],
+                  'ContrIO': [
+                    {
+                      'Entity': 'AGYTEK',
+                      'TotalInRecords': 36,
+                      'TotalOutRecords': 30,
+                      'StillInCount': 6,
+                    },
+                  ],
+                  'WhitelistIO': [
+                    {
+                      'Entity': 'AGYTEK',
+                      'TotalInRecords': 38,
+                      'TotalOutRecords': 38,
+                      'StillInCount': 0,
+                    },
+                  ],
+                },
+              },
+            ),
+          );
+        },
+      ),
+    );
+
+    final dataSource = ReferenceRemoteDataSource(dio);
+    final result = await dataSource.getDashboardSummary(
+      accessToken: 'token',
+      entity: 'AGYTEK',
+    );
+
+    expect(capturedUri.toString(), contains('/wmsws/Ref/dashboard'));
+    expect(capturedUri?.queryParameters['entity'], 'AGYTEK');
+    expect(result.status, isTrue);
+    expect(result.visitor.totalInRecords, 839);
+  });
+
+  test('dashboard maps wrapper failure message', () async {
+    final dio = Dio();
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          handler.resolve(
+            Response<dynamic>(
+              requestOptions: options,
+              data: {
+                'Status': false,
+                'Message': 'Entity is not allowed',
+                'Details': null,
+              },
+            ),
+          );
+        },
+      ),
+    );
+
+    final dataSource = ReferenceRemoteDataSource(dio);
+
+    expect(
+      () => dataSource.getDashboardSummary(
+        accessToken: 'token',
+        entity: 'AGYTEK',
+      ),
+      throwsA(
+        isA<ReferenceException>().having(
+          (error) => error.message,
+          'message',
+          'Entity is not allowed',
+        ),
+      ),
+    );
+  });
 }

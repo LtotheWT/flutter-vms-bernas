@@ -86,3 +86,22 @@
 - Verification:
   - `flutter analyze lib/presentation/pages/whitelist_detail_page.dart lib/presentation/pages/whitelist_check_page.dart`
   - `flutter test test/presentation/pages/whitelist_check_page_test.dart test/presentation/pages/whitelist_detail_page_test.dart test/presentation/state/whitelist_detail_providers_test.dart`
+
+## 2026-03-05 - Dashboard API integration with entity-only filter
+- [x] Add dashboard summary domain entities and `getDashboardSummary` repository/usecase contracts.
+- [x] Add dashboard response DTO parsing for `VisitorIO`/`ContrIO`/`WhitelistIO` with entity-match and fallback-zero behavior.
+- [x] Extend reference remote datasource and repository implementation for `GET /wmsws/Ref/dashboard?entity=...`.
+- [x] Add dashboard Riverpod controller/state for initial load and entity re-fetch.
+- [x] Refactor report dashboard page to use live API data and app-bar filter page with entity-only selection.
+- [x] Keep existing KPI tap navigation to dashboard list with selected entity context.
+- [x] Add/extend tests for dashboard DTO, datasource, repository, usecase, state, and page behavior.
+- [x] Run verification (`flutter analyze` + targeted `flutter test` suites).
+
+## Review (Dashboard API Integration)
+- Dashboard KPI cards now render live counts from `/wmsws/Ref/dashboard` instead of hardcoded values.
+- Entity defaults to the first non-empty option from `/wmsws/Ref/entity`, and initial dashboard fetch happens automatically.
+- Dashboard filter now follows the same pattern as other screens (app bar filter action + dedicated filter page) with entity-only selection.
+- Error/loading/retry states are wired through provider state; missing entity shows a clear actionable error.
+- Verification:
+  - `flutter analyze lib/presentation/pages/report_dashboard_page.dart lib/presentation/state/report_dashboard_providers.dart lib/data/datasources/reference_remote_data_source.dart lib/data/repositories/reference_repository_impl.dart lib/data/models/dashboard_io_metric_dto.dart lib/data/models/dashboard_summary_response_dto.dart lib/domain/entities/dashboard_io_metric_entity.dart lib/domain/entities/dashboard_summary_entity.dart lib/domain/repositories/reference_repository.dart lib/domain/usecases/get_dashboard_summary_usecase.dart`
+  - `flutter test test/data/models/dashboard_io_metric_dto_test.dart test/data/models/dashboard_summary_response_dto_test.dart test/data/datasources/reference_remote_data_source_test.dart test/data/repositories/reference_repository_impl_dashboard_test.dart test/domain/usecases/get_dashboard_summary_usecase_test.dart test/presentation/state/report_dashboard_providers_test.dart test/presentation/pages/report_dashboard_page_test.dart test/domain/usecases/get_permanent_contractor_info_usecase_test.dart test/domain/usecases/submit_permanent_contractor_check_in_usecase_test.dart test/domain/usecases/submit_permanent_contractor_check_out_usecase_test.dart test/domain/usecases/reference_usecases_test.dart test/presentation/state/permanent_contractor_check_providers_test.dart test/presentation/state/permanent_contractor_check_providers_image_test.dart test/presentation/pages/permanent_contractor_check_page_test.dart`

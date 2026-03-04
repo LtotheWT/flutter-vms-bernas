@@ -5,6 +5,7 @@ import 'network/remote_parsers.dart';
 import '../models/ref_department_dto.dart';
 import '../models/ref_entity_dto.dart';
 import '../models/ref_location_dto.dart';
+import '../models/dashboard_summary_response_dto.dart';
 import '../models/permanent_contractor_info_dto.dart';
 import '../models/permanent_contractor_submit_request_dto.dart';
 import '../models/permanent_contractor_submit_response_dto.dart';
@@ -181,6 +182,62 @@ class ReferenceRemoteDataSource {
     } on FormatException {
       throw ReferenceException(
         'Failed to load visitor types. Please try again.',
+      );
+    }
+  }
+
+  Future<DashboardSummaryResponseDto> getDashboardSummary({
+    required String accessToken,
+    required String entity,
+  }) async {
+    final normalizedEntity = entity.trim();
+    try {
+      final response = await _dio.get<dynamic>(
+        '/wmsws/Ref/dashboard',
+        queryParameters: {'entity': normalizedEntity},
+        options: Options(
+          headers: {'Authorization': 'Bearer $accessToken', 'accept': '*/*'},
+        ),
+      );
+
+      final root = parseJsonMap(response.data);
+      final dto = DashboardSummaryResponseDto.fromJson(
+        root,
+        requestedEntity: normalizedEntity,
+      );
+      if (!dto.status) {
+        throw ReferenceException(
+          _resolveBackendMessage(dto.message) ??
+              'Failed to load dashboard data. Please try again.',
+        );
+      }
+      return dto;
+    } on DioException catch (error) {
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 401 || statusCode == 403) {
+        throw ReferenceException('Please login again to load dashboard data.');
+      }
+
+      final backendMessage = _extractDashboardBackendMessage(
+        error.response?.data,
+        normalizedEntity,
+      );
+      if (backendMessage != null) {
+        throw ReferenceException(backendMessage);
+      }
+
+      if (isConnectivityIssue(error)) {
+        throw ReferenceException(
+          'Unable to load dashboard data. Please try again.',
+        );
+      }
+
+      throw ReferenceException(
+        'Failed to load dashboard data. Please try again.',
+      );
+    } on FormatException {
+      throw ReferenceException(
+        'Failed to load dashboard data. Please try again.',
       );
     }
   }
@@ -416,6 +473,25 @@ class ReferenceRemoteDataSource {
         parseJsonMap(data),
       );
       return _resolveBackendMessage(dto.message);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String? _extractDashboardBackendMessage(
+    dynamic data,
+    String requestedEntity,
+  ) {
+    try {
+      final dto = DashboardSummaryResponseDto.fromJson(
+        parseJsonMap(data),
+        requestedEntity: requestedEntity,
+      );
+      final message = dto.message?.trim();
+      if (message != null && message.isNotEmpty) {
+        return message;
+      }
+      return null;
     } catch (_) {
       return null;
     }
