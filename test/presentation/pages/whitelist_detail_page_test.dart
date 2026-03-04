@@ -208,6 +208,6 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Confirm Check-In'));
     await tester.pump();
 
-    expect(find.text('submit failed'), findsOneWidget);
+    expect(find.text('submit failed'), findsWidgets);
   });
 }

@@ -87,7 +87,6 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
       },
       fireImmediately: true,
     );
-    _scanController.text = "VIS|IV20260300016|AGYTEK|FACTORY1";
   }
 
   @override

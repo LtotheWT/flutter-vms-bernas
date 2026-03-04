@@ -30,6 +30,9 @@ class WhitelistDetailPage extends ConsumerStatefulWidget {
 }
 
 class _WhitelistDetailPageState extends ConsumerState<WhitelistDetailPage> {
+  bool _allowPop = false;
+  bool _shouldRefreshOnExit = false;
+
   @override
   void initState() {
     super.initState();
@@ -65,12 +68,28 @@ class _WhitelistDetailPageState extends ConsumerState<WhitelistDetailPage> {
     if (!mounted) {
       return;
     }
+    if (result.status) {
+      _shouldRefreshOnExit = true;
+    }
     final message = result.message.trim().isEmpty
         ? (result.status
               ? _submitSuccessFallback
               : 'Failed to submit whitelist.')
         : result.message.trim();
     showAppSnackBar(context, message);
+  }
+
+  void _popWithRefreshResult() {
+    if (_allowPop) {
+      return;
+    }
+    setState(() => _allowPop = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      Navigator.of(context).pop(_shouldRefreshOnExit);
+    });
   }
 
   @override
@@ -82,56 +101,65 @@ class _WhitelistDetailPageState extends ConsumerState<WhitelistDetailPage> {
         ? 'Confirm Check-Out'
         : 'Confirm Check-In';
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Whitelist Details')),
-      bottomNavigationBar: SafeArea(
-        minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-        child: AppFilledButton(
-          onPressed: canSubmit ? _onConfirm : null,
-          child: state.isSubmitting
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : Text(submitLabel),
+    return PopScope<bool>(
+      canPop: _allowPop,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          return;
+        }
+        _popWithRefreshResult();
+      },
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Whitelist Details')),
+        bottomNavigationBar: SafeArea(
+          minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          child: AppFilledButton(
+            onPressed: canSubmit ? _onConfirm : null,
+            child: state.isSubmitting
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(submitLabel),
+          ),
         ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
-        children: [
-          if (state.isLoading && !state.hasLoaded)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 120),
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else ...[
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  children: [
-                    InfoRow(label: 'Check Type', value: _checkTypeDisplay),
-                    InfoRow(
-                      label: 'Vehicle number',
-                      value: _displayOrDash(
-                        detail?.vehiclePlate ?? widget.args.vehiclePlate,
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
+          children: [
+            if (state.isLoading && !state.hasLoaded)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 120),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else ...[
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    children: [
+                      InfoRow(label: 'Check Type', value: _checkTypeDisplay),
+                      InfoRow(
+                        label: 'Vehicle number',
+                        value: _displayOrDash(
+                          detail?.vehiclePlate ?? widget.args.vehiclePlate,
+                        ),
                       ),
-                    ),
-                    InfoRow(
-                      label: 'IC/Passport',
-                      value: _displayOrDash(detail?.ic ?? ''),
-                    ),
-                    InfoRow(
-                      label: 'Name',
-                      value: _displayOrDash(detail?.name ?? ''),
-                    ),
-                  ],
+                      InfoRow(
+                        label: 'IC/Passport',
+                        value: _displayOrDash(detail?.ic ?? ''),
+                      ),
+                      InfoRow(
+                        label: 'Name',
+                        value: _displayOrDash(detail?.name ?? ''),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

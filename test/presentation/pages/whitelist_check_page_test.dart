@@ -37,11 +37,13 @@ class _FakeWhitelistRepository implements WhitelistRepository {
   final bool shouldThrow;
   final List<WhitelistSearchItemEntity> items;
   WhitelistSearchFilterEntity? lastFilter;
+  int searchCallCount = 0;
 
   @override
   Future<List<WhitelistSearchItemEntity>> searchWhitelist({
     required WhitelistSearchFilterEntity filter,
   }) async {
+    searchCallCount += 1;
     lastFilter = filter;
     if (shouldThrow) {
       throw Exception('boom');
@@ -88,6 +90,7 @@ Widget _buildApp({
   required _FakeWhitelistRepository repository,
   required bool isCheckIn,
   void Function(WhitelistDetailRouteArgs args)? onDetailOpened,
+  bool detailReturnsRefresh = false,
 }) {
   final router = GoRouter(
     initialLocation: '/',
@@ -102,6 +105,13 @@ Widget _buildApp({
         builder: (context, state) {
           final args = state.extra as WhitelistDetailRouteArgs;
           onDetailOpened?.call(args);
+          if (detailReturnsRefresh) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (context.mounted) {
+                Navigator.of(context).pop(true);
+              }
+            });
+          }
           return const Scaffold(body: Text('Detail Route Opened'));
         },
       ),
@@ -274,5 +284,27 @@ void main() {
 
     expect(find.textContaining('Select all'), findsNothing);
     expect(find.text('Delete'), findsNothing);
+  });
+
+  testWidgets('refreshes whitelist list when detail returns success', (
+    tester,
+  ) async {
+    final repository = _FakeWhitelistRepository();
+
+    await tester.pumpWidget(
+      _buildApp(
+        repository: repository,
+        isCheckIn: true,
+        detailReturnsRefresh: true,
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(repository.searchCallCount, 1);
+    await tester.tap(find.text('Details').first);
+    await tester.pumpAndSettle();
+
+    expect(repository.searchCallCount, 2);
   });
 }

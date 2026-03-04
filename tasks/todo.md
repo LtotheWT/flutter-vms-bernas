@@ -72,3 +72,17 @@
 - Verification:
   - `flutter analyze lib/presentation/pages/whitelist_detail_page.dart lib/presentation/state/whitelist_detail_providers.dart lib/data/datasources/whitelist_remote_data_source.dart lib/data/repositories/whitelist_repository_impl.dart lib/domain/repositories/whitelist_repository.dart`
   - `flutter test test/data/models/whitelist_submit_request_dto_test.dart test/data/models/whitelist_submit_response_dto_test.dart test/domain/usecases/submit_whitelist_check_in_usecase_test.dart test/domain/usecases/submit_whitelist_check_out_usecase_test.dart test/data/datasources/whitelist_remote_data_source_test.dart test/data/repositories/whitelist_repository_impl_test.dart test/presentation/state/whitelist_detail_providers_test.dart test/presentation/pages/whitelist_detail_page_test.dart test/presentation/pages/whitelist_check_page_test.dart test/presentation/state/whitelist_check_providers_test.dart test/domain/usecases/search_whitelist_usecase_test.dart test/domain/usecases/get_whitelist_detail_usecase_test.dart`
+
+## 2026-03-05 - Refresh whitelist list after successful detail submit
+- [x] Return refresh signal from whitelist detail route when check-in/out submit succeeds.
+- [x] Refresh whitelist list page when detail route pops with refresh signal.
+- [x] Add widget coverage for list refresh-on-return behavior.
+- [x] Run targeted verify for whitelist check/detail pages.
+
+## Review (Whitelist Refresh on Return)
+- Whitelist detail page now tracks successful submit and pops with a boolean refresh result.
+- Whitelist list page listens for detail route result and re-runs whitelist search when result is `true`.
+- Behavior applies for both check-in and check-out submit success paths.
+- Verification:
+  - `flutter analyze lib/presentation/pages/whitelist_detail_page.dart lib/presentation/pages/whitelist_check_page.dart`
+  - `flutter test test/presentation/pages/whitelist_check_page_test.dart test/presentation/pages/whitelist_detail_page_test.dart test/presentation/state/whitelist_detail_providers_test.dart`

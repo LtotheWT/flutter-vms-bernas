@@ -246,14 +246,21 @@ class _WhitelistCheckPageState extends ConsumerState<WhitelistCheckPage> {
                             );
                             return;
                           }
-                          context.pushNamed(
-                            whitelistDetailRouteName,
-                            extra: WhitelistDetailRouteArgs(
-                              entity: entity,
-                              vehiclePlate: vehiclePlate,
-                              checkType: _currentType,
-                            ),
-                          );
+                          context
+                              .pushNamed<bool>(
+                                whitelistDetailRouteName,
+                                extra: WhitelistDetailRouteArgs(
+                                  entity: entity,
+                                  vehiclePlate: vehiclePlate,
+                                  checkType: _currentType,
+                                ),
+                              )
+                              .then((shouldRefresh) {
+                                if (!mounted || shouldRefresh != true) {
+                                  return;
+                                }
+                                _requestListing();
+                              });
                         },
                       ),
                     ),
