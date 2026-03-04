@@ -32,9 +32,12 @@ class InfoRow extends StatelessWidget {
             ),
           ),
           Spacer(),
-          Text(
-            value,
-            style: textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
+          Expanded(
+            child: Text(
+              value,
+              style: textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
+              textAlign: TextAlign.end,
+            ),
           ),
         ],
       ),
