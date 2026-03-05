@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../core/error_messages.dart';
 import '../../domain/entities/whitelist_detail_entity.dart';
 import '../../domain/entities/whitelist_submit_entity.dart';
 import '../../domain/entities/whitelist_submit_result_entity.dart';
@@ -139,7 +140,7 @@ class WhitelistDetailController extends Notifier<WhitelistDetailState> {
     } catch (error) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: _normalizeError(
+        errorMessage: toDisplayErrorMessage(
           error,
           fallback: 'Failed to load whitelist detail.',
         ),
@@ -221,7 +222,7 @@ class WhitelistDetailController extends Notifier<WhitelistDetailState> {
       state = state.copyWith(isSubmitting: false);
       return result;
     } catch (error) {
-      final message = _normalizeError(
+      final message = toDisplayErrorMessage(
         error,
         fallback: isCheckOut
             ? 'Failed to submit whitelist check-out.'
@@ -230,13 +231,5 @@ class WhitelistDetailController extends Notifier<WhitelistDetailState> {
       state = state.copyWith(isSubmitting: false, errorMessage: message);
       return WhitelistSubmitResultEntity(status: false, message: message);
     }
-  }
-
-  String _normalizeError(Object error, {required String fallback}) {
-    final text = error.toString().trim();
-    if (text.startsWith('Exception:')) {
-      return text.replaceFirst('Exception:', '').trim();
-    }
-    return text.isEmpty ? fallback : text;
   }
 }

@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/error_messages.dart';
 import '../../data/datasources/visitor_access_remote_data_source.dart';
 import '../../data/repositories/visitor_access_repository_impl.dart';
 import '../../domain/entities/visitor_check_in_result_entity.dart';
@@ -168,12 +169,12 @@ class VisitorCheckController extends Notifier<VisitorCheckState> {
       );
       return true;
     } catch (error) {
-      final text = error.toString().trim();
       state = state.copyWith(
         isLoading: false,
-        errorMessage: text.startsWith('Exception:')
-            ? text.replaceFirst('Exception:', '').trim()
-            : (text.isEmpty ? 'Failed to load visitor check data.' : text),
+        errorMessage: toDisplayErrorMessage(
+          error,
+          fallback: 'Failed to load visitor check data.',
+        ),
       );
       return false;
     }
@@ -197,10 +198,10 @@ class VisitorCheckController extends Notifier<VisitorCheckState> {
       state = state.copyWith(isSubmitting: false);
       return result;
     } catch (error) {
-      final text = error.toString().trim();
-      final message = text.startsWith('Exception:')
-          ? text.replaceFirst('Exception:', '').trim()
-          : (text.isEmpty ? 'Failed to submit visitor check-in.' : text);
+      final message = toDisplayErrorMessage(
+        error,
+        fallback: 'Failed to submit visitor check-in.',
+      );
       state = state.copyWith(isSubmitting: false, errorMessage: message);
       return VisitorCheckInResultEntity(status: false, message: message);
     }
@@ -224,10 +225,10 @@ class VisitorCheckController extends Notifier<VisitorCheckState> {
       state = state.copyWith(isSubmitting: false);
       return result;
     } catch (error) {
-      final text = error.toString().trim();
-      final message = text.startsWith('Exception:')
-          ? text.replaceFirst('Exception:', '').trim()
-          : (text.isEmpty ? 'Failed to submit visitor check-out.' : text);
+      final message = toDisplayErrorMessage(
+        error,
+        fallback: 'Failed to submit visitor check-out.',
+      );
       state = state.copyWith(isSubmitting: false, errorMessage: message);
       return VisitorCheckInResultEntity(status: false, message: message);
     }
@@ -252,10 +253,10 @@ class VisitorCheckController extends Notifier<VisitorCheckState> {
       state = state.copyWith(isUploadingPhoto: false);
       return result;
     } catch (error) {
-      final text = error.toString().trim();
-      final message = text.startsWith('Exception:')
-          ? text.replaceFirst('Exception:', '').trim()
-          : (text.isEmpty ? 'Failed to upload visitor photo.' : text);
+      final message = toDisplayErrorMessage(
+        error,
+        fallback: 'Failed to upload visitor photo.',
+      );
       state = state.copyWith(isUploadingPhoto: false, errorMessage: message);
       return VisitorSavePhotoResultEntity(
         success: false,
@@ -293,10 +294,10 @@ class VisitorCheckController extends Notifier<VisitorCheckState> {
       state = state.copyWith(isDeletingPhoto: false, deletingPhotoId: null);
       return result;
     } catch (error) {
-      final text = error.toString().trim();
-      final message = text.startsWith('Exception:')
-          ? text.replaceFirst('Exception:', '').trim()
-          : (text.isEmpty ? 'Failed to delete gallery photo.' : text);
+      final message = toDisplayErrorMessage(
+        error,
+        fallback: 'Failed to delete gallery photo.',
+      );
       state = state.copyWith(
         isDeletingPhoto: false,
         deletingPhotoId: null,

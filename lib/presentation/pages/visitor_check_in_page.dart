@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:vms_bernas/presentation/widgets/labeled_form_rows.dart';
 
+import '../../core/error_messages.dart';
 import '../../domain/entities/visitor_check_in_submission_entity.dart';
 import '../../domain/entities/visitor_check_in_submission_item_entity.dart';
 import '../../domain/entities/visitor_gallery_item_entity.dart';
@@ -1549,11 +1550,10 @@ class _VisitorGallerySection extends ConsumerWidget {
   }
 
   String _toErrorMessage(Object error) {
-    final text = error.toString().trim();
-    if (text.startsWith('Exception:')) {
-      return text.replaceFirst('Exception:', '').trim();
-    }
-    return text.isEmpty ? 'Failed to load gallery photos.' : text;
+    return toDisplayErrorMessage(
+      error,
+      fallback: 'Failed to load gallery photos.',
+    );
   }
 }
 

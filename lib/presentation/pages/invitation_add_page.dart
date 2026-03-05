@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/date_time_formats.dart';
+import '../../core/error_messages.dart';
 import '../state/department_option.dart';
 import '../state/entity_option.dart';
 import '../state/host_option.dart';
@@ -129,11 +130,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
   }
 
   String _toDisplayError(Object error, String fallback) {
-    final text = error.toString().trim();
-    if (text.startsWith('Exception:')) {
-      return text.replaceFirst('Exception:', '').trim();
-    }
-    return text.isEmpty ? fallback : text;
+    return toDisplayErrorMessage(error, fallback: fallback);
   }
 
   bool _hasUnsavedChanges(InvitationAddState formState) {

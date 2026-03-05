@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/error_messages.dart';
 import '../../domain/entities/dashboard_summary_entity.dart';
 import '../../domain/usecases/get_dashboard_summary_usecase.dart';
 import 'reference_providers.dart';
@@ -121,7 +122,7 @@ class ReportDashboardController extends Notifier<ReportDashboardState> {
         activeEntity: normalizedEntity,
       );
     } catch (error) {
-      final message = _normalizeError(
+      final message = toDisplayErrorMessage(
         error,
         fallback: 'Failed to load dashboard data.',
       );
@@ -132,13 +133,5 @@ class ReportDashboardController extends Notifier<ReportDashboardState> {
         activeEntity: normalizedEntity,
       );
     }
-  }
-
-  String _normalizeError(Object error, {required String fallback}) {
-    final text = error.toString().trim();
-    if (text.startsWith('Exception:')) {
-      return text.replaceFirst('Exception:', '').trim();
-    }
-    return text.isEmpty ? fallback : text;
   }
 }

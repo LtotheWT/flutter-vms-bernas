@@ -16,3 +16,6 @@
 - When actions happen on a details page but list freshness matters, return a route result flag and refresh the list on pop rather than forcing immediate navigation.
 - When implementing a new check-in/out screen that already has an existing profile-photo pattern in a similar feature, include photo parity upfront unless explicitly out of scope.
 - Never hardcode logged-in user labels in form UI; read username from persisted session/provider and fallback safely.
+
+## 2026-03-06
+- If the same error-normalization branch (e.g., stripping `Exception:`) appears in multiple pages/providers, extract to `lib/core/` immediately and replace all duplicates in one pass.

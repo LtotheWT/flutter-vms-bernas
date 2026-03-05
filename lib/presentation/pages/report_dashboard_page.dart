@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/error_messages.dart';
 import '../app/router.dart';
 import '../state/async_option_helpers.dart';
 import '../state/entity_option.dart';
@@ -24,11 +25,7 @@ class _ReportDashboardPageState extends ConsumerState<ReportDashboardPage> {
   bool _didLoadInitial = false;
 
   String _toDisplayError(Object error, String fallback) {
-    final text = error.toString().trim();
-    if (text.startsWith('Exception:')) {
-      return text.replaceFirst('Exception:', '').trim();
-    }
-    return text.isEmpty ? fallback : text;
+    return toDisplayErrorMessage(error, fallback: fallback);
   }
 
   void _maybeLoadInitial(List<EntityOption> entityOptions) {
@@ -300,11 +297,7 @@ class _DashboardFilterPageState extends ConsumerState<_DashboardFilterPage> {
   }
 
   String _toDisplayError(Object error, String fallback) {
-    final text = error.toString().trim();
-    if (text.startsWith('Exception:')) {
-      return text.replaceFirst('Exception:', '').trim();
-    }
-    return text.isEmpty ? fallback : text;
+    return toDisplayErrorMessage(error, fallback: fallback);
   }
 
   Future<String?> _pickFilterOption({

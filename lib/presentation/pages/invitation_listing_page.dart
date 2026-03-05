@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/error_messages.dart';
 import '../../domain/entities/invitation_list_item_entity.dart';
 import '../../domain/entities/invitation_listing_filter_entity.dart';
 import '../state/async_option_helpers.dart';
@@ -580,11 +581,7 @@ class _InvitationFilterPageState extends ConsumerState<_InvitationFilterPage> {
   }
 
   String _toDisplayError(Object error, String fallback) {
-    final text = error.toString().trim();
-    if (text.startsWith('Exception:')) {
-      return text.replaceFirst('Exception:', '').trim();
-    }
-    return text.isEmpty ? fallback : text;
+    return toDisplayErrorMessage(error, fallback: fallback);
   }
 
   @override

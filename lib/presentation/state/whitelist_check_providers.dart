@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/error_messages.dart';
 import '../../data/datasources/whitelist_remote_data_source.dart';
 import '../../data/repositories/whitelist_repository_impl.dart';
 import '../../domain/entities/whitelist_search_filter_entity.dart';
@@ -113,12 +114,12 @@ class WhitelistCheckController extends Notifier<WhitelistCheckState> {
         activeFilter: filter,
       );
     } catch (error) {
-      final text = error.toString().trim();
       state = state.copyWith(
         isLoading: false,
-        errorMessage: text.startsWith('Exception:')
-            ? text.replaceFirst('Exception:', '').trim()
-            : (text.isEmpty ? 'Failed to load whitelist records.' : text),
+        errorMessage: toDisplayErrorMessage(
+          error,
+          fallback: 'Failed to load whitelist records.',
+        ),
         hasLoaded: true,
         activeFilter: filter,
       );

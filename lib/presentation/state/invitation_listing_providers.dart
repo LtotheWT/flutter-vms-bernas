@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/error_messages.dart';
 import '../../domain/entities/invitation_list_item_entity.dart';
 import '../../domain/entities/invitation_listing_filter_entity.dart';
 import '../../domain/usecases/list_invitations_usecase.dart';
@@ -75,12 +76,12 @@ class InvitationListingController extends Notifier<InvitationListingState> {
         hasLoaded: true,
       );
     } catch (error) {
-      final text = error.toString().trim();
       state = state.copyWith(
         isLoading: false,
-        errorMessage: text.startsWith('Exception:')
-            ? text.replaceFirst('Exception:', '').trim()
-            : (text.isEmpty ? 'Failed to load invitation listing.' : text),
+        errorMessage: toDisplayErrorMessage(
+          error,
+          fallback: 'Failed to load invitation listing.',
+        ),
         hasLoaded: true,
       );
     }

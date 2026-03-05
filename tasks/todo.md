@@ -227,3 +227,17 @@
 - Verification:
   - `flutter analyze lib/presentation/services/mobile_scanner_launcher.dart lib/presentation/pages/employee_check_page.dart lib/presentation/pages/permanent_contractor_check_page.dart lib/presentation/pages/visitor_check_in_page.dart`
   - `flutter test test/presentation/pages/employee_check_page_test.dart test/presentation/pages/permanent_contractor_check_page_test.dart test/presentation/pages/visitor_check_in_page_test.dart` *(blocked by local Flutter SDK/framework mismatch in semantics compile stage, same environment issue as prior runs).*
+
+## 2026-03-06 - Shared exception-prefix error message helper
+- [x] Add shared core helper for exception-prefix stripping + fallback display message.
+- [x] Refactor repeated `Exception:` normalization in presentation pages/providers to use shared helper.
+- [x] Run targeted verification (`flutter analyze` on touched files).
+
+## Review (Shared Exception Helper)
+- Added shared utility `/Users/wengthailim/Workspace/flutter_projects/vms_bernas/lib/core/error_messages.dart` with `stripExceptionPrefix(...)` and `toDisplayErrorMessage(...)`.
+- Replaced repeated inline `Exception:` parsing in 13 presentation files (pages + providers) with the shared helper, preserving existing fallback messages per flow.
+- Removed duplicated private `_normalizeError` implementations from employee/whitelist detail/report dashboard providers.
+- Added targeted helper tests in `/Users/wengthailim/Workspace/flutter_projects/vms_bernas/test/core/error_messages_test.dart`.
+- Verification:
+  - `flutter analyze lib/core/error_messages.dart lib/presentation/pages/invitation_add_page.dart lib/presentation/pages/invitation_listing_page.dart lib/presentation/pages/report_dashboard_page.dart lib/presentation/pages/visitor_check_in_page.dart lib/presentation/pages/whitelist_check_page.dart lib/presentation/state/employee_check_providers.dart lib/presentation/state/invitation_add_providers.dart lib/presentation/state/invitation_listing_providers.dart lib/presentation/state/permanent_contractor_check_providers.dart lib/presentation/state/report_dashboard_providers.dart lib/presentation/state/visitor_check_in_providers.dart lib/presentation/state/whitelist_check_providers.dart lib/presentation/state/whitelist_detail_providers.dart`
+  - `flutter test test/core/error_messages_test.dart` *(blocked by local Flutter SDK/framework mismatch in semantics compile stage, same environment issue as prior runs).*

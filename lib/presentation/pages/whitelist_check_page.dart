@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/error_messages.dart';
 import '../../domain/entities/whitelist_search_filter_entity.dart';
 import '../../domain/entities/whitelist_search_item_entity.dart';
 import '../app/router.dart';
@@ -36,11 +37,7 @@ class _WhitelistCheckPageState extends ConsumerState<WhitelistCheckPage> {
   String get _currentType => widget.isCheckIn ? 'I' : 'O';
 
   String _toDisplayError(Object error, String fallback) {
-    final text = error.toString().trim();
-    if (text.startsWith('Exception:')) {
-      return text.replaceFirst('Exception:', '').trim();
-    }
-    return text.isEmpty ? fallback : text;
+    return toDisplayErrorMessage(error, fallback: fallback);
   }
 
   @override
@@ -408,11 +405,7 @@ class _WhitelistFilterPageState extends ConsumerState<_WhitelistFilterPage> {
   }
 
   String _toDisplayError(Object error, String fallback) {
-    final text = error.toString().trim();
-    if (text.startsWith('Exception:')) {
-      return text.replaceFirst('Exception:', '').trim();
-    }
-    return text.isEmpty ? fallback : text;
+    return toDisplayErrorMessage(error, fallback: fallback);
   }
 
   Future<String?> _pickFilterOption({

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../core/error_messages.dart';
 import '../../domain/entities/permanent_contractor_info_entity.dart';
 import '../../domain/entities/permanent_contractor_submit_entity.dart';
 import '../../domain/entities/permanent_contractor_submit_result_entity.dart';
@@ -149,14 +150,12 @@ class PermanentContractorCheckController
       );
       return true;
     } catch (error) {
-      final text = error.toString().trim();
       state = state.copyWith(
         isLoading: false,
-        errorMessage: text.startsWith('Exception:')
-            ? text.replaceFirst('Exception:', '').trim()
-            : (text.isEmpty
-                  ? 'Failed to load permanent contractor info.'
-                  : text),
+        errorMessage: toDisplayErrorMessage(
+          error,
+          fallback: 'Failed to load permanent contractor info.',
+        ),
       );
       return false;
     }
@@ -229,14 +228,12 @@ class PermanentContractorCheckController
       state = state.copyWith(isSubmitting: false);
       return result;
     } catch (error) {
-      final text = error.toString().trim();
-      final message = text.startsWith('Exception:')
-          ? text.replaceFirst('Exception:', '').trim()
-          : (text.isEmpty
-                ? type == PermanentContractorCheckType.checkIn
-                      ? 'Failed to submit permanent contractor check-in.'
-                      : 'Failed to submit permanent contractor check-out.'
-                : text);
+      final message = toDisplayErrorMessage(
+        error,
+        fallback: type == PermanentContractorCheckType.checkIn
+            ? 'Failed to submit permanent contractor check-in.'
+            : 'Failed to submit permanent contractor check-out.',
+      );
       state = state.copyWith(isSubmitting: false, errorMessage: message);
       return PermanentContractorSubmitResultEntity(
         status: false,

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../core/error_messages.dart';
 import '../../data/datasources/invitation_remote_data_source.dart';
 import '../../data/repositories/invitation_repository_impl.dart';
 import '../../domain/repositories/invitation_repository.dart';
@@ -220,12 +221,12 @@ class InvitationAddController extends Notifier<InvitationAddState> {
         message: response.message ?? 'Failed to submit invitation.',
       );
     } catch (error) {
-      final text = error.toString().trim();
       return InvitationSubmitResult(
         success: false,
-        message: text.startsWith('Exception:')
-            ? text.replaceFirst('Exception:', '').trim()
-            : (text.isEmpty ? 'Failed to submit invitation.' : text),
+        message: toDisplayErrorMessage(
+          error,
+          fallback: 'Failed to submit invitation.',
+        ),
       );
     } finally {
       state = state.copyWith(isSubmitting: false);

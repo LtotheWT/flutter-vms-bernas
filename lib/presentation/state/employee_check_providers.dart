@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../core/error_messages.dart';
 import '../../data/datasources/employee_access_remote_data_source.dart';
 import '../../data/repositories/employee_access_repository_impl.dart';
 import '../../domain/entities/employee_info_entity.dart';
@@ -165,7 +166,7 @@ class EmployeeCheckController extends Notifier<EmployeeCheckState> {
       );
       return true;
     } catch (error) {
-      final message = _normalizeError(
+      final message = toDisplayErrorMessage(
         error,
         fallback: 'Failed to load employee info.',
       );
@@ -242,7 +243,7 @@ class EmployeeCheckController extends Notifier<EmployeeCheckState> {
       state = state.copyWith(isSubmitting: false);
       return result;
     } catch (error) {
-      final message = _normalizeError(
+      final message = toDisplayErrorMessage(
         error,
         fallback: isCheckOut
             ? 'Failed to submit employee check-out.'
@@ -251,14 +252,6 @@ class EmployeeCheckController extends Notifier<EmployeeCheckState> {
       state = state.copyWith(isSubmitting: false, errorMessage: message);
       return EmployeeSubmitResultEntity(status: false, message: message);
     }
-  }
-
-  String _normalizeError(Object error, {required String fallback}) {
-    final text = error.toString().trim();
-    if (text.startsWith('Exception:')) {
-      return text.replaceFirst('Exception:', '').trim();
-    }
-    return text.isEmpty ? fallback : text;
   }
 }
 
