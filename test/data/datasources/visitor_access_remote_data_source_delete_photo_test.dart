@@ -27,7 +27,7 @@ void main() {
     );
 
     expect(capturedUri.toString(), contains('/wmsws/Visitor/photo/32/delete'));
-    expect(result.success, isTrue);
+    expect(result.status, isTrue);
   });
 
   test('maps auth failure', () async {

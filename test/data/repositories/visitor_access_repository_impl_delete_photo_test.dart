@@ -30,7 +30,7 @@ class _FakeVisitorAccessRemoteDataSource extends VisitorAccessRemoteDataSource {
     capturedToken = accessToken;
     capturedPhotoId = photoId;
     return const VisitorDeletePhotoResponseDto(
-      success: true,
+      status: true,
       message: 'Deleted',
     );
   }

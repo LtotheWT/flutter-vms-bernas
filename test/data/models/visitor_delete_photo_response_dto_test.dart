@@ -7,7 +7,7 @@ void main() {
       'success': true,
       'message': 'Deleted',
     });
-    expect(dto.success, isTrue);
+    expect(dto.status, isTrue);
     expect(dto.message, 'Deleted');
   });
 
@@ -16,7 +16,7 @@ void main() {
       'Success': true,
       'Message': 'Deleted',
     });
-    expect(dto.success, isTrue);
+    expect(dto.status, isTrue);
     expect(dto.message, 'Deleted');
   });
 
