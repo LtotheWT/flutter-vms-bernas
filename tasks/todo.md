@@ -165,3 +165,49 @@
 - Verification:
   - `flutter analyze lib/domain/entities/invitation_submission_entity.dart lib/data/models/invitation_create_response_dto.dart lib/presentation/state/invitation_add_providers.dart lib/presentation/pages/invitation_add_page.dart`
   - `flutter test test/data/models/invitation_create_response_dto_test.dart test/presentation/state/invitation_add_providers_test.dart`
+
+## 2026-03-06 - Visitor check-in physical tag mandatory
+- [x] Enforce physical tag validation for selected visitors in check-in flow before submit API call.
+- [x] Keep check-out behavior unchanged and preserve existing payload mapping.
+- [x] Update check-in physical tag input affordance text from optional to required.
+- [x] Add/extend visitor check-in widget tests for mandatory physical tag validation.
+- [x] Run targeted verification (`flutter analyze` + relevant `flutter test`).
+
+## Review (Visitor Physical Tag Mandatory)
+- Check-in confirm now blocks submission when any selected eligible visitor has blank `Physical Tag` and shows `Physical Tag is required for selected visitors before check-in.`.
+- Check-out submit path and payload behavior remain unchanged.
+- Editable physical tag row now shows `Required` hint text for check-in rows.
+- Added widget coverage for blocking submit when selected visitor has empty physical tag and asserting no check-in API call is made.
+- Verification:
+  - `flutter analyze lib/presentation/pages/visitor_check_in_page.dart test/presentation/pages/visitor_check_in_page_test.dart`
+  - `flutter test test/presentation/pages/visitor_check_in_page_test.dart` *(blocked by local Flutter SDK/framework mismatch in semantics compile stage, same environment issue as prior runs).*
+
+## 2026-03-06 - Visitor physical tag inline error + focus to first missing row
+- [x] Add inline `Required` error support for `LabeledTextInputRow` and wire to visitor physical tag row.
+- [x] Add per-row physical tag error/focus/card key maps and custom scroll controller on visitor check page.
+- [x] On check-in confirm failure, mark missing selected rows inline and auto-switch/scroll/focus first missing row.
+- [x] Clear inline physical tag error on value correction, scan fill, and deselection.
+- [x] Extend visitor page widget tests for inline error/focus path and correction flow.
+- [x] Run targeted verification (`flutter analyze` + relevant `flutter test`).
+
+## Review (Visitor Physical Tag Inline Error + Focus)
+- Check-in validation now marks missing selected physical tags with inline `Required` under each affected row.
+- Confirm from Summary tab now auto-switches to Visitor List, scrolls to the first missing row, and focuses its physical tag input.
+- Inline errors clear immediately when user types/scans a non-empty physical tag, and on row deselection.
+- Shared `LabeledTextInputRow` now supports optional inline `errorText` for dense form rows.
+- Verification:
+  - `flutter analyze lib/presentation/widgets/labeled_form_rows.dart lib/presentation/pages/visitor_check_in_page.dart test/presentation/pages/visitor_check_in_page_test.dart`
+  - `flutter test test/presentation/pages/visitor_check_in_page_test.dart` *(blocked by local Flutter SDK/framework mismatch in semantics compile stage, same environment issue as prior runs).*
+
+## 2026-03-06 - Simplify missing-physical-tag focus scroll flow
+- [x] Replace complex viewport/offset fallback logic with simple `ensureVisible` + coarse scroll fallback.
+- [x] Keep behavior: switch to Visitor List tab, try ensureVisible first, then estimate offset when context is missing.
+- [x] Keep code lightweight (no render viewport math).
+- [x] Run targeted verification (`flutter analyze`).
+
+## Review (Simplified EnsureVisible Flow)
+- `_focusFirstMissingPhysicalTag` now uses a simple two-step approach: try `ensureVisible` first; if context is missing, do coarse index-based scroll and focus.
+- This improves long-list behavior without reintroducing render viewport complexity.
+- Render viewport math is removed; scroll behavior stays lightweight and maintainable.
+- Verification:
+  - `flutter analyze lib/presentation/pages/visitor_check_in_page.dart`

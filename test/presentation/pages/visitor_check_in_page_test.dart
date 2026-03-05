@@ -757,6 +757,7 @@ void main() {
 
       expect(find.byKey(const Key('physical-tag-input-222')), findsOneWidget);
       expect(find.byKey(const Key('physical-tag-scan-222')), findsOneWidget);
+      expect(find.text('Required'), findsOneWidget);
       expect(
         tester
             .widget<TextFormField>(
@@ -775,6 +776,96 @@ void main() {
             .enabled,
         isTrue,
       );
+    },
+  );
+
+  testWidgets(
+    'check-in submit is blocked when selected visitor physical tag is blank',
+    (tester) async {
+      const lookup = VisitorLookupEntity(
+        invitationId: 'IV20260200038',
+        entity: 'AGYTEK',
+        site: 'FACTORY1',
+        siteDesc: 'FACTORY1 T',
+        department: 'ADC',
+        departmentDesc: 'ADMIN CENTER',
+        purpose: 'MEETING',
+        company: 'TEST',
+        contactNumber: '0123456789',
+        visitorType: '1_Visitor',
+        inviteBy: 'Suraya',
+        workLevel: '',
+        vehiclePlateNumber: 'WWW0000',
+        status: 'ARRIVED',
+        visitDateFrom: '2026-02-25T00:00:00',
+        visitDateTo: '2026-02-25T00:00:00',
+        visitTimeFrom: '19:00:PM',
+        visitTimeTo: '20:00:PM',
+        visitors: [
+          VisitorLookupItemEntity(
+            name: 'NAME2',
+            icPassport: '123456561231',
+            physicalTag: '',
+            email: '',
+            contactNo: '',
+            company: '',
+            checkInTime: '',
+            checkOutTime: '',
+          ),
+        ],
+      );
+      final repository = _FakeVisitorAccessRepository(
+        lookupResponses: const [lookup, lookup],
+      );
+      final authLocalDataSource = _FakeAuthLocalDataSource(
+        const AuthSessionDto(
+          username: 'Ryan',
+          fullname: 'Ryan',
+          entity: "AGYTEK",
+          accessToken: 'token123',
+          defaultSite: 'FACTORY1',
+          defaultGate: 'F1_A',
+        ),
+      );
+
+      await tester.pumpWidget(
+        _buildApp(
+          repository: repository,
+          isCheckIn: true,
+          authLocalDataSource: authLocalDataSource,
+        ),
+      );
+
+      await tester.enterText(find.byType(TextFormField).first, 'VIS|IV|A|F');
+      await tester.tap(find.widgetWithText(FilledButton, 'Search'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Visitor List (1)'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Select all (0/1)'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Summary'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Confirm Check-In'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          'Physical Tag is required for selected visitors before check-in.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Select all (1/1)'), findsOneWidget);
+      expect(find.text('Required'), findsNWidgets(2));
+      final focusedEditable = find.descendant(
+        of: find.byKey(const Key('physical-tag-input-123456561231')),
+        matching: find.byType(EditableText),
+      );
+      expect(
+        tester.widget<EditableText>(focusedEditable).focusNode.hasFocus,
+        isTrue,
+      );
+      expect(repository.lastCheckInSubmission, isNull);
     },
   );
 
@@ -989,10 +1080,18 @@ void main() {
 
       await tester.tap(find.text('Select all (0/1)'));
       await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Confirm Check-In'));
+      await tester.pumpAndSettle();
+      expect(repository.lastCheckInSubmission, isNull);
+      expect(find.text('Required'), findsNWidgets(2));
+
       await tester.enterText(
         find.byKey(const Key('physical-tag-input-123456561231')),
         'TAG-EDITED',
       );
+      await tester.pumpAndSettle();
+      expect(find.text('Required'), findsNothing);
+
       await tester.tap(find.widgetWithText(FilledButton, 'Confirm Check-In'));
       await tester.pumpAndSettle();
 
@@ -1084,6 +1183,11 @@ void main() {
 
     await tester.tap(find.byType(Checkbox).last);
     await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Confirm Check-In'));
+    await tester.pumpAndSettle();
+    expect(repository.lastCheckInSubmission, isNull);
+    expect(find.text('Required'), findsNWidgets(2));
+
     expect(
       tester
           .widget<TextFormField>(
@@ -1100,6 +1204,7 @@ void main() {
     scanButtonWidget.onTap!.call();
     await tester.pumpAndSettle();
     expect(find.text('SCANNED-TAG'), findsOneWidget);
+    expect(find.text('Required'), findsNothing);
 
     await tester.tap(find.widgetWithText(FilledButton, 'Confirm Check-In'));
     await tester.pumpAndSettle();

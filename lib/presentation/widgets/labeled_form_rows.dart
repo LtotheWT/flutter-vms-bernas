@@ -61,6 +61,7 @@ class LabeledTextInputRow extends StatelessWidget {
     this.contentPadding = EdgeInsets.zero,
     this.obscureText = false,
     this.textInputAction,
+    this.errorText,
   });
 
   final String label;
@@ -79,6 +80,7 @@ class LabeledTextInputRow extends StatelessWidget {
   final EdgeInsets contentPadding;
   final bool obscureText;
   final TextInputAction? textInputAction;
+  final String? errorText;
 
   @override
   Widget build(BuildContext context) {
@@ -101,6 +103,15 @@ class LabeledTextInputRow extends StatelessWidget {
           suffixIcon: suffixIcon,
           contentPadding: contentPadding,
         ),
+        if (errorText != null && errorText!.trim().isNotEmpty) ...[
+          const SizedBox(height: 2),
+          Text(
+            errorText!,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.error,
+            ),
+          ),
+        ],
         const SizedBox(height: 4),
         const FormRowDivider(),
         const SizedBox(height: 8),

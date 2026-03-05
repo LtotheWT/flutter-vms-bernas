@@ -44,11 +44,16 @@ class VisitorCheckInPage extends ConsumerStatefulWidget {
 class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
   final _scanController = TextEditingController();
   final _scanFocusNode = FocusNode();
+  final _scrollController = ScrollController();
   final _gallerySectionKey = GlobalKey();
   final Set<int> _selectedIndexes = <int>{};
   final Map<String, String> _physicalTagDraftByAppId = <String, String>{};
+  final Map<String, String> _physicalTagErrorByAppId = <String, String>{};
   final Map<String, TextEditingController> _physicalTagControllerByAppId =
       <String, TextEditingController>{};
+  final Map<String, FocusNode> _physicalTagFocusNodeByAppId =
+      <String, FocusNode>{};
+  final Map<String, GlobalKey> _visitorCardKeyByAppId = <String, GlobalKey>{};
   int _resultTabIndex = 0;
   String _lastLookupCode = '';
   late final ProviderSubscription<VisitorCheckState> _stateSubscription;
@@ -77,11 +82,17 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
           for (final controller in _physicalTagControllerByAppId.values) {
             controller.dispose();
           }
+          for (final focusNode in _physicalTagFocusNodeByAppId.values) {
+            focusNode.dispose();
+          }
           setState(() {
             _selectedIndexes.clear();
             _resultTabIndex = 0;
             _physicalTagDraftByAppId.clear();
+            _physicalTagErrorByAppId.clear();
             _physicalTagControllerByAppId.clear();
+            _physicalTagFocusNodeByAppId.clear();
+            _visitorCardKeyByAppId.clear();
           });
         }
       },
@@ -94,8 +105,12 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
     _stateSubscription.close();
     _scanController.dispose();
     _scanFocusNode.dispose();
+    _scrollController.dispose();
     for (final controller in _physicalTagControllerByAppId.values) {
       controller.dispose();
+    }
+    for (final focusNode in _physicalTagFocusNodeByAppId.values) {
+      focusNode.dispose();
     }
     super.dispose();
   }
@@ -158,7 +173,9 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
         selection: TextSelection.collapsed(offset: scanned.length),
       );
     }
-    setState(() {});
+    setState(() {
+      _physicalTagErrorByAppId.remove(appId);
+    });
   }
 
   Future<void> _captureFromCamera() async {
@@ -403,6 +420,20 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
     _physicalTagDraftByAppId[appId] = value;
   }
 
+  void _onPhysicalTagChanged(VisitorLookupItemEntity visitor, String value) {
+    _setPhysicalTagFor(visitor, value);
+    final appId = visitor.icPassport.trim();
+    if (appId.isEmpty) {
+      return;
+    }
+    if (value.trim().isNotEmpty &&
+        _physicalTagErrorByAppId.containsKey(appId)) {
+      setState(() {
+        _physicalTagErrorByAppId.remove(appId);
+      });
+    }
+  }
+
   TextEditingController _physicalTagControllerFor(
     VisitorLookupItemEntity visitor,
   ) {
@@ -421,6 +452,74 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
     final controller = TextEditingController(text: value);
     _physicalTagControllerByAppId[appId] = controller;
     return controller;
+  }
+
+  FocusNode _physicalTagFocusNodeFor(VisitorLookupItemEntity visitor) {
+    final appId = visitor.icPassport.trim();
+    final existing = _physicalTagFocusNodeByAppId[appId];
+    if (existing != null) {
+      return existing;
+    }
+    final focusNode = FocusNode();
+    _physicalTagFocusNodeByAppId[appId] = focusNode;
+    return focusNode;
+  }
+
+  GlobalKey _visitorCardKeyFor(VisitorLookupItemEntity visitor, int index) {
+    final appId = visitor.icPassport.trim();
+    final keyId = appId.isEmpty ? '__visitor_$index' : appId;
+    final existing = _visitorCardKeyByAppId[keyId];
+    if (existing != null) {
+      return existing;
+    }
+    final key = GlobalKey(debugLabel: 'visitor-card-$keyId');
+    _visitorCardKeyByAppId[keyId] = key;
+    return key;
+  }
+
+  void _focusFirstMissingPhysicalTag({
+    required VisitorLookupItemEntity visitor,
+    required int index,
+  }) {
+    if (_resultTabIndex != 1) {
+      setState(() => _resultTabIndex = 1);
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      final appId = visitor.icPassport.trim();
+      final targetContext = _visitorCardKeyByAppId[appId]?.currentContext;
+      if (targetContext != null) {
+        Scrollable.ensureVisible(
+          targetContext,
+          duration: const Duration(milliseconds: 260),
+          curve: Curves.easeOut,
+          alignment: 0.1,
+        );
+        _physicalTagFocusNodeByAppId[appId]?.requestFocus();
+        return;
+      }
+      if (!_scrollController.hasClients) {
+        return;
+      }
+      final estimatedOffset = (index * 220.0).clamp(
+        0.0,
+        _scrollController.position.maxScrollExtent,
+      );
+      _scrollController
+          .animateTo(
+            estimatedOffset,
+            duration: const Duration(milliseconds: 260),
+            curve: Curves.easeOut,
+          )
+          .then((_) {
+            if (!mounted) {
+              return;
+            }
+            _physicalTagFocusNodeByAppId[appId]?.requestFocus();
+          });
+    });
   }
 
   void _clear() {
@@ -468,6 +567,39 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
       return;
     }
 
+    if (widget.isCheckIn) {
+      final missingIndexes = <int>[];
+      setState(() {
+        for (final index in selectedEligible) {
+          final visitor = visitors[index];
+          final appId = visitor.icPassport.trim();
+          if (appId.isEmpty) {
+            continue;
+          }
+          final physicalTag =
+              (_physicalTagDraftByAppId[appId] ?? visitor.physicalTag).trim();
+          if (physicalTag.isEmpty) {
+            _physicalTagErrorByAppId[appId] = 'Required';
+            missingIndexes.add(index);
+          } else {
+            _physicalTagErrorByAppId.remove(appId);
+          }
+        }
+      });
+      if (missingIndexes.isNotEmpty) {
+        showAppSnackBar(
+          context,
+          'Physical Tag is required for selected visitors before check-in.',
+        );
+        final firstMissingIndex = missingIndexes.first;
+        _focusFirstMissingPhysicalTag(
+          visitor: visitors[firstMissingIndex],
+          index: firstMissingIndex,
+        );
+        return;
+      }
+    }
+
     final session = await ref.read(authLocalDataSourceProvider).getSession();
     final userId = session?.username.trim() ?? '';
     final site = session?.defaultSite.trim() ?? '';
@@ -494,14 +626,15 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
         }
         return;
       }
+      final physicalTag =
+          (widget.isCheckIn
+                  ? (_physicalTagDraftByAppId[appId] ?? visitor.physicalTag)
+                  : visitor.physicalTag)
+              .trim();
       selectedVisitors.add(
         VisitorCheckInSubmissionItemEntity(
           appId: appId,
-          physicalTag:
-              (widget.isCheckIn
-                      ? (_physicalTagDraftByAppId[appId] ?? visitor.physicalTag)
-                      : visitor.physicalTag)
-                  .trim(),
+          physicalTag: physicalTag,
         ),
       );
     }
@@ -636,6 +769,7 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
         ),
       ),
       body: CustomScrollView(
+        controller: _scrollController,
         slivers: [
           SliverToBoxAdapter(
             child: Padding(
@@ -815,12 +949,25 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
                       onChanged: hasEligibleVisitors
                           ? (checked) {
                               setState(() {
+                                final previouslySelected = _selectedIndexes
+                                    .toList(growable: false);
                                 if (checked == true) {
                                   _selectedIndexes
                                     ..clear()
                                     ..addAll(eligibleIndexes);
                                 } else {
                                   _selectedIndexes.clear();
+                                }
+                                if (checked != true) {
+                                  for (final selectedIndex
+                                      in previouslySelected) {
+                                    final appId = visitors[selectedIndex]
+                                        .icPassport
+                                        .trim();
+                                    if (appId.isNotEmpty) {
+                                      _physicalTagErrorByAppId.remove(appId);
+                                    }
+                                  }
                                 }
                               });
                             }
@@ -848,6 +995,7 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
                   final isPhysicalTagEnabled =
                       isPhysicalTagEditable && _selectedIndexes.contains(i);
                   return _VisitorCard(
+                    key: _visitorCardKeyFor(visitor, i),
                     invitationId: lookup.invitationId,
                     visitor: visitor,
                     selected: _selectedIndexes.contains(i),
@@ -860,8 +1008,13 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
                     physicalTagController: isPhysicalTagEditable
                         ? _physicalTagControllerFor(visitor)
                         : null,
+                    physicalTagFocusNode: isPhysicalTagEditable
+                        ? _physicalTagFocusNodeFor(visitor)
+                        : null,
+                    physicalTagErrorText:
+                        _physicalTagErrorByAppId[visitor.icPassport.trim()],
                     onPhysicalTagChanged: isPhysicalTagEnabled
-                        ? (value) => _setPhysicalTagFor(visitor, value)
+                        ? (value) => _onPhysicalTagChanged(visitor, value)
                         : null,
                     onPhysicalTagScanTap: isPhysicalTagEnabled
                         ? () => _scanPhysicalTagFor(visitor)
@@ -875,6 +1028,9 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
                                 }
                               } else {
                                 _selectedIndexes.remove(i);
+                                _physicalTagErrorByAppId.remove(
+                                  visitor.icPassport.trim(),
+                                );
                               }
                             });
                           }
@@ -956,6 +1112,7 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
 
 class _VisitorCard extends StatelessWidget {
   const _VisitorCard({
+    super.key,
     required this.invitationId,
     required this.visitor,
     required this.selected,
@@ -966,6 +1123,8 @@ class _VisitorCard extends StatelessWidget {
     required this.checkInDate,
     required this.checkOutDate,
     required this.physicalTagController,
+    required this.physicalTagFocusNode,
+    required this.physicalTagErrorText,
     required this.onPhysicalTagChanged,
     required this.onPhysicalTagScanTap,
     required this.onSelected,
@@ -982,6 +1141,8 @@ class _VisitorCard extends StatelessWidget {
   final String checkInDate;
   final String checkOutDate;
   final TextEditingController? physicalTagController;
+  final FocusNode? physicalTagFocusNode;
+  final String? physicalTagErrorText;
   final ValueChanged<String>? onPhysicalTagChanged;
   final VoidCallback? onPhysicalTagScanTap;
   final ValueChanged<bool?>? onSelected;
@@ -1050,9 +1211,11 @@ class _VisitorCard extends StatelessWidget {
               _PhysicalTagInputRow(
                 appId: visitor.icPassport.trim(),
                 controller: physicalTagController!,
+                focusNode: physicalTagFocusNode!,
                 enabled: onPhysicalTagChanged != null,
                 onChanged: onPhysicalTagChanged,
                 onScanTap: onPhysicalTagScanTap,
+                errorText: physicalTagErrorText,
               )
             else
               InfoRow(
@@ -1079,25 +1242,31 @@ class _PhysicalTagInputRow extends StatelessWidget {
   const _PhysicalTagInputRow({
     required this.appId,
     required this.controller,
+    required this.focusNode,
     required this.enabled,
     required this.onChanged,
     required this.onScanTap,
+    required this.errorText,
   });
 
   final String appId;
   final TextEditingController controller;
+  final FocusNode focusNode;
   final bool enabled;
   final ValueChanged<String>? onChanged;
   final VoidCallback? onScanTap;
+  final String? errorText;
 
   @override
   Widget build(BuildContext context) {
     return LabeledTextInputRow(
       label: 'Physical Tag',
-      hintText: 'Optional',
+      hintText: 'Required',
       controller: controller,
+      focusNode: focusNode,
       onChanged: onChanged,
       enabled: enabled,
+      errorText: errorText,
       inputFieldKey: Key('physical-tag-input-$appId'),
       suffixIcon: CompactSuffixTapIcon(
         key: Key('physical-tag-scan-$appId'),
