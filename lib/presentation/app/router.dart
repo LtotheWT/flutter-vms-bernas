@@ -8,6 +8,7 @@ import '../pages/invitation_add_page.dart';
 import '../pages/invitation_listing_page.dart';
 import '../pages/login_page.dart';
 import '../pages/permanent_contractor_check_page.dart';
+import '../pages/employee_check_page.dart';
 import '../pages/report_page.dart';
 import '../pages/splash_page.dart';
 import '../pages/visitor_walk_in_page.dart';
@@ -21,6 +22,7 @@ import '../pages/report_dashboard_page.dart';
 import '../pages/report_dashboard_list_page.dart';
 import '../state/auth_session_providers.dart';
 import '../state/permanent_contractor_check_providers.dart';
+import '../state/employee_check_providers.dart';
 
 const String loginRouteName = 'login';
 const String loginRoutePath = '/login';
@@ -60,6 +62,8 @@ const String whitelistDetailRoutePath = '/whitelist/detail';
 const String permanentContractorCheckRouteName = 'permanent_contractor_check';
 const String permanentContractorCheckRoutePath =
     '/workforce/permanent-contractor-check';
+const String employeeCheckRouteName = 'employee_check';
+const String employeeCheckRoutePath = '/workforce/employee-check';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -142,6 +146,17 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             );
           }
           return WhitelistDetailPage(args: args);
+        },
+      ),
+      GoRoute(
+        name: employeeCheckRouteName,
+        path: employeeCheckRoutePath,
+        builder: (context, state) {
+          final checkTypeParam = state.uri.queryParameters['checkType'];
+          final initialCheckType = checkTypeParam == 'check_out'
+              ? EmployeeCheckType.checkOut
+              : EmployeeCheckType.checkIn;
+          return EmployeeCheckPage(initialCheckType: initialCheckType);
         },
       ),
       GoRoute(

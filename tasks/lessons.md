@@ -14,3 +14,4 @@
 - If the primary action is "open details then act", do not force `ExpansionTile`; use direct row navigation and keep details/actions on a dedicated page.
 - When list item taps depend on identifiers, validate identifiers at tap time and fail with concise snackbar rather than navigating to a broken screen.
 - When actions happen on a details page but list freshness matters, return a route result flag and refresh the list on pop rather than forcing immediate navigation.
+- When implementing a new check-in/out screen that already has an existing profile-photo pattern in a similar feature, include photo parity upfront unless explicitly out of scope.

@@ -101,9 +101,19 @@ class HomePage extends StatelessWidget {
                   title: 'Employees',
                   icon: Icons.badge_outlined,
                   color: colorScheme.tertiaryContainer,
-                  children: const [
-                    _MenuTile(title: 'Employee Check-In'),
-                    _MenuTile(title: 'Employee Check-Out'),
+                  children: [
+                    _MenuTile(
+                      title: 'Employee Check-In',
+                      onTap: () => context.push(
+                        '$employeeCheckRoutePath?checkType=check_in',
+                      ),
+                    ),
+                    _MenuTile(
+                      title: 'Employee Check-Out',
+                      onTap: () => context.push(
+                        '$employeeCheckRoutePath?checkType=check_out',
+                      ),
+                    ),
                   ],
                 ),
                 _SectionCard(

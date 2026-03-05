@@ -105,3 +105,37 @@
 - Verification:
   - `flutter analyze lib/presentation/pages/report_dashboard_page.dart lib/presentation/state/report_dashboard_providers.dart lib/data/datasources/reference_remote_data_source.dart lib/data/repositories/reference_repository_impl.dart lib/data/models/dashboard_io_metric_dto.dart lib/data/models/dashboard_summary_response_dto.dart lib/domain/entities/dashboard_io_metric_entity.dart lib/domain/entities/dashboard_summary_entity.dart lib/domain/repositories/reference_repository.dart lib/domain/usecases/get_dashboard_summary_usecase.dart`
   - `flutter test test/data/models/dashboard_io_metric_dto_test.dart test/data/models/dashboard_summary_response_dto_test.dart test/data/datasources/reference_remote_data_source_test.dart test/data/repositories/reference_repository_impl_dashboard_test.dart test/domain/usecases/get_dashboard_summary_usecase_test.dart test/presentation/state/report_dashboard_providers_test.dart test/presentation/pages/report_dashboard_page_test.dart test/domain/usecases/get_permanent_contractor_info_usecase_test.dart test/domain/usecases/submit_permanent_contractor_check_in_usecase_test.dart test/domain/usecases/submit_permanent_contractor_check_out_usecase_test.dart test/domain/usecases/reference_usecases_test.dart test/presentation/state/permanent_contractor_check_providers_test.dart test/presentation/state/permanent_contractor_check_providers_image_test.dart test/presentation/pages/permanent_contractor_check_page_test.dart`
+
+## 2026-03-05 - Employee check-in/out integration
+- [x] Add employee domain entities, repository contract, and use cases for lookup + submit.
+- [x] Add employee lookup/submit DTOs, datasource methods, and repository implementation for `/wmsws/Employee/*`.
+- [x] Add employee Riverpod Notifier controller/state with idempotency lifecycle and session validation.
+- [x] Add new Employee Check-In/Out page with check type toggle, scan/manual search, detail display, and confirm submit.
+- [x] Extract reusable `CheckTypeSegmentedControl` widget and reuse in permanent contractor page.
+- [x] Wire routes and home tiles for Employee Check-In/Out to the shared employee page with preselected mode.
+- [x] Add data/domain/state/page tests for employee feature and run verification.
+
+## Review (Employee Check-In/Out)
+- Employee lookup now uses `GET /wmsws/Employee/{encodedCode}` and clears the scan/input field on successful lookup.
+- Submit now calls live APIs by mode (`/wmsws/Employee/check-in` or `/wmsws/Employee/check-out`) with `Idempotency-Key`.
+- Submit payload uses session `defaultSite/defaultGate/username` and loaded `EmployeeId`, with stable idempotency key reuse on retry.
+- Details stay visible after submit and user feedback is shown via snackbar backend message/fallback.
+- Verification:
+  - `flutter analyze lib/presentation/pages/employee_check_page.dart lib/presentation/state/employee_check_providers.dart lib/data/datasources/employee_access_remote_data_source.dart lib/data/repositories/employee_access_repository_impl.dart lib/presentation/widgets/check_type_segmented_control.dart lib/presentation/pages/permanent_contractor_check_page.dart lib/presentation/app/router.dart lib/presentation/pages/home_page.dart lib/core/date_time_formats.dart`
+  - `flutter test test/data/models/employee_info_response_dto_test.dart test/data/models/employee_submit_request_dto_test.dart test/data/models/employee_submit_response_dto_test.dart test/data/datasources/employee_access_remote_data_source_test.dart test/data/repositories/employee_access_repository_impl_test.dart test/domain/usecases/get_employee_info_usecase_test.dart test/domain/usecases/submit_employee_check_in_usecase_test.dart test/domain/usecases/submit_employee_check_out_usecase_test.dart test/presentation/state/employee_check_providers_test.dart test/presentation/pages/employee_check_page_test.dart test/presentation/pages/permanent_contractor_check_page_test.dart`
+
+## 2026-03-05 - Employee profile image integration
+- [x] Extend employee repository/data source contracts for profile image bytes fetch (`GET /wmsws/Employee/{employeeId}/photo`).
+- [x] Add employee image provider + in-memory cache in employee state providers.
+- [x] Render profile photo slot in Employee Check-In/Out info card with fullscreen preview behavior.
+- [x] Add/extend data/repository/widget tests for employee profile image.
+- [x] Run targeted verification for touched employee files.
+
+## Review (Employee Profile Image)
+- Employee info card now shows profile photo using the same `RemotePhotoSlot` pattern as permanent contractor.
+- Image fetch is lazy and cached in memory per employee id during provider lifecycle.
+- Missing/404 image returns placeholder and does not block check-in/out flow.
+- Tapping loaded profile photo opens fullscreen preview.
+- Verification:
+  - `flutter analyze lib/presentation/pages/employee_check_page.dart lib/presentation/state/employee_check_providers.dart lib/data/datasources/employee_access_remote_data_source.dart lib/data/repositories/employee_access_repository_impl.dart lib/domain/repositories/employee_access_repository.dart`
+  - `flutter test test/data/datasources/employee_access_remote_data_source_test.dart test/data/repositories/employee_access_repository_impl_test.dart test/domain/usecases/get_employee_info_usecase_test.dart test/domain/usecases/submit_employee_check_in_usecase_test.dart test/domain/usecases/submit_employee_check_out_usecase_test.dart test/presentation/state/employee_check_providers_test.dart test/presentation/pages/employee_check_page_test.dart`

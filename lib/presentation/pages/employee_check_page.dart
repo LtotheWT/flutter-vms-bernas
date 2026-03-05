@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/date_time_formats.dart';
 import 'mobile_scanner_page.dart';
-import '../state/permanent_contractor_check_providers.dart';
+import '../state/employee_check_providers.dart';
 import '../widgets/app_filled_button.dart';
 import '../widgets/app_snackbar.dart';
 import '../widgets/check_type_segmented_control.dart';
@@ -11,38 +11,34 @@ import '../widgets/info_row.dart';
 import '../widgets/labeled_form_rows.dart';
 import '../widgets/remote_photo_slot.dart';
 
-class PermanentContractorCheckPage extends ConsumerStatefulWidget {
-  const PermanentContractorCheckPage({
+class EmployeeCheckPage extends ConsumerStatefulWidget {
+  const EmployeeCheckPage({
     super.key,
     required this.initialCheckType,
     this.scanLauncher,
   });
 
-  final PermanentContractorCheckType initialCheckType;
+  final EmployeeCheckType initialCheckType;
   final Future<String?> Function(BuildContext context)? scanLauncher;
 
   @override
-  ConsumerState<PermanentContractorCheckPage> createState() =>
-      _PermanentContractorCheckPageState();
+  ConsumerState<EmployeeCheckPage> createState() => _EmployeeCheckPageState();
 }
 
-class _PermanentContractorCheckPageState
-    extends ConsumerState<PermanentContractorCheckPage> {
+class _EmployeeCheckPageState extends ConsumerState<EmployeeCheckPage> {
   final _searchController = TextEditingController();
   final _searchFocusNode = FocusNode();
-  late final ProviderSubscription<PermanentContractorCheckState>
-  _stateSubscription;
+  late final ProviderSubscription<EmployeeCheckState> _stateSubscription;
 
   @override
   void initState() {
     super.initState();
-    _stateSubscription = ref.listenManual<PermanentContractorCheckState>(
-      permanentContractorCheckControllerProvider,
+    _stateSubscription = ref.listenManual<EmployeeCheckState>(
+      employeeCheckControllerProvider,
       (previous, next) {
         if (!mounted) {
           return;
         }
-
         if (_searchController.text != next.searchInput) {
           _searchController.value = TextEditingValue(
             text: next.searchInput,
@@ -55,7 +51,7 @@ class _PermanentContractorCheckPageState
 
     Future<void>.microtask(() {
       ref
-          .read(permanentContractorCheckControllerProvider.notifier)
+          .read(employeeCheckControllerProvider.notifier)
           .setCheckType(widget.initialCheckType);
     });
   }
@@ -70,9 +66,7 @@ class _PermanentContractorCheckPageState
 
   Future<void> _search({String? overrideCode}) async {
     final value = overrideCode ?? _searchController.text;
-    final controller = ref.read(
-      permanentContractorCheckControllerProvider.notifier,
-    );
+    final controller = ref.read(employeeCheckControllerProvider.notifier);
     controller.updateSearchInput(value);
     await controller.search();
   }
@@ -96,41 +90,42 @@ class _PermanentContractorCheckPageState
     await _search(overrideCode: scanned);
   }
 
-  Future<void> _confirm(PermanentContractorCheckState state) async {
-    final hasInfo = state.info?.contractorId.trim().isNotEmpty == true;
+  Future<void> _confirm(EmployeeCheckState state) async {
+    final hasInfo = state.info?.employeeId.trim().isNotEmpty == true;
     if (!hasInfo) {
-      showAppSnackBar(context, 'Please search contractor info before submit.');
+      showAppSnackBar(context, 'Please search employee info before submit.');
       return;
     }
 
-    final controller = ref.read(
-      permanentContractorCheckControllerProvider.notifier,
-    );
-    final result = state.checkType == PermanentContractorCheckType.checkIn
-        ? await controller.submitCheckIn()
-        : await controller.submitCheckOut();
+    final result = await ref
+        .read(employeeCheckControllerProvider.notifier)
+        .submit();
     if (!mounted) {
       return;
     }
 
-    final fallbackMessage =
-        state.checkType == PermanentContractorCheckType.checkIn
-        ? 'Checked-in successfully.'
-        : 'Checked-out successfully.';
-    showAppSnackBar(
-      context,
-      result.message.trim().isEmpty ? fallbackMessage : result.message,
-    );
+    final fallbackMessage = state.checkType == EmployeeCheckType.checkOut
+        ? 'Employee checked out successfully.'
+        : 'Employee checked in successfully.';
+    final message = result.message.trim().isNotEmpty
+        ? result.message.trim()
+        : fallbackMessage;
+    showAppSnackBar(context, message);
+  }
+
+  String _displayOrDash(String? value) {
+    final text = value?.trim() ?? '';
+    return text.isEmpty ? '-' : text;
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(permanentContractorCheckControllerProvider);
+    final state = ref.watch(employeeCheckControllerProvider);
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Permanent Contractor Check-In/Out')),
+      appBar: AppBar(title: const Text('Employee Check-In/Out')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         children: [
@@ -141,24 +136,21 @@ class _PermanentContractorCheckPageState
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'Search Contractor',
+                    'Search Employee',
                     style: textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 10),
                   CheckTypeSegmentedControl(
-                    isCheckIn:
-                        state.checkType == PermanentContractorCheckType.checkIn,
+                    isCheckIn: state.checkType == EmployeeCheckType.checkIn,
                     onChanged: (isCheckIn) {
                       ref
-                          .read(
-                            permanentContractorCheckControllerProvider.notifier,
-                          )
+                          .read(employeeCheckControllerProvider.notifier)
                           .setCheckType(
                             isCheckIn
-                                ? PermanentContractorCheckType.checkIn
-                                : PermanentContractorCheckType.checkOut,
+                                ? EmployeeCheckType.checkIn
+                                : EmployeeCheckType.checkOut,
                           );
                     },
                   ),
@@ -170,12 +162,10 @@ class _PermanentContractorCheckPageState
                     focusNode: _searchFocusNode,
                     hintText: 'Please input',
                     onChanged: ref
-                        .read(
-                          permanentContractorCheckControllerProvider.notifier,
-                        )
+                        .read(employeeCheckControllerProvider.notifier)
                         .updateSearchInput,
                     suffixIcon: CompactSuffixTapIcon(
-                      key: const Key('permanent-contractor-scan-button'),
+                      key: const Key('employee-scan-button'),
                       icon: Icons.qr_code_scanner,
                       enabled: !(state.isLoading || state.isSubmitting),
                       onTap: _openScannerAndSearch,
@@ -223,7 +213,7 @@ class _PermanentContractorCheckPageState
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'Permanent Contractor Info',
+                    'Employee Info',
                     style: textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -232,16 +222,12 @@ class _PermanentContractorCheckPageState
                   Align(
                     alignment: Alignment.centerLeft,
                     child: RemotePhotoSlot(
-                      thumbnailKey: const Key(
-                        'permanent-contractor-photo-thumbnail',
-                      ),
-                      fullscreenKey: const Key(
-                        'permanent-contractor-photo-fullscreen',
-                      ),
+                      thumbnailKey: const Key('employee-photo-thumbnail'),
+                      fullscreenKey: const Key('employee-photo-fullscreen'),
                       asyncBytes: ref.watch(
-                        permanentContractorImageProvider(
-                          PermanentContractorPhotoKey(
-                            contractorId: state.info?.contractorId ?? '',
+                        employeeImageProvider(
+                          EmployeePhotoKey(
+                            employeeId: state.info?.employeeId ?? '',
                           ),
                         ),
                       ),
@@ -249,52 +235,48 @@ class _PermanentContractorCheckPageState
                   ),
                   const SizedBox(height: 8),
                   InfoRow(
-                    label: 'Permanent Contractor ID',
-                    value: state.info?.contractorId.trim().isNotEmpty == true
-                        ? state.info!.contractorId
-                        : '-',
+                    label: 'Employee ID',
+                    value: _displayOrDash(state.info?.employeeId),
                   ),
                   InfoRow(
-                    label: 'Permanent Contractor Name',
-                    value: state.info?.contractorName.trim().isNotEmpty == true
-                        ? state.info!.contractorName
-                        : '-',
+                    label: 'Employee Name',
+                    value: _displayOrDash(state.info?.employeeName),
                   ),
                   InfoRow(
-                    label: 'IC/Passport Number',
-                    value: state.info?.contractorIc.trim().isNotEmpty == true
-                        ? state.info!.contractorIc
-                        : '-',
+                    label: 'Site',
+                    value: _displayOrDash(state.info?.site),
+                  ),
+                  InfoRow(
+                    label: 'Department',
+                    value: _displayOrDash(state.info?.department),
+                  ),
+                  InfoRow(
+                    label: 'Unit',
+                    value: _displayOrDash(state.info?.unit),
+                  ),
+                  InfoRow(
+                    label: 'Vehicle Type',
+                    value: _displayOrDash(state.info?.vehicleType),
                   ),
                   InfoRow(
                     label: 'Handphone No',
-                    value: state.info?.hpNo.trim().isNotEmpty == true
-                        ? state.info!.hpNo
-                        : '-',
+                    value: _displayOrDash(state.info?.handphoneNo),
                   ),
                   InfoRow(
-                    label: 'Email',
-                    value: state.info?.email.trim().isNotEmpty == true
-                        ? state.info!.email
-                        : '-',
+                    label: 'Tel No and Extension',
+                    value: _displayOrDash(state.info?.telNoExtension),
                   ),
                   InfoRow(
-                    label: 'Company Name',
-                    value: state.info?.company.trim().isNotEmpty == true
-                        ? state.info!.company
-                        : '-',
-                  ),
-                  InfoRow(
-                    label: 'Valid Working Datetime From',
+                    label: 'Effective Working Date',
                     value: state.info == null
                         ? '-'
-                        : formatDateOnlyOrRaw(state.info!.validWorkingDateFrom),
+                        : formatDateOnlyOrRaw(state.info!.effectiveWorkingDate),
                   ),
                   InfoRow(
-                    label: 'Valid Working Datetime To',
+                    label: 'Last Working Date',
                     value: state.info == null
                         ? '-'
-                        : formatDateOnlyOrRaw(state.info!.validWorkingDateTo),
+                        : formatDateOnlyOrRaw(state.info!.lastWorkingDate),
                   ),
                 ],
               ),
@@ -308,7 +290,7 @@ class _PermanentContractorCheckPageState
           onPressed:
               !state.isLoading &&
                   !state.isSubmitting &&
-                  state.info?.contractorId.trim().isNotEmpty == true
+                  state.info?.employeeId.trim().isNotEmpty == true
               ? () => _confirm(state)
               : null,
           child: state.isSubmitting
@@ -318,9 +300,9 @@ class _PermanentContractorCheckPageState
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : Text(
-                  state.checkType == PermanentContractorCheckType.checkIn
-                      ? 'Confirm Check-In'
-                      : 'Confirm Check-Out',
+                  state.checkType == EmployeeCheckType.checkOut
+                      ? 'Confirm Check-Out'
+                      : 'Confirm Check-In',
                 ),
         ),
       ),
