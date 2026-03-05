@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/date_time_formats.dart';
-import 'mobile_scanner_page.dart';
+import '../services/mobile_scanner_launcher.dart';
 import '../state/employee_check_providers.dart';
 import '../widgets/app_filled_button.dart';
 import '../widgets/app_snackbar.dart';
@@ -72,16 +72,12 @@ class _EmployeeCheckPageState extends ConsumerState<EmployeeCheckPage> {
   }
 
   Future<void> _openScannerAndSearch() async {
-    final scannerResult =
-        await (widget.scanLauncher?.call(context) ??
-            Navigator.of(context).push<String>(
-              MaterialPageRoute(
-                builder: (_) => const MobileScannerPage(
-                  title: 'Scan QR Code',
-                  description: 'Align QR code inside the frame to scan.',
-                ),
-              ),
-            ));
+    final scannerResult = await openMobileScanner(
+      context: context,
+      title: 'Scan QR Code',
+      description: 'Align QR code inside the frame to scan.',
+      overrideLauncher: widget.scanLauncher,
+    );
 
     final scanned = scannerResult?.trim() ?? '';
     if (scanned.isEmpty || !mounted) {

@@ -211,3 +211,19 @@
 - Render viewport math is removed; scroll behavior stays lightweight and maintainable.
 - Verification:
   - `flutter analyze lib/presentation/pages/visitor_check_in_page.dart`
+
+## 2026-03-06 - Scanner launch dedup via shared helper
+- [x] Add shared scanner launcher helper for `MobileScannerPage` navigation with optional override hook.
+- [x] Refactor employee check page scanner-open flow to use shared helper.
+- [x] Refactor permanent contractor check page scanner-open flow to use shared helper.
+- [x] Refactor visitor page QR and physical-tag scan flows to use shared helper.
+- [x] Run targeted verification (`flutter analyze` + page test attempt).
+
+## Review (Scanner Launch Helper Refactor)
+- Added `/Users/wengthailim/Workspace/flutter_projects/vms_bernas/lib/presentation/services/mobile_scanner_launcher.dart` with `openMobileScanner(...)` and `ScannerLauncherOverride`.
+- Employee, permanent contractor, and visitor pages now call the shared helper instead of duplicating `Navigator.push(MobileScannerPage)` blocks.
+- Existing page-level test hooks (`scanLauncher`, `physicalTagScanLauncher`) are preserved by passing them as `overrideLauncher`.
+- Scan behavior remains unchanged: page-level trim/empty guards and follow-up actions still happen at call sites.
+- Verification:
+  - `flutter analyze lib/presentation/services/mobile_scanner_launcher.dart lib/presentation/pages/employee_check_page.dart lib/presentation/pages/permanent_contractor_check_page.dart lib/presentation/pages/visitor_check_in_page.dart`
+  - `flutter test test/presentation/pages/employee_check_page_test.dart test/presentation/pages/permanent_contractor_check_page_test.dart test/presentation/pages/visitor_check_in_page_test.dart` *(blocked by local Flutter SDK/framework mismatch in semantics compile stage, same environment issue as prior runs).*

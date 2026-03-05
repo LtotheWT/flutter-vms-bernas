@@ -12,7 +12,7 @@ import '../../domain/entities/visitor_gallery_item_entity.dart';
 import '../../domain/entities/visitor_lookup_entity.dart';
 import '../../domain/entities/visitor_lookup_item_entity.dart';
 import '../../domain/entities/visitor_save_photo_submission_entity.dart';
-import 'mobile_scanner_page.dart';
+import '../services/mobile_scanner_launcher.dart';
 import '../state/auth_session_providers.dart';
 import '../state/device_service_providers.dart';
 import '../state/visitor_check_in_providers.dart';
@@ -127,16 +127,12 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
   }
 
   Future<void> _openScannerAndSearch() async {
-    final scannerResult =
-        await (widget.scanLauncher?.call(context) ??
-            Navigator.of(context).push<String>(
-              MaterialPageRoute(
-                builder: (_) => const MobileScannerPage(
-                  title: 'Scan QR Code',
-                  description: 'Align QR code inside the frame to scan.',
-                ),
-              ),
-            ));
+    final scannerResult = await openMobileScanner(
+      context: context,
+      title: 'Scan QR Code',
+      description: 'Align QR code inside the frame to scan.',
+      overrideLauncher: widget.scanLauncher,
+    );
 
     final scanned = scannerResult?.trim() ?? '';
     if (scanned.isEmpty || !mounted) {
@@ -146,17 +142,12 @@ class _VisitorCheckInPageState extends ConsumerState<VisitorCheckInPage> {
   }
 
   Future<void> _scanPhysicalTagFor(VisitorLookupItemEntity visitor) async {
-    final result =
-        await (widget.physicalTagScanLauncher?.call(context) ??
-            Navigator.of(context).push<String>(
-              MaterialPageRoute(
-                builder: (_) => const MobileScannerPage(
-                  title: 'Scan Physical Tag',
-                  description:
-                      'Align QR code inside the frame to scan physical tag.',
-                ),
-              ),
-            ));
+    final result = await openMobileScanner(
+      context: context,
+      title: 'Scan Physical Tag',
+      description: 'Align QR code inside the frame to scan physical tag.',
+      overrideLauncher: widget.physicalTagScanLauncher,
+    );
     final scanned = result?.trim() ?? '';
     if (scanned.isEmpty || !mounted) {
       return;
