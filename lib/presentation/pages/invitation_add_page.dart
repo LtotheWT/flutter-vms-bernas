@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/date_time_formats.dart';
 import '../state/department_option.dart';
@@ -11,6 +12,7 @@ import '../state/option_label_formatters.dart';
 import '../state/reference_providers.dart';
 import '../state/site_option.dart';
 import '../state/visitor_type_option.dart';
+import '../state/auth_session_providers.dart';
 import '../widgets/app_filled_button.dart';
 import '../widgets/labeled_form_rows.dart';
 import '../widgets/searchable_option_sheet.dart';
@@ -19,7 +21,9 @@ import '../widgets/double_back_exit_scope.dart';
 import '../widgets/loading_overlay.dart';
 
 class InvitationAddPage extends ConsumerStatefulWidget {
-  const InvitationAddPage({super.key});
+  const InvitationAddPage({super.key, this.shareLauncher});
+
+  final Future<void> Function(String url)? shareLauncher;
 
   @override
   ConsumerState<InvitationAddPage> createState() => _InvitationAddPageState();
@@ -215,10 +219,40 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
         .read(invitationAddControllerProvider.notifier)
         .submit();
     if (!mounted) return;
-    showAppSnackBar(context, result.message);
+
     if (result.success) {
+      final encryptUrl = result.encryptUrl?.trim() ?? '';
+      if (encryptUrl.isNotEmpty) {
+        try {
+          await _shareEncryptedUrl(encryptUrl);
+        } catch (_) {
+          if (!mounted) return;
+          showAppSnackBar(
+            context,
+            'Invitation created, but unable to open share sheet.',
+          );
+          _clearAll();
+          return;
+        }
+      }
+
+      if (!mounted) return;
+      showAppSnackBar(context, result.message);
       _clearAll();
+      return;
     }
+
+    showAppSnackBar(context, result.message);
+  }
+
+  Future<void> _shareEncryptedUrl(String encryptUrl) async {
+    final launcher = widget.shareLauncher;
+    if (launcher != null) {
+      await launcher(encryptUrl);
+      return;
+    }
+
+    await SharePlus.instance.share(ShareParams(text: encryptUrl));
   }
 
   void _clearAll() {
@@ -272,6 +306,13 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final formState = ref.watch(invitationAddControllerProvider);
+    final sessionAsync = ref.watch(persistedSessionProvider);
+    final session = sessionAsync.asData?.value;
+    final userDisplay = sessionAsync.isLoading
+        ? 'Loading...'
+        : ((session?.username.trim().isNotEmpty ?? false)
+              ? session!.username
+              : '-');
     final entityOptionsAsync = ref.watch(entityOptionsProvider);
     final entityOptions = extractOptions<EntityOption>(entityOptionsAsync);
     final entityDisplayValue = findDisplayLabel<EntityOption>(
@@ -412,7 +453,7 @@ class _InvitationAddPageState extends ConsumerState<InvitationAddPage> {
                     title: 'Basic Info',
                     onClear: _clearBasicInfo,
                     children: [
-                      const _ReadOnlyValueRow(label: 'User', value: 'Ryan'),
+                      _ReadOnlyValueRow(label: 'User', value: userDisplay),
                       LabeledSelectRow(
                         key: _entityRowKey,
                         label: 'Entity',

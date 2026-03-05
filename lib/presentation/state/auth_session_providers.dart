@@ -9,6 +9,7 @@ import '../../data/datasources/auth_remote_data_source.dart';
 import '../../data/datasources/network/dio_provider.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../domain/repositories/auth_repository.dart';
+import '../../domain/entities/auth_session_entity.dart';
 import '../../domain/usecases/get_persisted_session_usecase.dart';
 import '../../domain/usecases/save_session_usecase.dart';
 
@@ -125,6 +126,14 @@ final getPersistedSessionUseCaseProvider = Provider<GetPersistedSessionUseCase>(
     final repository = ref.read(authRepositoryProvider);
     return GetPersistedSessionUseCase(repository);
   },
+);
+
+final persistedSessionProvider = FutureProvider.autoDispose<AuthSessionEntity?>(
+  (ref) async {
+    final useCase = ref.read(getPersistedSessionUseCaseProvider);
+    return useCase();
+  },
+  retry: (_, __) => null,
 );
 
 final saveSessionUseCaseProvider = Provider<SaveSessionUseCase>((ref) {

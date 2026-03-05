@@ -101,10 +101,17 @@ class InvitationAddState {
 
 @immutable
 class InvitationSubmitResult {
-  const InvitationSubmitResult({required this.success, required this.message});
+  const InvitationSubmitResult({
+    required this.success,
+    required this.message,
+    this.encryptUrl,
+    this.invitationId,
+  });
 
   final bool success;
   final String message;
+  final String? encryptUrl;
+  final String? invitationId;
 }
 
 final invitationAddControllerProvider =
@@ -203,6 +210,8 @@ class InvitationAddController extends Notifier<InvitationAddState> {
         return InvitationSubmitResult(
           success: true,
           message: response.message ?? 'Invitation submitted.',
+          encryptUrl: response.encryptUrl,
+          invitationId: response.invitationId,
         );
       }
 

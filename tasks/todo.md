@@ -139,3 +139,29 @@
 - Verification:
   - `flutter analyze lib/presentation/pages/employee_check_page.dart lib/presentation/state/employee_check_providers.dart lib/data/datasources/employee_access_remote_data_source.dart lib/data/repositories/employee_access_repository_impl.dart lib/domain/repositories/employee_access_repository.dart`
   - `flutter test test/data/datasources/employee_access_remote_data_source_test.dart test/data/repositories/employee_access_repository_impl_test.dart test/domain/usecases/get_employee_info_usecase_test.dart test/domain/usecases/submit_employee_check_in_usecase_test.dart test/domain/usecases/submit_employee_check_out_usecase_test.dart test/presentation/state/employee_check_providers_test.dart test/presentation/pages/employee_check_page_test.dart`
+
+## 2026-03-05 - Invitation Add user row session binding
+- [x] Replace hardcoded `User` row value in Invitation Add basic info with persisted session username.
+- [x] Add reusable `persistedSessionProvider` in auth session providers for UI-level session reads.
+- [x] Verify invitation add/auth session touched files via analyzer.
+
+## Review (Invitation Add User Row)
+- Invitation Add `User` row now reads logged-in username from persisted session (`persistedSessionProvider`) instead of hardcoded text.
+- While session is loading, UI shows `Loading...`; if unavailable, it falls back to `-`.
+- Verification:
+  - `flutter analyze lib/presentation/pages/invitation_add_page.dart lib/presentation/state/auth_session_providers.dart`
+
+## 2026-03-05 - Invitation Add share encrypted URL on submit success
+- [x] Extend invitation submission entity/DTO parsing to carry `InvitationId`, `CreatedAt`, `GUID`, and `encryptURL`.
+- [x] Extend invitation add provider submit result mapping to expose optional `encryptUrl`/`invitationId`.
+- [x] Trigger `share_plus` share sheet from Invitation Add page when submit succeeds with non-empty encrypted URL.
+- [x] Add/extend targeted tests for DTO parsing and invitation add provider mapping.
+- [x] Run targeted verification (`flutter analyze` + targeted `flutter test`).
+
+## Review (Invitation Add Share URL)
+- Invitation submit response now preserves optional backend detail fields (`InvitationId`, `CreatedAt`, `GUID`, `encryptURL`) through DTO -> domain -> provider mapping.
+- Invitation Add page now opens native share sheet on successful submit when encrypted URL is present, then keeps existing success snackbar + form reset flow.
+- Share failure is non-blocking: app shows `Invitation created, but unable to open share sheet.` and still clears the form.
+- Verification:
+  - `flutter analyze lib/domain/entities/invitation_submission_entity.dart lib/data/models/invitation_create_response_dto.dart lib/presentation/state/invitation_add_providers.dart lib/presentation/pages/invitation_add_page.dart`
+  - `flutter test test/data/models/invitation_create_response_dto_test.dart test/presentation/state/invitation_add_providers_test.dart`

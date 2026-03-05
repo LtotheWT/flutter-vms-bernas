@@ -11,40 +11,37 @@ class ReportPage extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Report'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Report'), centerTitle: true),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         children: [
-          _ReportCard(
-            title: 'Visitor Log',
-            subtitle: 'View visitor entries and exits.',
-            icon: Icons.badge_outlined,
-            color: colorScheme.primaryContainer,
-            textTheme: textTheme,
-            onTap: () => context.push(visitorLogRoutePath),
-          ),
-          const SizedBox(height: 16),
-          _ReportCard(
-            title: 'Employee Log',
-            subtitle: 'Track employee check-in/out history.',
-            icon: Icons.work_outline,
-            color: colorScheme.secondaryContainer,
-            textTheme: textTheme,
-            onTap: () => context.push(employeeLogRoutePath),
-          ),
-          const SizedBox(height: 16),
-          _ReportCard(
-            title: 'Permanent Contractor Log',
-            subtitle: 'Review contractor access logs.',
-            icon: Icons.construction_outlined,
-            color: colorScheme.tertiaryContainer,
-            textTheme: textTheme,
-            onTap: () => context.push(permanentContractorLogRoutePath),
-          ),
-          const SizedBox(height: 16),
+          // _ReportCard(
+          //   title: 'Visitor Log',
+          //   subtitle: 'View visitor entries and exits.',
+          //   icon: Icons.badge_outlined,
+          //   color: colorScheme.primaryContainer,
+          //   textTheme: textTheme,
+          //   onTap: () => context.push(visitorLogRoutePath),
+          // ),
+          // const SizedBox(height: 16),
+          // _ReportCard(
+          //   title: 'Employee Log',
+          //   subtitle: 'Track employee check-in/out history.',
+          //   icon: Icons.work_outline,
+          //   color: colorScheme.secondaryContainer,
+          //   textTheme: textTheme,
+          //   onTap: () => context.push(employeeLogRoutePath),
+          // ),
+          // const SizedBox(height: 16),
+          // _ReportCard(
+          //   title: 'Permanent Contractor Log',
+          //   subtitle: 'Review contractor access logs.',
+          //   icon: Icons.construction_outlined,
+          //   color: colorScheme.tertiaryContainer,
+          //   textTheme: textTheme,
+          //   onTap: () => context.push(permanentContractorLogRoutePath),
+          // ),
+          // const SizedBox(height: 16),
           _ReportCard(
             title: 'Dashboard',
             subtitle: 'Key metrics and summaries.',
