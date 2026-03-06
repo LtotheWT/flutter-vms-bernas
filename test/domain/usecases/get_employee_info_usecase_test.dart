@@ -1,7 +1,11 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vms_bernas/domain/entities/employee_delete_photo_result_entity.dart';
+import 'package:vms_bernas/domain/entities/employee_gallery_item_entity.dart';
 import 'package:vms_bernas/domain/entities/employee_info_entity.dart';
+import 'package:vms_bernas/domain/entities/employee_save_photo_result_entity.dart';
+import 'package:vms_bernas/domain/entities/employee_save_photo_submission_entity.dart';
 import 'package:vms_bernas/domain/entities/employee_submit_entity.dart';
 import 'package:vms_bernas/domain/entities/employee_submit_result_entity.dart';
 import 'package:vms_bernas/domain/repositories/employee_access_repository.dart';
@@ -45,6 +49,32 @@ class _FakeEmployeeAccessRepository implements EmployeeAccessRepository {
 
   @override
   Future<Uint8List?> getEmployeeImage({required String employeeId}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<EmployeeGalleryItemEntity>> getEmployeeGalleryList({
+    required String guid,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Uint8List?> getEmployeeGalleryPhoto({required int photoId}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<EmployeeSavePhotoResultEntity> saveEmployeePhoto({
+    required EmployeeSavePhotoSubmissionEntity submission,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<EmployeeDeletePhotoResultEntity> deleteEmployeeGalleryPhoto({
+    required int photoId,
+  }) {
     throw UnimplementedError();
   }
 }

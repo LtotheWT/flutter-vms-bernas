@@ -4,13 +4,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/error_messages.dart';
+import '../../domain/entities/employee_delete_photo_result_entity.dart';
+import '../../domain/entities/employee_gallery_item_entity.dart';
 import '../../data/datasources/employee_access_remote_data_source.dart';
 import '../../data/repositories/employee_access_repository_impl.dart';
 import '../../domain/entities/employee_info_entity.dart';
+import '../../domain/entities/employee_save_photo_result_entity.dart';
+import '../../domain/entities/employee_save_photo_submission_entity.dart';
 import '../../domain/entities/employee_submit_entity.dart';
 import '../../domain/entities/employee_submit_result_entity.dart';
 import '../../domain/repositories/employee_access_repository.dart';
+import '../../domain/usecases/delete_employee_gallery_photo_usecase.dart';
 import '../../domain/usecases/get_employee_info_usecase.dart';
+import '../../domain/usecases/save_employee_photo_usecase.dart';
 import '../../domain/usecases/submit_employee_check_in_usecase.dart';
 import '../../domain/usecases/submit_employee_check_out_usecase.dart';
 import 'auth_session_providers.dart';
@@ -49,6 +55,19 @@ final submitEmployeeCheckOutUseCaseProvider =
       return SubmitEmployeeCheckOutUseCase(repository);
     });
 
+final saveEmployeePhotoUseCaseProvider = Provider<SaveEmployeePhotoUseCase>((
+  ref,
+) {
+  final repository = ref.read(employeeAccessRepositoryProvider);
+  return SaveEmployeePhotoUseCase(repository);
+});
+
+final deleteEmployeeGalleryPhotoUseCaseProvider =
+    Provider<DeleteEmployeeGalleryPhotoUseCase>((ref) {
+      final repository = ref.read(employeeAccessRepositoryProvider);
+      return DeleteEmployeeGalleryPhotoUseCase(repository);
+    });
+
 @immutable
 class EmployeeCheckState {
   const EmployeeCheckState({
@@ -57,6 +76,10 @@ class EmployeeCheckState {
     this.info,
     this.isLoading = false,
     this.isSubmitting = false,
+    this.isUploadingPhoto = false,
+    this.isDeletingPhoto = false,
+    this.deletingPhotoId,
+    this.photoSessionGuid = '',
     this.idempotencyKey,
     this.idempotencySignature,
     this.errorMessage,
@@ -67,6 +90,10 @@ class EmployeeCheckState {
   final EmployeeInfoEntity? info;
   final bool isLoading;
   final bool isSubmitting;
+  final bool isUploadingPhoto;
+  final bool isDeletingPhoto;
+  final int? deletingPhotoId;
+  final String photoSessionGuid;
   final String? idempotencyKey;
   final String? idempotencySignature;
   final String? errorMessage;
@@ -77,6 +104,10 @@ class EmployeeCheckState {
     Object? info = _unset,
     bool? isLoading,
     bool? isSubmitting,
+    bool? isUploadingPhoto,
+    bool? isDeletingPhoto,
+    Object? deletingPhotoId = _unset,
+    String? photoSessionGuid,
     Object? idempotencyKey = _unset,
     Object? idempotencySignature = _unset,
     Object? errorMessage = _unset,
@@ -87,6 +118,12 @@ class EmployeeCheckState {
       info: identical(info, _unset) ? this.info : info as EmployeeInfoEntity?,
       isLoading: isLoading ?? this.isLoading,
       isSubmitting: isSubmitting ?? this.isSubmitting,
+      isUploadingPhoto: isUploadingPhoto ?? this.isUploadingPhoto,
+      isDeletingPhoto: isDeletingPhoto ?? this.isDeletingPhoto,
+      deletingPhotoId: identical(deletingPhotoId, _unset)
+          ? this.deletingPhotoId
+          : deletingPhotoId as int?,
+      photoSessionGuid: photoSessionGuid ?? this.photoSessionGuid,
       idempotencyKey: identical(idempotencyKey, _unset)
           ? this.idempotencyKey
           : idempotencyKey as String?,
@@ -111,7 +148,8 @@ class EmployeeCheckController extends Notifier<EmployeeCheckState> {
   static const Uuid _uuid = Uuid();
 
   @override
-  EmployeeCheckState build() => const EmployeeCheckState();
+  EmployeeCheckState build() =>
+      EmployeeCheckState(photoSessionGuid: _uuid.v4());
 
   void setCheckType(EmployeeCheckType value) {
     if (value == state.checkType) {
@@ -253,6 +291,79 @@ class EmployeeCheckController extends Notifier<EmployeeCheckState> {
       return EmployeeSubmitResultEntity(status: false, message: message);
     }
   }
+
+  Future<EmployeeSavePhotoResultEntity> savePhoto({
+    required EmployeeSavePhotoSubmissionEntity submission,
+  }) async {
+    if (state.isUploadingPhoto) {
+      return const EmployeeSavePhotoResultEntity(
+        success: false,
+        message: 'Photo upload is currently in progress.',
+        photoId: null,
+      );
+    }
+
+    state = state.copyWith(isUploadingPhoto: true, errorMessage: null);
+
+    try {
+      final useCase = ref.read(saveEmployeePhotoUseCaseProvider);
+      final result = await useCase(submission: submission);
+      state = state.copyWith(isUploadingPhoto: false);
+      return result;
+    } catch (error) {
+      final message = toDisplayErrorMessage(
+        error,
+        fallback: 'Failed to upload employee photo.',
+      );
+      state = state.copyWith(isUploadingPhoto: false, errorMessage: message);
+      return EmployeeSavePhotoResultEntity(
+        success: false,
+        message: message,
+        photoId: null,
+      );
+    }
+  }
+
+  Future<EmployeeDeletePhotoResultEntity> deletePhoto({
+    required int photoId,
+  }) async {
+    if (photoId <= 0) {
+      return const EmployeeDeletePhotoResultEntity(
+        success: false,
+        message: 'Invalid photo id.',
+      );
+    }
+    if (state.isDeletingPhoto && state.deletingPhotoId == photoId) {
+      return const EmployeeDeletePhotoResultEntity(
+        success: false,
+        message: 'Photo deletion is currently in progress.',
+      );
+    }
+
+    state = state.copyWith(
+      isDeletingPhoto: true,
+      deletingPhotoId: photoId,
+      errorMessage: null,
+    );
+
+    try {
+      final useCase = ref.read(deleteEmployeeGalleryPhotoUseCaseProvider);
+      final result = await useCase(photoId: photoId);
+      state = state.copyWith(isDeletingPhoto: false, deletingPhotoId: null);
+      return result;
+    } catch (error) {
+      final message = toDisplayErrorMessage(
+        error,
+        fallback: 'Failed to delete employee photo.',
+      );
+      state = state.copyWith(
+        isDeletingPhoto: false,
+        deletingPhotoId: null,
+        errorMessage: message,
+      );
+      return EmployeeDeletePhotoResultEntity(success: false, message: message);
+    }
+  }
 }
 
 @immutable
@@ -286,3 +397,138 @@ final employeeImageProvider = FutureProvider.autoDispose
         loader: () => repository.getEmployeeImage(employeeId: employeeId),
       );
     });
+
+@immutable
+class EmployeeGalleryPhotoKey extends Equatable {
+  const EmployeeGalleryPhotoKey({required this.photoId});
+
+  final int photoId;
+
+  String get cacheKey => galleryPhotoCacheKey(photoId);
+
+  @override
+  List<Object?> get props => [photoId];
+}
+
+final employeeGalleryLocalItemsProvider =
+    NotifierProvider.autoDispose<
+      EmployeeGalleryLocalItemsController,
+      Map<String, List<EmployeeGalleryItemEntity>>
+    >(EmployeeGalleryLocalItemsController.new);
+
+class EmployeeGalleryLocalItemsController
+    extends Notifier<Map<String, List<EmployeeGalleryItemEntity>>> {
+  @override
+  Map<String, List<EmployeeGalleryItemEntity>> build() =>
+      <String, List<EmployeeGalleryItemEntity>>{};
+
+  void append({required String guid, required EmployeeGalleryItemEntity item}) {
+    final key = guid.trim();
+    if (key.isEmpty) {
+      return;
+    }
+
+    final next = <String, List<EmployeeGalleryItemEntity>>{...state};
+    final current = next[key] ?? const <EmployeeGalleryItemEntity>[];
+    next[key] = <EmployeeGalleryItemEntity>[...current, item];
+    state = next;
+  }
+
+  void remove({required String guid, required int photoId}) {
+    final key = guid.trim();
+    if (key.isEmpty || photoId <= 0) {
+      return;
+    }
+
+    final current = state[key];
+    if (current == null || current.isEmpty) {
+      return;
+    }
+
+    final filtered = current
+        .where((item) => item.photoId != photoId)
+        .toList(growable: false);
+    final next = <String, List<EmployeeGalleryItemEntity>>{...state};
+    if (filtered.isEmpty) {
+      next.remove(key);
+    } else {
+      next[key] = filtered;
+    }
+    state = next;
+  }
+}
+
+final employeeGalleryDeletedPhotoIdsProvider =
+    NotifierProvider.autoDispose<
+      EmployeeGalleryDeletedPhotoIdsController,
+      Map<String, Set<int>>
+    >(EmployeeGalleryDeletedPhotoIdsController.new);
+
+class EmployeeGalleryDeletedPhotoIdsController
+    extends Notifier<Map<String, Set<int>>> {
+  @override
+  Map<String, Set<int>> build() => <String, Set<int>>{};
+
+  void markDeleted({required String guid, required int photoId}) {
+    final key = guid.trim();
+    if (key.isEmpty || photoId <= 0) {
+      return;
+    }
+
+    final next = <String, Set<int>>{...state};
+    final current = <int>{...(next[key] ?? const <int>{})};
+    current.add(photoId);
+    next[key] = current;
+    state = next;
+  }
+}
+
+final employeeGalleryPhotoCacheProvider = Provider<Map<String, Uint8List?>>((
+  ref,
+) {
+  return <String, Uint8List?>{};
+});
+
+final employeeGalleryListProvider = FutureProvider.autoDispose
+    .family<List<EmployeeGalleryItemEntity>, String>((ref, guid) async {
+      final normalizedGuid = guid.trim();
+      if (normalizedGuid.isEmpty) {
+        return const <EmployeeGalleryItemEntity>[];
+      }
+
+      final repository = ref.read(employeeAccessRepositoryProvider);
+      return repository.getEmployeeGalleryList(guid: normalizedGuid);
+    });
+
+final employeeGalleryPhotoProvider = FutureProvider.autoDispose
+    .family<Uint8List?, EmployeeGalleryPhotoKey>((ref, key) async {
+      if (key.photoId <= 0) {
+        return null;
+      }
+
+      final cache = ref.read(employeeGalleryPhotoCacheProvider);
+      final repository = ref.read(employeeAccessRepositoryProvider);
+      return fetchPhotoWithMemoryCache(
+        cache: cache,
+        cacheKey: key.cacheKey,
+        loader: () => repository.getEmployeeGalleryPhoto(photoId: key.photoId),
+      );
+    });
+
+void seedEmployeeGalleryPhotoCache(
+  WidgetRef ref, {
+  required int photoId,
+  required Uint8List bytes,
+}) {
+  final cache = ref.read(employeeGalleryPhotoCacheProvider);
+  seedPhotoMemoryCache(
+    cache,
+    cacheKey: galleryPhotoCacheKey(photoId),
+    bytes: bytes,
+  );
+}
+
+void removeEmployeeGalleryPhotoCache(WidgetRef ref, {required int photoId}) {
+  final cache = ref.read(employeeGalleryPhotoCacheProvider);
+  removePhotoMemoryCache(cache, cacheKey: galleryPhotoCacheKey(photoId));
+}

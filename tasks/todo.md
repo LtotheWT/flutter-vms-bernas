@@ -219,6 +219,33 @@
 - [x] Refactor visitor page QR and physical-tag scan flows to use shared helper.
 - [x] Run targeted verification (`flutter analyze` + page test attempt).
 
+## 2026-03-06 - Employee gallery GUID split by check type
+- [x] Replace single employee gallery session GUID with stable per-mode GUID state.
+- [x] Update employee page upload/gallery wiring to use the active mode GUID.
+- [x] Extend employee state/page tests for mode-specific gallery restoration and isolation.
+- [x] Run targeted verification (`flutter analyze` + employee tests attempt).
+
+## Review (Employee Gallery GUID Split - Superseded)
+- This temporary direction was later corrected because the backend gallery API is keyed only by session GUID, not by check type.
+- The current behavior is documented in `Review (Employee Gallery GUID Semantics)` below.
+- Verification:
+  - `flutter analyze lib/presentation/state/employee_check_providers.dart lib/presentation/pages/employee_check_page.dart test/presentation/state/employee_check_providers_test.dart test/presentation/pages/employee_check_page_test.dart`
+  - `flutter test test/presentation/state/employee_check_providers_test.dart test/presentation/pages/employee_check_page_test.dart` *(blocked by local Flutter SDK/framework mismatch in semantics compile stage, same environment issue as prior runs).*
+
+## 2026-03-06 - Employee gallery GUID semantics correction
+- [x] Revert employee gallery back to one stable page-session GUID shared by check-in and check-out toggle states.
+- [x] Update employee page tests to assert gallery continuity across mode toggles.
+- [x] Update project lessons to capture GUID semantics for session-scoped galleries.
+- [x] Run targeted verification (`flutter analyze` + employee tests attempt).
+
+## Review (Employee Gallery GUID Semantics)
+- Employee gallery now uses one GUID for the whole Employee Check-In/Out page session, even when the user toggles between Check-In and Check-Out.
+- Toggling mode no longer switches gallery buckets; uploaded photos remain visible across both modes during that page session.
+- Existing employee submit idempotency and profile photo behavior remain unchanged.
+- Verification:
+  - `flutter analyze lib/presentation/state/employee_check_providers.dart lib/presentation/pages/employee_check_page.dart test/presentation/state/employee_check_providers_test.dart test/presentation/pages/employee_check_page_test.dart`
+  - `flutter test test/presentation/state/employee_check_providers_test.dart test/presentation/pages/employee_check_page_test.dart`
+
 ## Review (Scanner Launch Helper Refactor)
 - Added `/Users/wengthailim/Workspace/flutter_projects/vms_bernas/lib/presentation/services/mobile_scanner_launcher.dart` with `openMobileScanner(...)` and `ScannerLauncherOverride`.
 - Employee, permanent contractor, and visitor pages now call the shared helper instead of duplicating `Navigator.push(MobileScannerPage)` blocks.
@@ -273,3 +300,19 @@
 - Verification:
   - `flutter analyze lib/presentation/widgets/gallery_photo_grid.dart lib/presentation/pages/visitor_check_in_page.dart lib/presentation/pages/whitelist_detail_page.dart`
   - `flutter test test/presentation/pages/whitelist_detail_page_test.dart test/presentation/pages/visitor_check_in_page_test.dart` *(blocked by the existing local Flutter SDK/framework semantics mismatch in this environment).*
+
+## 2026-03-06 - Employee gallery session integration
+- [x] Add employee gallery/photo domain, DTO, datasource, repository, and usecase support.
+- [x] Extend employee check state with page-session GUID, gallery providers, and upload/delete flows.
+- [x] Update employee check page with camera action, upload preview flow, and in-page gallery using shared widgets.
+- [x] Add/extend targeted tests for employee gallery DTOs, datasource/repository, state, and page behavior.
+- [x] Run targeted verification (`flutter analyze` + relevant `flutter test`).
+
+## Review (Employee Gallery Session)
+- Employee Check-In/Out now has a page-session gallery GUID, generated once per page lifecycle and reused for `GET /wmsws/Employee/gallery-list/{guid}` and `POST /wmsws/Employee/save-photo`.
+- Employee page keeps the existing profile photo card and adds a second in-page gallery card with `Camera`, upload preview, local append on success, fullscreen preview, and local delete without list refetch.
+- Shared photo UX is reused instead of duplicated: `photo_upload_bottom_sheet.dart`, `gallery_photo_grid.dart`, `gallery_photo_tile.dart`, `camera_capture_service.dart`, and the shared memory-cache helpers.
+- Gallery items are appended to the end of local state so the newest photo stays at the back, matching the existing gallery ordering rule.
+- Verification:
+  - `flutter analyze lib/domain/repositories/employee_access_repository.dart lib/domain/entities/employee_gallery_item_entity.dart lib/domain/entities/employee_save_photo_submission_entity.dart lib/domain/entities/employee_save_photo_result_entity.dart lib/domain/entities/employee_delete_photo_result_entity.dart lib/domain/usecases/save_employee_photo_usecase.dart lib/domain/usecases/delete_employee_gallery_photo_usecase.dart lib/data/models/employee_gallery_item_dto.dart lib/data/models/employee_save_photo_request_dto.dart lib/data/models/employee_save_photo_response_dto.dart lib/data/models/employee_delete_photo_response_dto.dart lib/data/datasources/employee_access_remote_data_source.dart lib/data/repositories/employee_access_repository_impl.dart lib/presentation/state/employee_check_providers.dart lib/presentation/pages/employee_check_page.dart test/data/models/employee_gallery_item_dto_test.dart test/data/models/employee_save_photo_request_dto_test.dart test/data/models/employee_save_photo_response_dto_test.dart test/data/models/employee_delete_photo_response_dto_test.dart test/data/datasources/employee_access_remote_data_source_test.dart test/data/repositories/employee_access_repository_impl_test.dart test/domain/usecases/get_employee_info_usecase_test.dart test/domain/usecases/submit_employee_check_in_usecase_test.dart test/domain/usecases/submit_employee_check_out_usecase_test.dart test/domain/usecases/save_employee_photo_usecase_test.dart test/domain/usecases/delete_employee_gallery_photo_usecase_test.dart test/presentation/state/employee_check_providers_test.dart test/presentation/pages/employee_check_page_test.dart`
+  - `flutter test test/data/models/employee_gallery_item_dto_test.dart test/data/models/employee_save_photo_request_dto_test.dart test/data/models/employee_save_photo_response_dto_test.dart test/data/models/employee_delete_photo_response_dto_test.dart test/data/datasources/employee_access_remote_data_source_test.dart test/data/repositories/employee_access_repository_impl_test.dart test/domain/usecases/get_employee_info_usecase_test.dart test/domain/usecases/submit_employee_check_in_usecase_test.dart test/domain/usecases/submit_employee_check_out_usecase_test.dart test/domain/usecases/save_employee_photo_usecase_test.dart test/domain/usecases/delete_employee_gallery_photo_usecase_test.dart test/presentation/state/employee_check_providers_test.dart test/presentation/pages/employee_check_page_test.dart` *(blocked by the existing local Flutter SDK/framework semantics mismatch in this environment).*

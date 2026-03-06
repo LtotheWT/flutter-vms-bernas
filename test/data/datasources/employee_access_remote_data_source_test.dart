@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vms_bernas/data/datasources/employee_access_remote_data_source.dart';
+import 'package:vms_bernas/data/models/employee_save_photo_request_dto.dart';
 import 'package:vms_bernas/data/models/employee_submit_request_dto.dart';
 
 void main() {
@@ -278,5 +279,150 @@ void main() {
         ),
       ),
     );
+  });
+
+  test('gets employee gallery list for guid', () async {
+    final dio = Dio();
+    Uri? capturedUri;
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          capturedUri = options.uri;
+          handler.resolve(
+            Response<dynamic>(
+              requestOptions: options,
+              data: [
+                {
+                  'photoId': 40,
+                  'photoDesc': 'Gate photo',
+                  'Url': '/Employee/photo/40',
+                },
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    final dataSource = EmployeeAccessRemoteDataSource(dio);
+    final result = await dataSource.getEmployeeGalleryList(
+      accessToken: 'token',
+      guid: '4b564f08-3765-4527-93d4-e9d2f8cbb8f6',
+    );
+
+    expect(
+      capturedUri.toString(),
+      contains(
+        '/wmsws/Employee/gallery-list/4b564f08-3765-4527-93d4-e9d2f8cbb8f6',
+      ),
+    );
+    expect(result.single.photoId, 40);
+  });
+
+  test('gets employee gallery photo bytes', () async {
+    final dio = Dio();
+    Uri? capturedUri;
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          capturedUri = options.uri;
+          handler.resolve(
+            Response<dynamic>(
+              requestOptions: options,
+              data: Uint8List.fromList(const [4, 5, 6]),
+            ),
+          );
+        },
+      ),
+    );
+
+    final dataSource = EmployeeAccessRemoteDataSource(dio);
+    final result = await dataSource.getEmployeeGalleryPhoto(
+      accessToken: 'token',
+      photoId: 40,
+    );
+
+    expect(capturedUri.toString(), contains('/wmsws/Employee/photo/40'));
+    expect(result, Uint8List.fromList(const [4, 5, 6]));
+  });
+
+  test('save employee photo posts payload', () async {
+    final dio = Dio();
+    Uri? capturedUri;
+    dynamic capturedBody;
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          capturedUri = options.uri;
+          capturedBody = options.data;
+          handler.resolve(
+            Response<dynamic>(
+              requestOptions: options,
+              data: {
+                'success': true,
+                'message': 'Photo saved successfully',
+                'data': {'PhotoId': 40},
+              },
+            ),
+          );
+        },
+      ),
+    );
+
+    final dataSource = EmployeeAccessRemoteDataSource(dio);
+    final result = await dataSource.saveEmployeePhoto(
+      accessToken: 'token',
+      request: const EmployeeSavePhotoRequestDto(
+        imageBase64: 'abc',
+        photoDescription: 'Gate',
+        guid: 'guid-1',
+        entity: 'AGYTEK',
+        site: 'FACTORY1',
+        uploadedBy: 'Ryan',
+      ),
+    );
+
+    expect(capturedUri.toString(), contains('/wmsws/Employee/save-photo'));
+    expect(capturedBody, {
+      'ImageBase64': 'abc',
+      'PhotoDescription': 'Gate',
+      'GUID': 'guid-1',
+      'Entity': 'AGYTEK',
+      'Site': 'FACTORY1',
+      'UploadedBy': 'Ryan',
+    });
+    expect(result.success, isTrue);
+    expect(result.photoId, 40);
+  });
+
+  test('delete employee photo calls delete endpoint', () async {
+    final dio = Dio();
+    Uri? capturedUri;
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          capturedUri = options.uri;
+          handler.resolve(
+            Response<dynamic>(
+              requestOptions: options,
+              data: {
+                'Status': true,
+                'Message': 'delete is successful',
+                'Details': null,
+              },
+            ),
+          );
+        },
+      ),
+    );
+
+    final dataSource = EmployeeAccessRemoteDataSource(dio);
+    final result = await dataSource.deleteEmployeeGalleryPhoto(
+      accessToken: 'token',
+      photoId: 30,
+    );
+
+    expect(capturedUri.toString(), contains('/wmsws/Employee/photo/30/delete'));
+    expect(result.status, isTrue);
   });
 }

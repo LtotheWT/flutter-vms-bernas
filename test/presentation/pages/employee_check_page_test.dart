@@ -5,13 +5,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:vms_bernas/data/datasources/auth_local_data_source.dart';
 import 'package:vms_bernas/data/models/auth_session_dto.dart';
+import 'package:vms_bernas/domain/entities/employee_delete_photo_result_entity.dart';
+import 'package:vms_bernas/domain/entities/employee_gallery_item_entity.dart';
 import 'package:vms_bernas/domain/entities/employee_info_entity.dart';
+import 'package:vms_bernas/domain/entities/employee_save_photo_result_entity.dart';
+import 'package:vms_bernas/domain/entities/employee_save_photo_submission_entity.dart';
 import 'package:vms_bernas/domain/entities/employee_submit_entity.dart';
 import 'package:vms_bernas/domain/entities/employee_submit_result_entity.dart';
 import 'package:vms_bernas/domain/repositories/employee_access_repository.dart';
+import 'package:vms_bernas/domain/usecases/delete_employee_gallery_photo_usecase.dart';
 import 'package:vms_bernas/domain/usecases/get_employee_info_usecase.dart';
+import 'package:vms_bernas/domain/usecases/save_employee_photo_usecase.dart';
 import 'package:vms_bernas/domain/usecases/submit_employee_check_in_usecase.dart';
 import 'package:vms_bernas/domain/usecases/submit_employee_check_out_usecase.dart';
 import 'package:vms_bernas/presentation/pages/employee_check_page.dart';
@@ -19,20 +26,23 @@ import 'package:vms_bernas/presentation/state/auth_session_providers.dart';
 import 'package:vms_bernas/presentation/state/employee_check_providers.dart';
 
 class _FakeEmployeeAccessRepository implements EmployeeAccessRepository {
-  _FakeEmployeeAccessRepository({this.error, this.imageBytes});
+  _FakeEmployeeAccessRepository({
+    this.imageBytes,
+    this.initialGalleryItems = const <EmployeeGalleryItemEntity>[],
+  });
 
-  final Object? error;
   final Uint8List? imageBytes;
+  final List<EmployeeGalleryItemEntity> initialGalleryItems;
+  int _nextSavedPhotoId = 40;
   String? lastLookupCode;
   EmployeeSubmitEntity? lastCheckInSubmission;
   EmployeeSubmitEntity? lastCheckOutSubmission;
+  EmployeeSavePhotoSubmissionEntity? lastSavePhotoSubmission;
+  int? lastDeletedPhotoId;
 
   @override
   Future<EmployeeInfoEntity> getEmployeeInfo({required String code}) async {
     lastLookupCode = code;
-    if (error != null) {
-      throw error!;
-    }
     return const EmployeeInfoEntity(
       employeeId: 'EMP0001',
       employeeName: 'Suraya',
@@ -77,6 +87,42 @@ class _FakeEmployeeAccessRepository implements EmployeeAccessRepository {
   Future<Uint8List?> getEmployeeImage({required String employeeId}) async {
     return imageBytes;
   }
+
+  @override
+  Future<List<EmployeeGalleryItemEntity>> getEmployeeGalleryList({
+    required String guid,
+  }) async {
+    return initialGalleryItems;
+  }
+
+  @override
+  Future<Uint8List?> getEmployeeGalleryPhoto({required int photoId}) async {
+    return imageBytes;
+  }
+
+  @override
+  Future<EmployeeSavePhotoResultEntity> saveEmployeePhoto({
+    required EmployeeSavePhotoSubmissionEntity submission,
+  }) async {
+    lastSavePhotoSubmission = submission;
+    final photoId = _nextSavedPhotoId++;
+    return EmployeeSavePhotoResultEntity(
+      success: true,
+      message: 'Photo saved successfully',
+      photoId: photoId,
+    );
+  }
+
+  @override
+  Future<EmployeeDeletePhotoResultEntity> deleteEmployeeGalleryPhoto({
+    required int photoId,
+  }) async {
+    lastDeletedPhotoId = photoId;
+    return const EmployeeDeletePhotoResultEntity(
+      success: true,
+      message: 'delete is successful',
+    );
+  }
 }
 
 class _FakeAuthLocalDataSource extends AuthLocalDataSource {
@@ -99,6 +145,7 @@ Widget _buildApp({
   required EmployeeAccessRepository repository,
   required EmployeeCheckType initialCheckType,
   Future<String?> Function(BuildContext context)? scanLauncher,
+  Future<XFile?> Function(BuildContext context)? cameraLauncher,
 }) {
   return ProviderScope(
     overrides: [
@@ -112,12 +159,19 @@ Widget _buildApp({
       submitEmployeeCheckOutUseCaseProvider.overrideWithValue(
         SubmitEmployeeCheckOutUseCase(repository),
       ),
+      saveEmployeePhotoUseCaseProvider.overrideWithValue(
+        SaveEmployeePhotoUseCase(repository),
+      ),
+      deleteEmployeeGalleryPhotoUseCaseProvider.overrideWithValue(
+        DeleteEmployeeGalleryPhotoUseCase(repository),
+      ),
       authLocalDataSourceProvider.overrideWithValue(_FakeAuthLocalDataSource()),
     ],
     child: MaterialApp(
       home: EmployeeCheckPage(
         initialCheckType: initialCheckType,
         scanLauncher: scanLauncher,
+        cameraLauncher: cameraLauncher,
       ),
     ),
   );
@@ -243,5 +297,163 @@ void main() {
       find.text('Employee EMP0001 checked out successfully.'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('camera upload uses current employee gallery session guid', (
+    tester,
+  ) async {
+    final repository = _FakeEmployeeAccessRepository(
+      imageBytes: base64Decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5WcMsAAAAASUVORK5CYII=',
+      ),
+    );
+    await tester.pumpWidget(
+      _buildApp(
+        repository: repository,
+        initialCheckType: EmployeeCheckType.checkIn,
+        cameraLauncher: (_) async => XFile.fromData(
+          base64Decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5WcMsAAAAASUVORK5CYII=',
+          ),
+          name: 'employee-camera.png',
+        ),
+      ),
+    );
+
+    await tester.enterText(find.byType(TextFormField).first, 'EMP|EMP0001||');
+    await tester.tap(find.widgetWithText(FilledButton, 'Search'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final listView = find.byType(ListView).first;
+    final cameraButton = find
+        .byKey(const Key('employee-gallery-camera-button'))
+        .first;
+    await tester.drag(listView, const Offset(0, -500));
+    await tester.pumpAndSettle();
+    expect(find.text('No photos uploaded for this session.'), findsOneWidget);
+    await tester.tap(cameraButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Upload Photo'), findsOneWidget);
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Photo Description (Optional)'),
+      'Gate shot',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Upload'));
+    await tester.pumpAndSettle();
+
+    expect(repository.lastSavePhotoSubmission?.guid, isNotEmpty);
+    expect(repository.lastSavePhotoSubmission?.photoDescription, 'Gate shot');
+    expect(find.text('Photo saved successfully'), findsOneWidget);
+  });
+
+  testWidgets('delete photo removes gallery item locally', (tester) async {
+    final repository = _FakeEmployeeAccessRepository(
+      imageBytes: base64Decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5WcMsAAAAASUVORK5CYII=',
+      ),
+      initialGalleryItems: const <EmployeeGalleryItemEntity>[
+        EmployeeGalleryItemEntity(
+          photoId: 40,
+          photoDesc: 'Existing',
+          url: '/Employee/photo/40',
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      _buildApp(
+        repository: repository,
+        initialCheckType: EmployeeCheckType.checkIn,
+        cameraLauncher: (_) async => XFile.fromData(
+          base64Decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5WcMsAAAAASUVORK5CYII=',
+          ),
+          name: 'employee-camera.png',
+        ),
+      ),
+    );
+
+    await tester.enterText(find.byType(TextFormField).first, 'EMP|EMP0001||');
+    await tester.tap(find.widgetWithText(FilledButton, 'Search'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final listView = find.byType(ListView).first;
+    await tester.drag(listView, const Offset(0, -500));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('employee-gallery-delete-40')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('employee-gallery-delete-40')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+    await tester.pumpAndSettle();
+
+    expect(repository.lastDeletedPhotoId, 40);
+    expect(find.byKey(const Key('employee-gallery-delete-40')), findsNothing);
+    expect(find.text('delete is successful'), findsOneWidget);
+  });
+
+  testWidgets('gallery reuses the same guid across check type toggle', (
+    tester,
+  ) async {
+    final repository = _FakeEmployeeAccessRepository(
+      imageBytes: base64Decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5WcMsAAAAASUVORK5CYII=',
+      ),
+    );
+    await tester.pumpWidget(
+      _buildApp(
+        repository: repository,
+        initialCheckType: EmployeeCheckType.checkIn,
+        cameraLauncher: (_) async => XFile.fromData(
+          base64Decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5WcMsAAAAASUVORK5CYII=',
+          ),
+          name: 'employee-camera.png',
+        ),
+      ),
+    );
+
+    await tester.enterText(find.byType(TextFormField).first, 'EMP|EMP0001||');
+    await tester.tap(find.widgetWithText(FilledButton, 'Search'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final listView = find.byType(ListView).first;
+    final cameraButton = find
+        .byKey(const Key('employee-gallery-camera-button'))
+        .first;
+    await tester.drag(listView, const Offset(0, -500));
+    await tester.pumpAndSettle();
+    expect(find.text('No photos uploaded for this session.'), findsOneWidget);
+    await tester.tap(cameraButton);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Upload'));
+    await tester.pumpAndSettle();
+
+    final checkInGuid = repository.lastSavePhotoSubmission?.guid;
+    expect(checkInGuid, isNotNull);
+
+    await tester.drag(listView, const Offset(0, 500));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Check-Out'));
+    await tester.pumpAndSettle();
+
+    final cameraButtonAfterToggle = find
+        .byKey(const Key('employee-gallery-camera-button'))
+        .first;
+    await tester.drag(listView, const Offset(0, -500));
+    await tester.pumpAndSettle();
+    await tester.drag(listView, const Offset(0, -200));
+    await tester.pumpAndSettle();
+    await tester.tap(cameraButtonAfterToggle);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Upload'));
+    await tester.pumpAndSettle();
+
+    final checkOutGuid = repository.lastSavePhotoSubmission?.guid;
+    expect(checkOutGuid, isNotNull);
+    expect(checkOutGuid, checkInGuid);
   });
 }

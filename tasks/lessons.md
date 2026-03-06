@@ -19,3 +19,4 @@
 
 ## 2026-03-06
 - If the same error-normalization branch (e.g., stripping `Exception:`) appears in multiple pages/providers, extract to `lib/core/` immediately and replace all duplicates in one pass.
+- If a backend photo/gallery API is keyed only by GUID and not by mode, default to one stable GUID per page session; do not split by UI toggle unless the product explicitly requires separate galleries.
