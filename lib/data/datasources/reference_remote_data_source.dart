@@ -6,7 +6,11 @@ import '../models/ref_department_dto.dart';
 import '../models/ref_entity_dto.dart';
 import '../models/ref_location_dto.dart';
 import '../models/dashboard_summary_response_dto.dart';
+import '../models/permanent_contractor_delete_photo_response_dto.dart';
+import '../models/permanent_contractor_gallery_item_dto.dart';
 import '../models/permanent_contractor_info_dto.dart';
+import '../models/permanent_contractor_save_photo_request_dto.dart';
+import '../models/permanent_contractor_save_photo_response_dto.dart';
 import '../models/permanent_contractor_submit_request_dto.dart';
 import '../models/permanent_contractor_submit_response_dto.dart';
 import '../models/ref_personel_dto.dart';
@@ -340,6 +344,188 @@ class ReferenceRemoteDataSource {
     }
   }
 
+  Future<List<PermanentContractorGalleryItemDto>>
+  getPermanentContractorGalleryList({
+    required String accessToken,
+    required String guid,
+  }) async {
+    final encodedGuid = Uri.encodeComponent(guid.trim());
+    try {
+      final response = await _dio.get<dynamic>(
+        '/wmsws/Contractor/gallery-list/$encodedGuid',
+        options: Options(
+          headers: {'Authorization': 'Bearer $accessToken', 'accept': '*/*'},
+        ),
+      );
+
+      final list = parseJsonList(response.data);
+      return list
+          .whereType<Map>()
+          .map(
+            (item) => PermanentContractorGalleryItemDto.fromJson(
+              item.map((key, value) => MapEntry(key.toString(), value)),
+            ),
+          )
+          .toList(growable: false);
+    } on DioException catch (error) {
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 401 || statusCode == 403) {
+        throw ReferenceException(
+          'Please login again to load permanent contractor gallery.',
+        );
+      }
+
+      if (isConnectivityIssue(error)) {
+        throw ReferenceException(
+          'Unable to load permanent contractor gallery. Please try again.',
+        );
+      }
+
+      throw ReferenceException(
+        'Failed to load permanent contractor gallery. Please try again.',
+      );
+    } on FormatException {
+      throw ReferenceException(
+        'Failed to load permanent contractor gallery. Please try again.',
+      );
+    }
+  }
+
+  Future<Uint8List?> getPermanentContractorGalleryPhoto({
+    required String accessToken,
+    required int photoId,
+  }) async {
+    try {
+      final response = await _dio.get<dynamic>(
+        '/wmsws/Contractor/photo/$photoId',
+        options: Options(
+          headers: {'Authorization': 'Bearer $accessToken', 'accept': '*/*'},
+          responseType: ResponseType.bytes,
+        ),
+      );
+
+      final data = response.data;
+      if (data is Uint8List) {
+        return data.isEmpty ? null : data;
+      }
+      if (data is List<int>) {
+        return data.isEmpty ? null : Uint8List.fromList(data);
+      }
+      return null;
+    } on DioException catch (error) {
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 404) {
+        return null;
+      }
+      if (statusCode == 401 || statusCode == 403) {
+        throw ReferenceException(
+          'Please login again to load permanent contractor gallery photo.',
+        );
+      }
+
+      if (isConnectivityIssue(error)) {
+        throw ReferenceException(
+          'Unable to load permanent contractor gallery photo. Please try again.',
+        );
+      }
+
+      throw ReferenceException(
+        'Failed to load permanent contractor gallery photo. Please try again.',
+      );
+    } on FormatException {
+      throw ReferenceException(
+        'Failed to load permanent contractor gallery photo. Please try again.',
+      );
+    }
+  }
+
+  Future<PermanentContractorSavePhotoResponseDto> savePermanentContractorPhoto({
+    required String accessToken,
+    required PermanentContractorSavePhotoRequestDto request,
+  }) async {
+    try {
+      final response = await _dio.post<dynamic>(
+        '/wmsws/Contractor/save-photo',
+        data: request.toJson(),
+        options: Options(
+          headers: {'Authorization': 'Bearer $accessToken', 'accept': '*/*'},
+        ),
+      );
+
+      return PermanentContractorSavePhotoResponseDto.fromJson(
+        parseJsonMap(response.data),
+      );
+    } on DioException catch (error) {
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 401 || statusCode == 403) {
+        throw ReferenceException('Please login again to upload photo.');
+      }
+
+      final backendMessage = _extractPermanentContractorSavePhotoBackendMessage(
+        error.response?.data,
+      );
+      if (backendMessage != null) {
+        throw ReferenceException(backendMessage);
+      }
+
+      if (isConnectivityIssue(error)) {
+        throw ReferenceException('Unable to upload photo. Please try again.');
+      }
+
+      throw ReferenceException('Failed to upload photo. Please try again.');
+    } on FormatException {
+      throw ReferenceException('Failed to upload photo. Please try again.');
+    }
+  }
+
+  Future<PermanentContractorDeletePhotoResponseDto>
+  deletePermanentContractorGalleryPhoto({
+    required String accessToken,
+    required int photoId,
+  }) async {
+    try {
+      final response = await _dio.delete<dynamic>(
+        '/wmsws/Contractor/photo/$photoId/delete',
+        options: Options(
+          headers: {'Authorization': 'Bearer $accessToken', 'accept': '*/*'},
+        ),
+      );
+
+      return PermanentContractorDeletePhotoResponseDto.fromJson(
+        parseJsonMap(response.data),
+      );
+    } on DioException catch (error) {
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 401 || statusCode == 403) {
+        throw ReferenceException(
+          'Please login again to delete permanent contractor photo.',
+        );
+      }
+
+      final backendMessage =
+          _extractPermanentContractorDeletePhotoBackendMessage(
+            error.response?.data,
+          );
+      if (backendMessage != null) {
+        throw ReferenceException(backendMessage);
+      }
+
+      if (isConnectivityIssue(error)) {
+        throw ReferenceException(
+          'Unable to delete permanent contractor photo. Please try again.',
+        );
+      }
+
+      throw ReferenceException(
+        'Failed to delete permanent contractor photo. Please try again.',
+      );
+    } on FormatException {
+      throw ReferenceException(
+        'Failed to delete permanent contractor photo. Please try again.',
+      );
+    }
+  }
+
   Future<PermanentContractorSubmitResponseDto>
   submitPermanentContractorCheckIn({
     required String accessToken,
@@ -470,6 +656,28 @@ class ReferenceRemoteDataSource {
   String? _extractSubmitBackendMessage(dynamic data) {
     try {
       final dto = PermanentContractorSubmitResponseDto.fromJson(
+        parseJsonMap(data),
+      );
+      return _resolveBackendMessage(dto.message);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String? _extractPermanentContractorSavePhotoBackendMessage(dynamic data) {
+    try {
+      final dto = PermanentContractorSavePhotoResponseDto.fromJson(
+        parseJsonMap(data),
+      );
+      return _resolveBackendMessage(dto.message);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String? _extractPermanentContractorDeletePhotoBackendMessage(dynamic data) {
+    try {
+      final dto = PermanentContractorDeletePhotoResponseDto.fromJson(
         parseJsonMap(data),
       );
       return _resolveBackendMessage(dto.message);

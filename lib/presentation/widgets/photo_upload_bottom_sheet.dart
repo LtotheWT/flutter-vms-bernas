@@ -91,65 +91,73 @@ Future<PhotoUploadSheetResult?> showPhotoUploadBottomSheet({
                 16,
                 16 + MediaQuery.of(context).viewInsets.bottom,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.memory(imageBytes, fit: BoxFit.cover),
-                  ),
-                  const SizedBox(height: 12),
-                  LabeledTextInputRow(
-                    label: descriptionLabel,
-                    enabled: !isUploading,
-                    controller: descriptionController,
-                  ),
-                  if (errorText != null) ...[
-                    const SizedBox(height: 8),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
                     Text(
-                      errorText!,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
+                      title,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                  ],
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: AppOutlinedButton(
-                          onPressed: isUploading
-                              ? null
-                              : () => Navigator.of(sheetContext).pop(),
-                          child: const Text('Cancel'),
+                    const SizedBox(height: 12),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: 240,
+                          maxHeight: 240,
                         ),
+                        child: Image.memory(imageBytes, fit: BoxFit.contain),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: AppFilledButton(
-                          onPressed: isUploading ? null : upload,
-                          child: isUploading
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : Text(uploadButtonLabel),
+                    ),
+                    const SizedBox(height: 12),
+                    LabeledTextInputRow(
+                      label: descriptionLabel,
+                      enabled: !isUploading,
+                      controller: descriptionController,
+                    ),
+                    if (errorText != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        errorText!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
                         ),
                       ),
                     ],
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: AppOutlinedButton(
+                            onPressed: isUploading
+                                ? null
+                                : () => Navigator.of(sheetContext).pop(),
+                            child: const Text('Cancel'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: AppFilledButton(
+                            onPressed: isUploading ? null : upload,
+                            child: isUploading
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Text(uploadButtonLabel),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           );

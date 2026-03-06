@@ -1,0 +1,43 @@
+import '../../domain/entities/permanent_contractor_delete_photo_result_entity.dart';
+
+class PermanentContractorDeletePhotoResponseDto {
+  const PermanentContractorDeletePhotoResponseDto({
+    required this.status,
+    required this.message,
+  });
+
+  final bool status;
+  final String? message;
+
+  factory PermanentContractorDeletePhotoResponseDto.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    return PermanentContractorDeletePhotoResponseDto(
+      status: _asBool(json['status'] ?? json['Status']),
+      message: _asStringOrNull(json['message'] ?? json['Message']),
+    );
+  }
+
+  PermanentContractorDeletePhotoResultEntity toEntity() {
+    return PermanentContractorDeletePhotoResultEntity(
+      success: status,
+      message: message?.trim() ?? '',
+    );
+  }
+
+  static bool _asBool(dynamic value) {
+    if (value is bool) {
+      return value;
+    }
+    if (value is num) {
+      return value != 0;
+    }
+    final text = value?.toString().trim().toLowerCase() ?? '';
+    return text == 'true' || text == '1' || text == 'yes';
+  }
+
+  static String? _asStringOrNull(dynamic value) {
+    final text = value?.toString().trim() ?? '';
+    return text.isEmpty ? null : text;
+  }
+}

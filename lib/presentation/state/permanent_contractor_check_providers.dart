@@ -4,10 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/error_messages.dart';
+import '../../domain/entities/permanent_contractor_delete_photo_result_entity.dart';
+import '../../domain/entities/permanent_contractor_gallery_item_entity.dart';
 import '../../domain/entities/permanent_contractor_info_entity.dart';
+import '../../domain/entities/permanent_contractor_save_photo_result_entity.dart';
+import '../../domain/entities/permanent_contractor_save_photo_submission_entity.dart';
 import '../../domain/entities/permanent_contractor_submit_entity.dart';
 import '../../domain/entities/permanent_contractor_submit_result_entity.dart';
+import '../../domain/usecases/delete_permanent_contractor_gallery_photo_usecase.dart';
 import '../../domain/usecases/get_permanent_contractor_info_usecase.dart';
+import '../../domain/usecases/save_permanent_contractor_photo_usecase.dart';
 import '../../domain/usecases/submit_permanent_contractor_check_in_usecase.dart';
 import '../../domain/usecases/submit_permanent_contractor_check_out_usecase.dart';
 import 'auth_session_providers.dart';
@@ -34,6 +40,18 @@ final submitPermanentContractorCheckOutUseCaseProvider =
       return SubmitPermanentContractorCheckOutUseCase(repository);
     });
 
+final savePermanentContractorPhotoUseCaseProvider =
+    Provider<SavePermanentContractorPhotoUseCase>((ref) {
+      final repository = ref.read(referenceRepositoryProvider);
+      return SavePermanentContractorPhotoUseCase(repository);
+    });
+
+final deletePermanentContractorGalleryPhotoUseCaseProvider =
+    Provider<DeletePermanentContractorGalleryPhotoUseCase>((ref) {
+      final repository = ref.read(referenceRepositoryProvider);
+      return DeletePermanentContractorGalleryPhotoUseCase(repository);
+    });
+
 @immutable
 class PermanentContractorCheckState {
   const PermanentContractorCheckState({
@@ -41,7 +59,12 @@ class PermanentContractorCheckState {
     this.searchInput = '',
     this.isLoading = false,
     this.isSubmitting = false,
+    this.isUploadingPhoto = false,
+    this.isDeletingPhoto = false,
+    this.deletingPhotoId,
+    this.photoSessionGuid = '',
     this.idempotencyKey,
+    this.idempotencySignature,
     this.errorMessage,
     this.info,
   });
@@ -50,7 +73,12 @@ class PermanentContractorCheckState {
   final String searchInput;
   final bool isLoading;
   final bool isSubmitting;
+  final bool isUploadingPhoto;
+  final bool isDeletingPhoto;
+  final int? deletingPhotoId;
+  final String photoSessionGuid;
   final String? idempotencyKey;
+  final String? idempotencySignature;
   final String? errorMessage;
   final PermanentContractorInfoEntity? info;
 
@@ -59,7 +87,12 @@ class PermanentContractorCheckState {
     String? searchInput,
     bool? isLoading,
     bool? isSubmitting,
+    bool? isUploadingPhoto,
+    bool? isDeletingPhoto,
+    Object? deletingPhotoId = _unset,
+    String? photoSessionGuid,
     Object? idempotencyKey = _unset,
+    Object? idempotencySignature = _unset,
     Object? errorMessage = _unset,
     Object? info = _unset,
   }) {
@@ -68,9 +101,18 @@ class PermanentContractorCheckState {
       searchInput: searchInput ?? this.searchInput,
       isLoading: isLoading ?? this.isLoading,
       isSubmitting: isSubmitting ?? this.isSubmitting,
+      isUploadingPhoto: isUploadingPhoto ?? this.isUploadingPhoto,
+      isDeletingPhoto: isDeletingPhoto ?? this.isDeletingPhoto,
+      deletingPhotoId: identical(deletingPhotoId, _unset)
+          ? this.deletingPhotoId
+          : deletingPhotoId as int?,
+      photoSessionGuid: photoSessionGuid ?? this.photoSessionGuid,
       idempotencyKey: identical(idempotencyKey, _unset)
           ? this.idempotencyKey
           : idempotencyKey as String?,
+      idempotencySignature: identical(idempotencySignature, _unset)
+          ? this.idempotencySignature
+          : idempotencySignature as String?,
       errorMessage: identical(errorMessage, _unset)
           ? this.errorMessage
           : errorMessage as String?,
@@ -95,13 +137,18 @@ class PermanentContractorCheckController
 
   @override
   PermanentContractorCheckState build() =>
-      const PermanentContractorCheckState();
+      PermanentContractorCheckState(photoSessionGuid: _uuid.v4());
 
   void setCheckType(PermanentContractorCheckType value) {
     if (state.checkType == value) {
       return;
     }
-    state = state.copyWith(checkType: value, idempotencyKey: null);
+    state = state.copyWith(
+      checkType: value,
+      idempotencyKey: null,
+      idempotencySignature: null,
+      errorMessage: null,
+    );
   }
 
   void updateSearchInput(String value) {
@@ -116,6 +163,7 @@ class PermanentContractorCheckController
       info: null,
       errorMessage: null,
       idempotencyKey: null,
+      idempotencySignature: null,
     );
   }
 
@@ -146,6 +194,9 @@ class PermanentContractorCheckController
         searchInput: '',
         idempotencyKey: previousContractorId == nextContractorId
             ? state.idempotencyKey
+            : null,
+        idempotencySignature: previousContractorId == nextContractorId
+            ? state.idempotencySignature
             : null,
       );
       return true;
@@ -207,12 +258,21 @@ class PermanentContractorCheckController
       gate: gate,
       createdBy: createdBy,
     );
-
-    final idempotencyKey = state.idempotencyKey ?? _uuid.v4();
+    final signature = [
+      type == PermanentContractorCheckType.checkOut ? 'O' : 'I',
+      contractorId,
+      site,
+      gate,
+      createdBy,
+    ].join('|');
+    final idempotencyKey = state.idempotencySignature == signature
+        ? (state.idempotencyKey ?? _uuid.v4())
+        : _uuid.v4();
     state = state.copyWith(
       isSubmitting: true,
       errorMessage: null,
       idempotencyKey: idempotencyKey,
+      idempotencySignature: signature,
     );
 
     try {
@@ -240,6 +300,140 @@ class PermanentContractorCheckController
         message: message,
       );
     }
+  }
+
+  Future<PermanentContractorSavePhotoResultEntity> savePhoto({
+    required PermanentContractorSavePhotoSubmissionEntity submission,
+  }) async {
+    if (state.isUploadingPhoto) {
+      return const PermanentContractorSavePhotoResultEntity(
+        success: false,
+        message: 'Photo upload is currently in progress.',
+        photoId: null,
+      );
+    }
+
+    state = state.copyWith(isUploadingPhoto: true, errorMessage: null);
+
+    try {
+      final useCase = ref.read(savePermanentContractorPhotoUseCaseProvider);
+      final result = await useCase(submission: submission);
+      state = state.copyWith(isUploadingPhoto: false);
+      return result;
+    } catch (error) {
+      final message = toDisplayErrorMessage(
+        error,
+        fallback: 'Failed to upload permanent contractor photo.',
+      );
+      state = state.copyWith(isUploadingPhoto: false, errorMessage: message);
+      return PermanentContractorSavePhotoResultEntity(
+        success: false,
+        message: message,
+        photoId: null,
+      );
+    }
+  }
+
+  Future<PermanentContractorDeletePhotoResultEntity> deletePhoto({
+    required int photoId,
+  }) async {
+    if (photoId <= 0) {
+      return const PermanentContractorDeletePhotoResultEntity(
+        success: false,
+        message: 'Invalid photo id.',
+      );
+    }
+    if (state.isDeletingPhoto && state.deletingPhotoId == photoId) {
+      return const PermanentContractorDeletePhotoResultEntity(
+        success: false,
+        message: 'Photo deletion is currently in progress.',
+      );
+    }
+
+    state = state.copyWith(
+      isDeletingPhoto: true,
+      deletingPhotoId: photoId,
+      errorMessage: null,
+    );
+
+    try {
+      final useCase = ref.read(
+        deletePermanentContractorGalleryPhotoUseCaseProvider,
+      );
+      final result = await useCase(photoId: photoId);
+      state = state.copyWith(isDeletingPhoto: false, deletingPhotoId: null);
+      return result;
+    } catch (error) {
+      final message = toDisplayErrorMessage(
+        error,
+        fallback: 'Failed to delete permanent contractor photo.',
+      );
+      state = state.copyWith(
+        isDeletingPhoto: false,
+        deletingPhotoId: null,
+        errorMessage: message,
+      );
+      return PermanentContractorDeletePhotoResultEntity(
+        success: false,
+        message: message,
+      );
+    }
+  }
+
+  void resetAfterSuccessfulSubmit() {
+    final previousGuid = state.photoSessionGuid.trim();
+    final previousGalleryItems = previousGuid.isEmpty
+        ? const <PermanentContractorGalleryItemEntity>[]
+        : ref
+                  .read(permanentContractorGalleryListProvider(previousGuid))
+                  .maybeWhen(data: (items) => items, orElse: () => null) ??
+              const <PermanentContractorGalleryItemEntity>[];
+    final previousLocalItems =
+        ref.read(permanentContractorGalleryLocalItemsProvider)[previousGuid] ??
+        const <PermanentContractorGalleryItemEntity>[];
+    final previousDeletedPhotoIds =
+        ref.read(
+          permanentContractorGalleryDeletedPhotoIdsProvider,
+        )[previousGuid] ??
+        const <int>{};
+
+    final galleryPhotoCache = ref.read(
+      permanentContractorGalleryPhotoCacheProvider,
+    );
+    final photoIdsToClear = <int>{
+      ...previousGalleryItems.map((item) => item.photoId),
+      ...previousLocalItems.map((item) => item.photoId),
+      ...previousDeletedPhotoIds,
+    };
+    for (final photoId in photoIdsToClear) {
+      removePhotoMemoryCache(
+        galleryPhotoCache,
+        cacheKey: galleryPhotoCacheKey(photoId),
+      );
+    }
+
+    if (previousGuid.isNotEmpty) {
+      ref
+          .read(permanentContractorGalleryLocalItemsProvider.notifier)
+          .clearGuid(guid: previousGuid);
+      ref
+          .read(permanentContractorGalleryDeletedPhotoIdsProvider.notifier)
+          .clearGuid(guid: previousGuid);
+      ref.invalidate(permanentContractorGalleryListProvider(previousGuid));
+    }
+
+    state = state.copyWith(
+      searchInput: '',
+      info: null,
+      isSubmitting: false,
+      isUploadingPhoto: false,
+      isDeletingPhoto: false,
+      deletingPhotoId: null,
+      photoSessionGuid: _uuid.v4(),
+      idempotencyKey: null,
+      idempotencySignature: null,
+      errorMessage: null,
+    );
   }
 }
 
@@ -275,3 +469,161 @@ final permanentContractorImageProvider = FutureProvider.autoDispose
             repository.getPermanentContractorImage(contractorId: contractorId),
       );
     });
+
+@immutable
+class PermanentContractorGalleryPhotoKey extends Equatable {
+  const PermanentContractorGalleryPhotoKey({required this.photoId});
+
+  final int photoId;
+
+  String get cacheKey => galleryPhotoCacheKey(photoId);
+
+  @override
+  List<Object?> get props => [photoId];
+}
+
+final permanentContractorGalleryLocalItemsProvider =
+    NotifierProvider.autoDispose<
+      PermanentContractorGalleryLocalItemsController,
+      Map<String, List<PermanentContractorGalleryItemEntity>>
+    >(PermanentContractorGalleryLocalItemsController.new);
+
+class PermanentContractorGalleryLocalItemsController
+    extends Notifier<Map<String, List<PermanentContractorGalleryItemEntity>>> {
+  @override
+  Map<String, List<PermanentContractorGalleryItemEntity>> build() =>
+      <String, List<PermanentContractorGalleryItemEntity>>{};
+
+  void append({
+    required String guid,
+    required PermanentContractorGalleryItemEntity item,
+  }) {
+    final key = guid.trim();
+    if (key.isEmpty) {
+      return;
+    }
+    final next = <String, List<PermanentContractorGalleryItemEntity>>{...state};
+    final current = next[key] ?? const <PermanentContractorGalleryItemEntity>[];
+    next[key] = <PermanentContractorGalleryItemEntity>[...current, item];
+    state = next;
+  }
+
+  void remove({required String guid, required int photoId}) {
+    final key = guid.trim();
+    if (key.isEmpty || photoId <= 0) {
+      return;
+    }
+    final current = state[key];
+    if (current == null || current.isEmpty) {
+      return;
+    }
+    final filtered = current
+        .where((item) => item.photoId != photoId)
+        .toList(growable: false);
+    final next = <String, List<PermanentContractorGalleryItemEntity>>{...state};
+    if (filtered.isEmpty) {
+      next.remove(key);
+    } else {
+      next[key] = filtered;
+    }
+    state = next;
+  }
+
+  void clearGuid({required String guid}) {
+    final key = guid.trim();
+    if (key.isEmpty || !state.containsKey(key)) {
+      return;
+    }
+    final next = <String, List<PermanentContractorGalleryItemEntity>>{...state};
+    next.remove(key);
+    state = next;
+  }
+}
+
+final permanentContractorGalleryDeletedPhotoIdsProvider =
+    NotifierProvider.autoDispose<
+      PermanentContractorGalleryDeletedPhotoIdsController,
+      Map<String, Set<int>>
+    >(PermanentContractorGalleryDeletedPhotoIdsController.new);
+
+class PermanentContractorGalleryDeletedPhotoIdsController
+    extends Notifier<Map<String, Set<int>>> {
+  @override
+  Map<String, Set<int>> build() => <String, Set<int>>{};
+
+  void markDeleted({required String guid, required int photoId}) {
+    final key = guid.trim();
+    if (key.isEmpty || photoId <= 0) {
+      return;
+    }
+    final next = <String, Set<int>>{...state};
+    final current = <int>{...(next[key] ?? const <int>{})};
+    current.add(photoId);
+    next[key] = current;
+    state = next;
+  }
+
+  void clearGuid({required String guid}) {
+    final key = guid.trim();
+    if (key.isEmpty || !state.containsKey(key)) {
+      return;
+    }
+    final next = <String, Set<int>>{...state};
+    next.remove(key);
+    state = next;
+  }
+}
+
+final permanentContractorGalleryPhotoCacheProvider =
+    Provider<Map<String, Uint8List?>>((ref) => <String, Uint8List?>{});
+
+final permanentContractorGalleryListProvider = FutureProvider.autoDispose
+    .family<List<PermanentContractorGalleryItemEntity>, String>((
+      ref,
+      guid,
+    ) async {
+      final normalizedGuid = guid.trim();
+      if (normalizedGuid.isEmpty) {
+        return const <PermanentContractorGalleryItemEntity>[];
+      }
+
+      final repository = ref.read(referenceRepositoryProvider);
+      return repository.getPermanentContractorGalleryList(guid: normalizedGuid);
+    });
+
+final permanentContractorGalleryPhotoProvider = FutureProvider.autoDispose
+    .family<Uint8List?, PermanentContractorGalleryPhotoKey>((ref, key) async {
+      if (key.photoId <= 0) {
+        return null;
+      }
+
+      final cache = ref.read(permanentContractorGalleryPhotoCacheProvider);
+      final repository = ref.read(referenceRepositoryProvider);
+      return fetchPhotoWithMemoryCache(
+        cache: cache,
+        cacheKey: key.cacheKey,
+        loader: () =>
+            repository.getPermanentContractorGalleryPhoto(photoId: key.photoId),
+      );
+    });
+
+void seedPermanentContractorGalleryPhotoCache(
+  WidgetRef ref, {
+  required int photoId,
+  required Uint8List bytes,
+}) {
+  final cache = ref.read(permanentContractorGalleryPhotoCacheProvider);
+  seedPhotoMemoryCache(
+    cache,
+    cacheKey: galleryPhotoCacheKey(photoId),
+    bytes: bytes,
+  );
+}
+
+void removePermanentContractorGalleryPhotoCache(
+  WidgetRef ref, {
+  required int photoId,
+}) {
+  final cache = ref.read(permanentContractorGalleryPhotoCacheProvider);
+  removePhotoMemoryCache(cache, cacheKey: galleryPhotoCacheKey(photoId));
+}

@@ -2,6 +2,10 @@ import '../../domain/entities/ref_department_entity.dart';
 import '../../domain/entities/ref_entity_entity.dart';
 import '../../domain/entities/ref_location_entity.dart';
 import '../../domain/entities/permanent_contractor_info_entity.dart';
+import '../../domain/entities/permanent_contractor_gallery_item_entity.dart';
+import '../../domain/entities/permanent_contractor_save_photo_result_entity.dart';
+import '../../domain/entities/permanent_contractor_save_photo_submission_entity.dart';
+import '../../domain/entities/permanent_contractor_delete_photo_result_entity.dart';
 import '../../domain/entities/permanent_contractor_submit_entity.dart';
 import '../../domain/entities/permanent_contractor_submit_result_entity.dart';
 import '../../domain/entities/ref_personel_entity.dart';
@@ -11,6 +15,7 @@ import '../../domain/repositories/reference_repository.dart';
 import 'dart:typed_data';
 import '../datasources/auth_local_data_source.dart';
 import '../datasources/reference_remote_data_source.dart';
+import '../models/permanent_contractor_save_photo_request_dto.dart';
 import '../models/permanent_contractor_submit_request_dto.dart';
 
 class ReferenceRepositoryImpl implements ReferenceRepository {
@@ -122,6 +127,63 @@ class ReferenceRepositoryImpl implements ReferenceRepository {
       accessToken: accessToken,
       contractorId: contractorId,
     );
+  }
+
+  @override
+  Future<List<PermanentContractorGalleryItemEntity>>
+  getPermanentContractorGalleryList({required String guid}) async {
+    final accessToken = await _getAccessTokenOrThrow(
+      missingMessage:
+          'Please login again to load permanent contractor gallery.',
+    );
+    final dtos = await _remoteDataSource.getPermanentContractorGalleryList(
+      accessToken: accessToken,
+      guid: guid,
+    );
+    return dtos.map((dto) => dto.toEntity()).toList(growable: false);
+  }
+
+  @override
+  Future<Uint8List?> getPermanentContractorGalleryPhoto({
+    required int photoId,
+  }) async {
+    final accessToken = await _getAccessTokenOrThrow(
+      missingMessage:
+          'Please login again to load permanent contractor gallery photo.',
+    );
+    return _remoteDataSource.getPermanentContractorGalleryPhoto(
+      accessToken: accessToken,
+      photoId: photoId,
+    );
+  }
+
+  @override
+  Future<PermanentContractorSavePhotoResultEntity>
+  savePermanentContractorPhoto({
+    required PermanentContractorSavePhotoSubmissionEntity submission,
+  }) async {
+    final accessToken = await _getAccessTokenOrThrow(
+      missingMessage: 'Please login again to upload photo.',
+    );
+    final dto = await _remoteDataSource.savePermanentContractorPhoto(
+      accessToken: accessToken,
+      request: PermanentContractorSavePhotoRequestDto.fromEntity(submission),
+    );
+    return dto.toEntity();
+  }
+
+  @override
+  Future<PermanentContractorDeletePhotoResultEntity>
+  deletePermanentContractorGalleryPhoto({required int photoId}) async {
+    final accessToken = await _getAccessTokenOrThrow(
+      missingMessage:
+          'Please login again to delete permanent contractor photo.',
+    );
+    final dto = await _remoteDataSource.deletePermanentContractorGalleryPhoto(
+      accessToken: accessToken,
+      photoId: photoId,
+    );
+    return dto.toEntity();
   }
 
   @override

@@ -22,6 +22,10 @@ import 'package:vms_bernas/presentation/pages/report_dashboard_page.dart';
 import 'package:vms_bernas/presentation/state/entity_option.dart';
 import 'package:vms_bernas/presentation/state/reference_providers.dart';
 import 'package:vms_bernas/presentation/state/report_dashboard_providers.dart';
+import 'package:vms_bernas/domain/entities/permanent_contractor_delete_photo_result_entity.dart';
+import 'package:vms_bernas/domain/entities/permanent_contractor_gallery_item_entity.dart';
+import 'package:vms_bernas/domain/entities/permanent_contractor_save_photo_result_entity.dart';
+import 'package:vms_bernas/domain/entities/permanent_contractor_save_photo_submission_entity.dart';
 
 class _FakeReferenceRepository implements ReferenceRepository {
   _FakeReferenceRepository({this.shouldThrow = false});
@@ -126,6 +130,30 @@ class _FakeReferenceRepository implements ReferenceRepository {
   Future<Uint8List?> getPermanentContractorImage({
     required String contractorId,
   }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<PermanentContractorGalleryItemEntity>>
+  getPermanentContractorGalleryList({required String guid}) async =>
+      const <PermanentContractorGalleryItemEntity>[];
+
+  @override
+  Future<Uint8List?> getPermanentContractorGalleryPhoto({
+    required int photoId,
+  }) async => null;
+
+  @override
+  Future<PermanentContractorSavePhotoResultEntity>
+  savePermanentContractorPhoto({
+    required PermanentContractorSavePhotoSubmissionEntity submission,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<PermanentContractorDeletePhotoResultEntity>
+  deletePermanentContractorGalleryPhoto({required int photoId}) async {
     throw UnimplementedError();
   }
 

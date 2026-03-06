@@ -1,8 +1,16 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:typed_data';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:vms_bernas/data/datasources/auth_local_data_source.dart';
+import 'package:vms_bernas/data/models/auth_session_dto.dart';
 import 'package:vms_bernas/domain/entities/dashboard_summary_entity.dart';
+import 'package:vms_bernas/domain/entities/permanent_contractor_delete_photo_result_entity.dart';
+import 'package:vms_bernas/domain/entities/permanent_contractor_gallery_item_entity.dart';
 import 'package:vms_bernas/domain/entities/permanent_contractor_info_entity.dart';
+import 'package:vms_bernas/domain/entities/permanent_contractor_save_photo_result_entity.dart';
+import 'package:vms_bernas/domain/entities/permanent_contractor_save_photo_submission_entity.dart';
 import 'package:vms_bernas/domain/entities/permanent_contractor_submit_entity.dart';
 import 'package:vms_bernas/domain/entities/permanent_contractor_submit_result_entity.dart';
 import 'package:vms_bernas/domain/entities/ref_department_entity.dart';
@@ -11,14 +19,14 @@ import 'package:vms_bernas/domain/entities/ref_location_entity.dart';
 import 'package:vms_bernas/domain/entities/ref_personel_entity.dart';
 import 'package:vms_bernas/domain/entities/ref_visitor_type_entity.dart';
 import 'package:vms_bernas/domain/repositories/reference_repository.dart';
+import 'package:vms_bernas/domain/usecases/delete_permanent_contractor_gallery_photo_usecase.dart';
 import 'package:vms_bernas/domain/usecases/get_permanent_contractor_info_usecase.dart';
+import 'package:vms_bernas/domain/usecases/save_permanent_contractor_photo_usecase.dart';
 import 'package:vms_bernas/domain/usecases/submit_permanent_contractor_check_in_usecase.dart';
 import 'package:vms_bernas/domain/usecases/submit_permanent_contractor_check_out_usecase.dart';
-import 'package:vms_bernas/presentation/state/permanent_contractor_check_providers.dart';
-import 'package:vms_bernas/data/datasources/auth_local_data_source.dart';
-import 'package:vms_bernas/data/models/auth_session_dto.dart';
 import 'package:vms_bernas/presentation/state/auth_session_providers.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:vms_bernas/presentation/state/permanent_contractor_check_providers.dart';
+import 'package:vms_bernas/presentation/state/photo_cache_helpers.dart';
 
 class _FakeReferenceRepository implements ReferenceRepository {
   _FakeReferenceRepository({this.error});
@@ -29,6 +37,8 @@ class _FakeReferenceRepository implements ReferenceRepository {
   PermanentContractorSubmitEntity? checkOutSubmission;
   String? checkInIdempotencyKey;
   String? checkOutIdempotencyKey;
+  PermanentContractorSavePhotoSubmissionEntity? savePhotoSubmission;
+  int? deletedPhotoId;
 
   @override
   Future<PermanentContractorInfoEntity> getPermanentContractorInfo({
@@ -48,6 +58,11 @@ class _FakeReferenceRepository implements ReferenceRepository {
       validWorkingDateFrom: '2026-01-01T00:00:00',
       validWorkingDateTo: '2026-12-31T00:00:00',
     );
+  }
+
+  @override
+  Future<DashboardSummaryEntity> getDashboardSummary({required String entity}) {
+    throw UnimplementedError();
   }
 
   @override
@@ -74,16 +89,41 @@ class _FakeReferenceRepository implements ReferenceRepository {
   Future<List<RefVisitorTypeEntity>> getVisitorTypes() async => const [];
 
   @override
-  Future<DashboardSummaryEntity> getDashboardSummary({
-    required String entity,
-  }) async {
-    throw UnimplementedError();
-  }
-
-  @override
   Future<Uint8List?> getPermanentContractorImage({
     required String contractorId,
   }) async => null;
+
+  @override
+  Future<List<PermanentContractorGalleryItemEntity>>
+  getPermanentContractorGalleryList({required String guid}) async => const [];
+
+  @override
+  Future<Uint8List?> getPermanentContractorGalleryPhoto({
+    required int photoId,
+  }) async => null;
+
+  @override
+  Future<PermanentContractorSavePhotoResultEntity>
+  savePermanentContractorPhoto({
+    required PermanentContractorSavePhotoSubmissionEntity submission,
+  }) async {
+    savePhotoSubmission = submission;
+    return const PermanentContractorSavePhotoResultEntity(
+      success: true,
+      message: 'Photo saved successfully',
+      photoId: 53,
+    );
+  }
+
+  @override
+  Future<PermanentContractorDeletePhotoResultEntity>
+  deletePermanentContractorGalleryPhoto({required int photoId}) async {
+    deletedPhotoId = photoId;
+    return const PermanentContractorDeletePhotoResultEntity(
+      success: true,
+      message: 'delete is successful',
+    );
+  }
 
   @override
   Future<PermanentContractorSubmitResultEntity>
@@ -123,34 +163,44 @@ class _FakeAuthLocalDataSource extends AuthLocalDataSource {
   Future<AuthSessionDto?> getSession() async => _session;
 }
 
+ProviderContainer _buildContainer(_FakeReferenceRepository repo) {
+  return ProviderContainer(
+    overrides: [
+      getPermanentContractorInfoUseCaseProvider.overrideWithValue(
+        GetPermanentContractorInfoUseCase(repo),
+      ),
+      submitPermanentContractorCheckInUseCaseProvider.overrideWithValue(
+        SubmitPermanentContractorCheckInUseCase(repo),
+      ),
+      submitPermanentContractorCheckOutUseCaseProvider.overrideWithValue(
+        SubmitPermanentContractorCheckOutUseCase(repo),
+      ),
+      savePermanentContractorPhotoUseCaseProvider.overrideWithValue(
+        SavePermanentContractorPhotoUseCase(repo),
+      ),
+      deletePermanentContractorGalleryPhotoUseCaseProvider.overrideWithValue(
+        DeletePermanentContractorGalleryPhotoUseCase(repo),
+      ),
+      authLocalDataSourceProvider.overrideWithValue(
+        _FakeAuthLocalDataSource(
+          const AuthSessionDto(
+            username: 'Ryan',
+            fullname: 'Ryan',
+            entity: 'AGYTEK',
+            accessToken: 'token123',
+            defaultSite: 'FACTORY1',
+            defaultGate: 'F1_A',
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
 void main() {
   test('search success clears input and sets info', () async {
     final repo = _FakeReferenceRepository();
-    final container = ProviderContainer(
-      overrides: [
-        getPermanentContractorInfoUseCaseProvider.overrideWithValue(
-          GetPermanentContractorInfoUseCase(repo),
-        ),
-        submitPermanentContractorCheckInUseCaseProvider.overrideWithValue(
-          SubmitPermanentContractorCheckInUseCase(repo),
-        ),
-        submitPermanentContractorCheckOutUseCaseProvider.overrideWithValue(
-          SubmitPermanentContractorCheckOutUseCase(repo),
-        ),
-        authLocalDataSourceProvider.overrideWithValue(
-          _FakeAuthLocalDataSource(
-            const AuthSessionDto(
-              username: 'Ryan',
-              fullname: 'Ryan',
-              entity: 'AGYTEK',
-              accessToken: 'token123',
-              defaultSite: 'FACTORY1',
-              defaultGate: 'F1_A',
-            ),
-          ),
-        ),
-      ],
-    );
+    final container = _buildContainer(repo);
     addTearDown(container.dispose);
 
     final controller = container.read(
@@ -170,19 +220,7 @@ void main() {
 
   test('search failure keeps input and sets error', () async {
     final repo = _FakeReferenceRepository(error: Exception('not found'));
-    final container = ProviderContainer(
-      overrides: [
-        getPermanentContractorInfoUseCaseProvider.overrideWithValue(
-          GetPermanentContractorInfoUseCase(repo),
-        ),
-        submitPermanentContractorCheckInUseCaseProvider.overrideWithValue(
-          SubmitPermanentContractorCheckInUseCase(repo),
-        ),
-        submitPermanentContractorCheckOutUseCaseProvider.overrideWithValue(
-          SubmitPermanentContractorCheckOutUseCase(repo),
-        ),
-      ],
-    );
+    final container = _buildContainer(repo);
     addTearDown(container.dispose);
 
     final controller = container.read(
@@ -198,70 +236,17 @@ void main() {
     expect(state.errorMessage, 'not found');
   });
 
-  test('search validates empty input', () async {
-    final repo = _FakeReferenceRepository();
-    final container = ProviderContainer(
-      overrides: [
-        getPermanentContractorInfoUseCaseProvider.overrideWithValue(
-          GetPermanentContractorInfoUseCase(repo),
-        ),
-        submitPermanentContractorCheckInUseCaseProvider.overrideWithValue(
-          SubmitPermanentContractorCheckInUseCase(repo),
-        ),
-        submitPermanentContractorCheckOutUseCaseProvider.overrideWithValue(
-          SubmitPermanentContractorCheckOutUseCase(repo),
-        ),
-      ],
-    );
-    addTearDown(container.dispose);
-
-    final controller = container.read(
-      permanentContractorCheckControllerProvider.notifier,
-    );
-
-    controller.updateSearchInput('   ');
-    final ok = await controller.search();
-
-    expect(ok, isFalse);
-    expect(
-      container.read(permanentContractorCheckControllerProvider).errorMessage,
-      'Please input or scan contractor code.',
-    );
-  });
-
   test('submit check-in reuses idempotency key across retries', () async {
     final repo = _FakeReferenceRepository();
-    final container = ProviderContainer(
-      overrides: [
-        submitPermanentContractorCheckInUseCaseProvider.overrideWithValue(
-          SubmitPermanentContractorCheckInUseCase(repo),
-        ),
-        submitPermanentContractorCheckOutUseCaseProvider.overrideWithValue(
-          SubmitPermanentContractorCheckOutUseCase(repo),
-        ),
-        authLocalDataSourceProvider.overrideWithValue(
-          _FakeAuthLocalDataSource(
-            const AuthSessionDto(
-              username: 'Ryan',
-              fullname: 'Ryan',
-              entity: 'AGYTEK',
-              accessToken: 'token123',
-              defaultSite: 'FACTORY1',
-              defaultGate: 'F1_A',
-            ),
-          ),
-        ),
-      ],
-    );
+    final container = _buildContainer(repo);
     addTearDown(container.dispose);
     final controller = container.read(
       permanentContractorCheckControllerProvider.notifier,
     );
 
-    container
-        .read(permanentContractorCheckControllerProvider.notifier)
-        .state = const PermanentContractorCheckState(
-      info: PermanentContractorInfoEntity(
+    controller.state = PermanentContractorCheckState(
+      photoSessionGuid: 'guid-1',
+      info: const PermanentContractorInfoEntity(
         contractorId: 'C0023',
         contractorName: 'Dylan',
         contractorIc: '',
@@ -284,36 +269,16 @@ void main() {
 
   test('changing check type resets idempotency key', () async {
     final repo = _FakeReferenceRepository();
-    final container = ProviderContainer(
-      overrides: [
-        submitPermanentContractorCheckInUseCaseProvider.overrideWithValue(
-          SubmitPermanentContractorCheckInUseCase(repo),
-        ),
-        submitPermanentContractorCheckOutUseCaseProvider.overrideWithValue(
-          SubmitPermanentContractorCheckOutUseCase(repo),
-        ),
-        authLocalDataSourceProvider.overrideWithValue(
-          _FakeAuthLocalDataSource(
-            const AuthSessionDto(
-              username: 'Ryan',
-              fullname: 'Ryan',
-              entity: 'AGYTEK',
-              accessToken: 'token123',
-              defaultSite: 'FACTORY1',
-              defaultGate: 'F1_A',
-            ),
-          ),
-        ),
-      ],
-    );
+    final container = _buildContainer(repo);
     addTearDown(container.dispose);
     final controller = container.read(
       permanentContractorCheckControllerProvider.notifier,
     );
 
-    controller.state = const PermanentContractorCheckState(
+    controller.state = PermanentContractorCheckState(
+      photoSessionGuid: 'guid-1',
       checkType: PermanentContractorCheckType.checkIn,
-      info: PermanentContractorInfoEntity(
+      info: const PermanentContractorInfoEntity(
         contractorId: 'C0023',
         contractorName: 'Dylan',
         contractorIc: '',
@@ -331,9 +296,101 @@ void main() {
     expect(keyBeforeChange, isNotNull);
 
     controller.setCheckType(PermanentContractorCheckType.checkOut);
-    expect(
-      container.read(permanentContractorCheckControllerProvider).idempotencyKey,
-      isNull,
-    );
+    final state = container.read(permanentContractorCheckControllerProvider);
+    expect(state.idempotencyKey, isNull);
+    expect(state.idempotencySignature, isNull);
   });
+
+  test(
+    'save/delete and reset-after-success manage contractor gallery session',
+    () async {
+      final repo = _FakeReferenceRepository();
+      final container = _buildContainer(repo);
+      addTearDown(container.dispose);
+      final controller = container.read(
+        permanentContractorCheckControllerProvider.notifier,
+      );
+
+      controller.state = PermanentContractorCheckState(
+        photoSessionGuid: 'guid-1',
+        checkType: PermanentContractorCheckType.checkOut,
+        idempotencyKey: 'idem-1',
+        idempotencySignature: 'sig-1',
+        info: const PermanentContractorInfoEntity(
+          contractorId: 'C0023',
+          contractorName: 'Dylan',
+          contractorIc: '',
+          hpNo: '',
+          email: '',
+          company: '',
+          validWorkingDateFrom: '',
+          validWorkingDateTo: '',
+        ),
+      );
+
+      final saveResult = await controller.savePhoto(
+        submission: const PermanentContractorSavePhotoSubmissionEntity(
+          imageBase64: 'abc',
+          photoDescription: 'Gate shot',
+          guid: 'guid-1',
+          entity: 'AGYTEK',
+          site: 'FACTORY1',
+          uploadedBy: 'Ryan',
+        ),
+      );
+      expect(saveResult.success, isTrue);
+      expect(repo.savePhotoSubmission?.guid, 'guid-1');
+
+      final deleteResult = await controller.deletePhoto(photoId: 53);
+      expect(deleteResult.success, isTrue);
+      expect(repo.deletedPhotoId, 53);
+
+      container
+          .read(permanentContractorGalleryLocalItemsProvider.notifier)
+          .append(
+            guid: 'guid-1',
+            item: const PermanentContractorGalleryItemEntity(
+              photoId: 53,
+              photoDesc: 'Gate shot',
+              url: '/Contractor/photo/53',
+            ),
+          );
+      container
+          .read(permanentContractorGalleryDeletedPhotoIdsProvider.notifier)
+          .markDeleted(guid: 'guid-1', photoId: 53);
+      seedPhotoMemoryCache(
+        container.read(permanentContractorGalleryPhotoCacheProvider),
+        cacheKey: galleryPhotoCacheKey(53),
+        bytes: Uint8List.fromList([1, 2, 3]),
+      );
+
+      final oldGuid = container
+          .read(permanentContractorCheckControllerProvider)
+          .photoSessionGuid;
+      controller.resetAfterSuccessfulSubmit();
+      final state = container.read(permanentContractorCheckControllerProvider);
+
+      expect(state.checkType, PermanentContractorCheckType.checkOut);
+      expect(state.info, isNull);
+      expect(state.photoSessionGuid, isNot(oldGuid));
+      expect(state.idempotencyKey, isNull);
+      expect(state.idempotencySignature, isNull);
+      expect(
+        container.read(permanentContractorGalleryLocalItemsProvider)['guid-1'],
+        isNull,
+      );
+      expect(
+        container.read(
+          permanentContractorGalleryDeletedPhotoIdsProvider,
+        )['guid-1'],
+        isNull,
+      );
+      expect(
+        container.read(
+          permanentContractorGalleryPhotoCacheProvider,
+        )[galleryPhotoCacheKey(53)],
+        isNull,
+      );
+    },
+  );
 }

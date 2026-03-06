@@ -346,3 +346,21 @@
 - Verification:
   - `flutter analyze lib/presentation/pages/whitelist_detail_page.dart lib/presentation/pages/whitelist_check_page.dart test/presentation/pages/whitelist_detail_page_test.dart test/presentation/pages/whitelist_check_page_test.dart`
   - `flutter test test/presentation/pages/whitelist_detail_page_test.dart test/presentation/pages/whitelist_check_page_test.dart`
+
+## 2026-03-06 - Permanent contractor gallery session integration
+- [x] Extend reference repository/data source/repository implementation for contractor gallery list/photo, save-photo, and delete-photo APIs.
+- [x] Add permanent contractor gallery/save/delete domain entities, DTOs, and use cases.
+- [x] Extend permanent contractor state with page-session gallery GUID, upload/delete flows, local gallery state, and post-submit reset behavior.
+- [x] Update permanent contractor page with camera upload flow, in-page gallery, fullscreen photo view, and delete action.
+- [x] Mirror employee-style successful submit reset: clear contractor info, regenerate GUID, and require fresh search.
+- [x] Add/extend targeted model/data/state/page tests for contractor gallery behavior.
+- [x] Run verification (`flutter analyze` + targeted `flutter test` suites).
+
+## Review (Permanent Contractor Gallery Session)
+- Permanent contractor check-in/out now has a session-scoped gallery using one client GUID per page session for `/wmsws/Contractor/gallery-list/{guid}` and `/wmsws/Contractor/save-photo`.
+- The existing contractor profile photo remains separate; a new in-page gallery card provides camera capture, upload preview, fullscreen viewing, and per-photo delete.
+- Upload success appends new gallery items locally and seeds the in-memory photo cache without refetching the gallery list; delete success removes the item locally and clears cached bytes.
+- Successful contractor check-in/out now resets the session like employee: contractor info is cleared, the old gallery GUID is discarded, a fresh GUID is generated, and the current check type is preserved.
+- Verification:
+  - `flutter analyze lib/domain/repositories/reference_repository.dart lib/data/datasources/reference_remote_data_source.dart lib/data/repositories/reference_repository_impl.dart lib/presentation/state/permanent_contractor_check_providers.dart lib/presentation/pages/permanent_contractor_check_page.dart test/presentation/state/permanent_contractor_check_providers_test.dart test/presentation/pages/permanent_contractor_check_page_test.dart test/data/models/permanent_contractor_gallery_item_dto_test.dart test/data/models/permanent_contractor_save_photo_request_dto_test.dart test/data/models/permanent_contractor_save_photo_response_dto_test.dart test/data/models/permanent_contractor_delete_photo_response_dto_test.dart test/data/datasources/reference_remote_data_source_gallery_test.dart test/data/repositories/reference_repository_impl_gallery_test.dart`
+  - `flutter test test/presentation/state/permanent_contractor_check_providers_test.dart test/presentation/pages/permanent_contractor_check_page_test.dart test/data/models/permanent_contractor_gallery_item_dto_test.dart test/data/models/permanent_contractor_save_photo_request_dto_test.dart test/data/models/permanent_contractor_save_photo_response_dto_test.dart test/data/models/permanent_contractor_delete_photo_response_dto_test.dart test/data/datasources/reference_remote_data_source_gallery_test.dart test/data/repositories/reference_repository_impl_gallery_test.dart`
