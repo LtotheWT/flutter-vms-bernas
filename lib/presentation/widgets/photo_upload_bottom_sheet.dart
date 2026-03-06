@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:vms_bernas/presentation/widgets/labeled_form_rows.dart';
 
 import 'app_filled_button.dart';
 import 'app_outlined_button.dart';
@@ -103,17 +104,13 @@ Future<PhotoUploadSheetResult?> showPhotoUploadBottomSheet({
                   const SizedBox(height: 12),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: Image.memory(
-                      imageBytes,
-                      height: 220,
-                      fit: BoxFit.cover,
-                    ),
+                    child: Image.memory(imageBytes, fit: BoxFit.cover),
                   ),
                   const SizedBox(height: 12),
-                  TextFormField(
-                    controller: descriptionController,
+                  LabeledTextInputRow(
+                    label: descriptionLabel,
                     enabled: !isUploading,
-                    decoration: InputDecoration(labelText: descriptionLabel),
+                    controller: descriptionController,
                   ),
                   if (errorText != null) ...[
                     const SizedBox(height: 8),
