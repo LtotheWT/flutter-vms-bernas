@@ -1,6 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vms_bernas/data/datasources/whitelist_remote_data_source.dart';
+import 'package:vms_bernas/data/models/whitelist_save_photo_request_dto.dart';
 import 'package:vms_bernas/data/models/whitelist_search_request_dto.dart';
 import 'package:vms_bernas/data/models/whitelist_submit_request_dto.dart';
 
@@ -402,4 +405,151 @@ void main() {
       );
     },
   );
+
+  test('gets whitelist gallery list for guid', () async {
+    final dio = Dio();
+    Uri? capturedUri;
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          capturedUri = options.uri;
+          handler.resolve(
+            Response<dynamic>(
+              requestOptions: options,
+              data: [
+                {
+                  'photoId': 29,
+                  'photoDesc': 'string',
+                  'Url': '/Whitelist/photo/29',
+                },
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    final dataSource = WhitelistRemoteDataSource(dio);
+    final result = await dataSource.getWhitelistGalleryList(
+      accessToken: 'token',
+      guid: 'f5af3d09-a9d8-4fdb-8663-a7325af1a71f',
+    );
+
+    expect(
+      capturedUri.toString(),
+      contains(
+        '/wmsws/Whitelist/gallery-list/f5af3d09-a9d8-4fdb-8663-a7325af1a71f',
+      ),
+    );
+    expect(result.single.photoId, 29);
+  });
+
+  test('gets whitelist photo bytes', () async {
+    final dio = Dio();
+    Uri? capturedUri;
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          capturedUri = options.uri;
+          handler.resolve(
+            Response<dynamic>(
+              requestOptions: options,
+              data: Uint8List.fromList(const [1, 2, 3]),
+            ),
+          );
+        },
+      ),
+    );
+
+    final dataSource = WhitelistRemoteDataSource(dio);
+    final result = await dataSource.getWhitelistPhoto(
+      accessToken: 'token',
+      photoId: 30,
+    );
+
+    expect(capturedUri.toString(), contains('/wmsws/Whitelist/photo/30'));
+    expect(result, Uint8List.fromList(const [1, 2, 3]));
+  });
+
+  test('save whitelist photo posts payload', () async {
+    final dio = Dio();
+    Uri? capturedUri;
+    dynamic capturedBody;
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          capturedUri = options.uri;
+          capturedBody = options.data;
+          handler.resolve(
+            Response<dynamic>(
+              requestOptions: options,
+              data: {
+                'success': true,
+                'message': 'Photo saved successfully',
+                'data': {'PhotoId': 31},
+              },
+            ),
+          );
+        },
+      ),
+    );
+
+    final dataSource = WhitelistRemoteDataSource(dio);
+    final result = await dataSource.saveWhitelistPhoto(
+      accessToken: 'token',
+      request: const WhitelistSavePhotoRequestDto(
+        imageBase64: 'abc',
+        photoDescription: 'Gate',
+        guid: 'guid-123',
+        entity: 'AGYTEK',
+        site: 'FACTORY1',
+        uploadedBy: 'Ryan',
+      ),
+    );
+
+    expect(capturedUri.toString(), contains('/wmsws/Whitelist/save-photo'));
+    expect(capturedBody, {
+      'ImageBase64': 'abc',
+      'PhotoDescription': 'Gate',
+      'GUID': 'guid-123',
+      'Entity': 'AGYTEK',
+      'Site': 'FACTORY1',
+      'UploadedBy': 'Ryan',
+    });
+    expect(result.photoId, 31);
+  });
+
+  test('delete whitelist photo calls delete endpoint', () async {
+    final dio = Dio();
+    Uri? capturedUri;
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          capturedUri = options.uri;
+          handler.resolve(
+            Response<dynamic>(
+              requestOptions: options,
+              data: {
+                'Status': true,
+                'Message': 'delete is successful',
+                'Details': null,
+              },
+            ),
+          );
+        },
+      ),
+    );
+
+    final dataSource = WhitelistRemoteDataSource(dio);
+    final result = await dataSource.deleteWhitelistPhoto(
+      accessToken: 'token',
+      photoId: 31,
+    );
+
+    expect(
+      capturedUri.toString(),
+      contains('/wmsws/Whitelist/photo/31/delete'),
+    );
+    expect(result.status, isTrue);
+  });
 }

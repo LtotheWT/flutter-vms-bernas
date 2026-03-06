@@ -1,16 +1,24 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vms_bernas/data/datasources/auth_local_data_source.dart';
 import 'package:vms_bernas/data/datasources/whitelist_remote_data_source.dart';
 import 'package:vms_bernas/data/models/auth_session_dto.dart';
+import 'package:vms_bernas/data/models/whitelist_delete_photo_response_dto.dart';
 import 'package:vms_bernas/data/models/whitelist_detail_response_dto.dart';
+import 'package:vms_bernas/data/models/whitelist_gallery_item_dto.dart';
 import 'package:vms_bernas/data/models/whitelist_search_item_dto.dart';
 import 'package:vms_bernas/data/models/whitelist_search_request_dto.dart';
+import 'package:vms_bernas/data/models/whitelist_save_photo_request_dto.dart';
+import 'package:vms_bernas/data/models/whitelist_save_photo_response_dto.dart';
 import 'package:vms_bernas/data/models/whitelist_submit_request_dto.dart';
 import 'package:vms_bernas/data/models/whitelist_submit_response_dto.dart';
 import 'package:vms_bernas/data/repositories/whitelist_repository_impl.dart';
 import 'package:vms_bernas/domain/entities/whitelist_search_filter_entity.dart';
+import 'package:vms_bernas/domain/entities/whitelist_gallery_item_entity.dart';
+import 'package:vms_bernas/domain/entities/whitelist_save_photo_submission_entity.dart';
 import 'package:vms_bernas/domain/entities/whitelist_submit_entity.dart';
 
 class _FakeAuthLocalDataSource extends AuthLocalDataSource {
@@ -31,6 +39,9 @@ class _FakeWhitelistRemoteDataSource extends WhitelistRemoteDataSource {
   String? capturedDetailVehiclePlate;
   String? capturedIdempotencyKey;
   WhitelistSubmitRequestDto? capturedSubmitRequest;
+  String? capturedGalleryGuid;
+  int? capturedPhotoId;
+  WhitelistSavePhotoRequestDto? capturedSavePhotoRequest;
 
   @override
   Future<List<WhitelistSearchItemDto>> searchWhitelist({
@@ -107,6 +118,59 @@ class _FakeWhitelistRemoteDataSource extends WhitelistRemoteDataSource {
     return const WhitelistSubmitResponseDto(
       status: true,
       message: 'Whitelist checked OUT successfully.',
+    );
+  }
+
+  @override
+  Future<List<WhitelistGalleryItemDto>> getWhitelistGalleryList({
+    required String accessToken,
+    required String guid,
+  }) async {
+    capturedToken = accessToken;
+    capturedGalleryGuid = guid;
+    return const [
+      WhitelistGalleryItemDto(
+        photoId: 31,
+        photoDesc: 'test',
+        url: '/Whitelist/photo/31',
+      ),
+    ];
+  }
+
+  @override
+  Future<Uint8List?> getWhitelistPhoto({
+    required String accessToken,
+    required int photoId,
+  }) async {
+    capturedToken = accessToken;
+    capturedPhotoId = photoId;
+    return Uint8List.fromList(const [1, 2, 3]);
+  }
+
+  @override
+  Future<WhitelistSavePhotoResponseDto> saveWhitelistPhoto({
+    required String accessToken,
+    required WhitelistSavePhotoRequestDto request,
+  }) async {
+    capturedToken = accessToken;
+    capturedSavePhotoRequest = request;
+    return const WhitelistSavePhotoResponseDto(
+      success: true,
+      message: 'Photo saved successfully',
+      photoId: 31,
+    );
+  }
+
+  @override
+  Future<WhitelistDeletePhotoResponseDto> deleteWhitelistPhoto({
+    required String accessToken,
+    required int photoId,
+  }) async {
+    capturedToken = accessToken;
+    capturedPhotoId = photoId;
+    return const WhitelistDeletePhotoResponseDto(
+      status: true,
+      message: 'delete is successful',
     );
   }
 }
@@ -271,5 +335,113 @@ void main() {
     expect(remote.capturedIdempotencyKey, 'idem-3');
     expect(remote.capturedSubmitRequest?.vehiclePlate, 'RYAN1234');
     expect(result.status, isTrue);
+  });
+
+  test('maps whitelist gallery list from remote', () async {
+    final remote = _FakeWhitelistRemoteDataSource();
+    final repository = WhitelistRepositoryImpl(
+      remote,
+      _FakeAuthLocalDataSource(
+        const AuthSessionDto(
+          username: 'Ryan',
+          fullname: 'Ryan',
+          entity: 'AGYTEK',
+          accessToken: 'token123',
+          defaultSite: 'FACTORY1',
+          defaultGate: 'F1_A',
+        ),
+      ),
+    );
+
+    final result = await repository.getWhitelistGalleryList(guid: 'guid-123');
+
+    expect(remote.capturedToken, 'token123');
+    expect(remote.capturedGalleryGuid, 'guid-123');
+    expect(result, hasLength(1));
+    expect(
+      result.first,
+      const WhitelistGalleryItemEntity(
+        photoId: 31,
+        photoDesc: 'test',
+        url: '/Whitelist/photo/31',
+      ),
+    );
+  });
+
+  test('maps whitelist photo bytes from remote', () async {
+    final remote = _FakeWhitelistRemoteDataSource();
+    final repository = WhitelistRepositoryImpl(
+      remote,
+      _FakeAuthLocalDataSource(
+        const AuthSessionDto(
+          username: 'Ryan',
+          fullname: 'Ryan',
+          entity: 'AGYTEK',
+          accessToken: 'token123',
+          defaultSite: 'FACTORY1',
+          defaultGate: 'F1_A',
+        ),
+      ),
+    );
+
+    final result = await repository.getWhitelistPhoto(photoId: 31);
+
+    expect(remote.capturedPhotoId, 31);
+    expect(result, Uint8List.fromList(const [1, 2, 3]));
+  });
+
+  test('save whitelist photo maps request and response', () async {
+    final remote = _FakeWhitelistRemoteDataSource();
+    final repository = WhitelistRepositoryImpl(
+      remote,
+      _FakeAuthLocalDataSource(
+        const AuthSessionDto(
+          username: 'Ryan',
+          fullname: 'Ryan',
+          entity: 'AGYTEK',
+          accessToken: 'token123',
+          defaultSite: 'FACTORY1',
+          defaultGate: 'F1_A',
+        ),
+      ),
+    );
+
+    final result = await repository.saveWhitelistPhoto(
+      submission: const WhitelistSavePhotoSubmissionEntity(
+        imageBase64: 'abc',
+        photoDescription: 'Gate',
+        guid: 'guid-123',
+        entity: 'AGYTEK',
+        site: 'FACTORY1',
+        uploadedBy: 'Ryan',
+      ),
+    );
+
+    expect(remote.capturedSavePhotoRequest?.guid, 'guid-123');
+    expect(result.success, isTrue);
+    expect(result.photoId, 31);
+  });
+
+  test('delete whitelist photo maps response', () async {
+    final remote = _FakeWhitelistRemoteDataSource();
+    final repository = WhitelistRepositoryImpl(
+      remote,
+      _FakeAuthLocalDataSource(
+        const AuthSessionDto(
+          username: 'Ryan',
+          fullname: 'Ryan',
+          entity: 'AGYTEK',
+          accessToken: 'token123',
+          defaultSite: 'FACTORY1',
+          defaultGate: 'F1_A',
+        ),
+      ),
+    );
+
+    final result = await repository.deleteWhitelistPhoto(photoId: 31);
+
+    expect(remote.capturedPhotoId, 31);
+    expect(result.success, isTrue);
+    expect(result.message, 'delete is successful');
   });
 }

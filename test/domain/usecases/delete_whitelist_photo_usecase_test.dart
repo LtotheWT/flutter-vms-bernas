@@ -4,98 +4,75 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vms_bernas/domain/entities/whitelist_delete_photo_result_entity.dart';
 import 'package:vms_bernas/domain/entities/whitelist_detail_entity.dart';
 import 'package:vms_bernas/domain/entities/whitelist_gallery_item_entity.dart';
-import 'package:vms_bernas/domain/entities/whitelist_search_filter_entity.dart';
-import 'package:vms_bernas/domain/entities/whitelist_search_item_entity.dart';
 import 'package:vms_bernas/domain/entities/whitelist_save_photo_result_entity.dart';
 import 'package:vms_bernas/domain/entities/whitelist_save_photo_submission_entity.dart';
+import 'package:vms_bernas/domain/entities/whitelist_search_filter_entity.dart';
+import 'package:vms_bernas/domain/entities/whitelist_search_item_entity.dart';
 import 'package:vms_bernas/domain/entities/whitelist_submit_entity.dart';
 import 'package:vms_bernas/domain/entities/whitelist_submit_result_entity.dart';
 import 'package:vms_bernas/domain/repositories/whitelist_repository.dart';
-import 'package:vms_bernas/domain/usecases/get_whitelist_detail_usecase.dart';
+import 'package:vms_bernas/domain/usecases/delete_whitelist_photo_usecase.dart';
 
 class _FakeWhitelistRepository implements WhitelistRepository {
-  String? capturedEntity;
-  String? capturedVehiclePlate;
+  int? capturedPhotoId;
 
   @override
-  Future<WhitelistDetailEntity> getWhitelistDetail({
-    required String entity,
-    required String vehiclePlate,
+  Future<WhitelistDeletePhotoResultEntity> deleteWhitelistPhoto({
+    required int photoId,
   }) async {
-    capturedEntity = entity;
-    capturedVehiclePlate = vehiclePlate;
-    return const WhitelistDetailEntity(
-      entity: 'AGYTEK',
-      vehiclePlate: 'www9233G',
-      ic: '123456789012',
-      name: 'John',
-      status: 'ACTIVE',
-      createBy: 'admin',
-      createDate: '2025-12-03 10:23:10',
-      updateBy: 'admin',
-      updateDate: '2025-12-03 10:48:15',
+    capturedPhotoId = photoId;
+    return const WhitelistDeletePhotoResultEntity(
+      success: true,
+      message: 'delete is successful',
     );
   }
 
   @override
   Future<List<WhitelistSearchItemEntity>> searchWhitelist({
     required WhitelistSearchFilterEntity filter,
-  }) {
-    throw UnimplementedError();
-  }
+  }) => throw UnimplementedError();
+
+  @override
+  Future<WhitelistDetailEntity> getWhitelistDetail({
+    required String entity,
+    required String vehiclePlate,
+  }) => throw UnimplementedError();
 
   @override
   Future<List<WhitelistGalleryItemEntity>> getWhitelistGalleryList({
     required String guid,
-  }) {
-    throw UnimplementedError();
-  }
+  }) => throw UnimplementedError();
 
   @override
-  Future<Uint8List?> getWhitelistPhoto({required int photoId}) {
-    throw UnimplementedError();
-  }
+  Future<Uint8List?> getWhitelistPhoto({required int photoId}) =>
+      throw UnimplementedError();
 
   @override
   Future<WhitelistSavePhotoResultEntity> saveWhitelistPhoto({
     required WhitelistSavePhotoSubmissionEntity submission,
-  }) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<WhitelistDeletePhotoResultEntity> deleteWhitelistPhoto({
-    required int photoId,
-  }) {
-    throw UnimplementedError();
-  }
+  }) => throw UnimplementedError();
 
   @override
   Future<WhitelistSubmitResultEntity> submitWhitelistCheckIn({
     required WhitelistSubmitEntity submission,
     required String idempotencyKey,
-  }) {
-    throw UnimplementedError();
-  }
+  }) => throw UnimplementedError();
 
   @override
   Future<WhitelistSubmitResultEntity> submitWhitelistCheckOut({
     required WhitelistSubmitEntity submission,
     required String idempotencyKey,
-  }) {
-    throw UnimplementedError();
-  }
+  }) => throw UnimplementedError();
 }
 
 void main() {
-  test('forwards detail identifiers to repository', () async {
+  test('forwards whitelist photo delete to repository', () async {
     final repository = _FakeWhitelistRepository();
-    final useCase = GetWhitelistDetailUseCase(repository);
+    final useCase = DeleteWhitelistPhotoUseCase(repository);
 
-    final detail = await useCase(entity: 'AGYTEK', vehiclePlate: 'www9233G');
+    final result = await useCase(photoId: 31);
 
-    expect(repository.capturedEntity, 'AGYTEK');
-    expect(repository.capturedVehiclePlate, 'www9233G');
-    expect(detail.name, 'John');
+    expect(repository.capturedPhotoId, 31);
+    expect(result.success, isTrue);
   });
 }

@@ -1,8 +1,14 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vms_bernas/domain/entities/whitelist_delete_photo_result_entity.dart';
 import 'package:vms_bernas/domain/entities/whitelist_detail_entity.dart';
+import 'package:vms_bernas/domain/entities/whitelist_gallery_item_entity.dart';
 import 'package:vms_bernas/domain/entities/whitelist_search_filter_entity.dart';
 import 'package:vms_bernas/domain/entities/whitelist_search_item_entity.dart';
+import 'package:vms_bernas/domain/entities/whitelist_save_photo_result_entity.dart';
+import 'package:vms_bernas/domain/entities/whitelist_save_photo_submission_entity.dart';
 import 'package:vms_bernas/domain/entities/whitelist_submit_entity.dart';
 import 'package:vms_bernas/domain/entities/whitelist_submit_result_entity.dart';
 import 'package:vms_bernas/domain/repositories/whitelist_repository.dart';
@@ -43,6 +49,32 @@ class _FakeWhitelistRepository implements WhitelistRepository {
   Future<WhitelistDetailEntity> getWhitelistDetail({
     required String entity,
     required String vehiclePlate,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<WhitelistGalleryItemEntity>> getWhitelistGalleryList({
+    required String guid,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Uint8List?> getWhitelistPhoto({required int photoId}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<WhitelistSavePhotoResultEntity> saveWhitelistPhoto({
+    required WhitelistSavePhotoSubmissionEntity submission,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<WhitelistDeletePhotoResultEntity> deleteWhitelistPhoto({
+    required int photoId,
   }) {
     throw UnimplementedError();
   }

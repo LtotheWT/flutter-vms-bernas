@@ -1,8 +1,13 @@
 import 'package:dio/dio.dart';
+import 'dart:typed_data';
 
 import '../models/whitelist_detail_response_dto.dart';
+import '../models/whitelist_delete_photo_response_dto.dart';
+import '../models/whitelist_gallery_item_dto.dart';
 import '../models/whitelist_search_item_dto.dart';
 import '../models/whitelist_search_request_dto.dart';
+import '../models/whitelist_save_photo_request_dto.dart';
+import '../models/whitelist_save_photo_response_dto.dart';
 import '../models/whitelist_search_response_dto.dart';
 import '../models/whitelist_submit_request_dto.dart';
 import '../models/whitelist_submit_response_dto.dart';
@@ -166,6 +171,208 @@ class WhitelistRemoteDataSource {
     );
   }
 
+  Future<List<WhitelistGalleryItemDto>> getWhitelistGalleryList({
+    required String accessToken,
+    required String guid,
+  }) async {
+    final encodedGuid = Uri.encodeComponent(guid.trim());
+
+    try {
+      final response = await _dio.get<dynamic>(
+        '/wmsws/Whitelist/gallery-list/$encodedGuid',
+        options: Options(
+          headers: {'Authorization': 'Bearer $accessToken', 'accept': '*/*'},
+        ),
+      );
+
+      final list = parseJsonList(response.data);
+      return list
+          .whereType<Map>()
+          .map(
+            (item) => WhitelistGalleryItemDto.fromJson(
+              item.map((key, value) => MapEntry(key.toString(), value)),
+            ),
+          )
+          .toList(growable: false);
+    } on DioException catch (error) {
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 401 || statusCode == 403) {
+        throw WhitelistException(
+          'Please login again to load whitelist gallery.',
+        );
+      }
+
+      if (isConnectivityIssue(error)) {
+        throw WhitelistException(
+          'Unable to load whitelist gallery. Please try again.',
+        );
+      }
+
+      throw WhitelistException(
+        'Failed to load whitelist gallery. Please try again.',
+      );
+    } on FormatException {
+      throw WhitelistException(
+        'Failed to load whitelist gallery. Please try again.',
+      );
+    }
+  }
+
+  Future<Uint8List?> getWhitelistPhoto({
+    required String accessToken,
+    required int photoId,
+  }) async {
+    try {
+      final response = await _dio.get<dynamic>(
+        '/wmsws/Whitelist/photo/$photoId',
+        options: Options(
+          headers: {'Authorization': 'Bearer $accessToken', 'accept': '*/*'},
+          responseType: ResponseType.bytes,
+        ),
+      );
+
+      final data = response.data;
+      if (data is Uint8List) {
+        return data.isEmpty ? null : data;
+      }
+      if (data is List<int>) {
+        return data.isEmpty ? null : Uint8List.fromList(data);
+      }
+      return null;
+    } on DioException catch (error) {
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 404) {
+        return null;
+      }
+      if (statusCode == 401 || statusCode == 403) {
+        throw WhitelistException('Please login again to load whitelist photo.');
+      }
+
+      if (isConnectivityIssue(error)) {
+        throw WhitelistException(
+          'Unable to load whitelist photo. Please try again.',
+        );
+      }
+
+      throw WhitelistException(
+        'Failed to load whitelist photo. Please try again.',
+      );
+    } on FormatException {
+      throw WhitelistException(
+        'Failed to load whitelist photo. Please try again.',
+      );
+    }
+  }
+
+  Future<WhitelistSavePhotoResponseDto> saveWhitelistPhoto({
+    required String accessToken,
+    required WhitelistSavePhotoRequestDto request,
+  }) async {
+    try {
+      final response = await _dio.post<dynamic>(
+        '/wmsws/Whitelist/save-photo',
+        data: request.toJson(),
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $accessToken',
+            'accept': '*/*',
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+
+      final dto = WhitelistSavePhotoResponseDto.fromJson(
+        parseJsonMap(response.data),
+      );
+      if (!dto.success) {
+        throw WhitelistException(
+          _resolveBackendMessage(dto.message) ??
+              'Failed to upload whitelist photo. Please try again.',
+        );
+      }
+      return dto;
+    } on DioException catch (error) {
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 401 || statusCode == 403) {
+        throw WhitelistException('Please login again to upload photo.');
+      }
+
+      final backendMessage = _extractSavePhotoBackendMessage(
+        error.response?.data,
+      );
+      if (backendMessage != null) {
+        throw WhitelistException(backendMessage);
+      }
+
+      if (isConnectivityIssue(error)) {
+        throw WhitelistException(
+          'Unable to upload whitelist photo. Please try again.',
+        );
+      }
+
+      throw WhitelistException(
+        'Failed to upload whitelist photo. Please try again.',
+      );
+    } on FormatException {
+      throw WhitelistException(
+        'Failed to upload whitelist photo. Please try again.',
+      );
+    }
+  }
+
+  Future<WhitelistDeletePhotoResponseDto> deleteWhitelistPhoto({
+    required String accessToken,
+    required int photoId,
+  }) async {
+    try {
+      final response = await _dio.delete<dynamic>(
+        '/wmsws/Whitelist/photo/$photoId/delete',
+        options: Options(
+          headers: {'Authorization': 'Bearer $accessToken', 'accept': '*/*'},
+        ),
+      );
+
+      final dto = WhitelistDeletePhotoResponseDto.fromJson(
+        parseJsonMap(response.data),
+      );
+      if (!dto.status) {
+        throw WhitelistException(
+          _resolveBackendMessage(dto.message) ??
+              'Failed to delete whitelist photo. Please try again.',
+        );
+      }
+      return dto;
+    } on DioException catch (error) {
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 401 || statusCode == 403) {
+        throw WhitelistException(
+          'Please login again to delete whitelist photo.',
+        );
+      }
+
+      final backendMessage = _extractDeletePhotoBackendMessage(
+        error.response?.data,
+      );
+      if (backendMessage != null) {
+        throw WhitelistException(backendMessage);
+      }
+
+      if (isConnectivityIssue(error)) {
+        throw WhitelistException(
+          'Unable to delete whitelist photo. Please try again.',
+        );
+      }
+
+      throw WhitelistException(
+        'Failed to delete whitelist photo. Please try again.',
+      );
+    } on FormatException {
+      throw WhitelistException(
+        'Failed to delete whitelist photo. Please try again.',
+      );
+    }
+  }
+
   Future<WhitelistSubmitResponseDto> _submitWhitelist({
     required String accessToken,
     required String idempotencyKey,
@@ -247,14 +454,33 @@ class WhitelistRemoteDataSource {
   String? _extractSubmitBackendMessage(dynamic data) {
     try {
       final dto = WhitelistSubmitResponseDto.fromJson(parseJsonMap(data));
-      final message = dto.message.trim();
-      if (message.isNotEmpty) {
-        return message;
-      }
-      return null;
+      return _resolveBackendMessage(dto.message);
     } catch (_) {
       return null;
     }
+  }
+
+  String? _extractSavePhotoBackendMessage(dynamic data) {
+    try {
+      final dto = WhitelistSavePhotoResponseDto.fromJson(parseJsonMap(data));
+      return _resolveBackendMessage(dto.message);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String? _extractDeletePhotoBackendMessage(dynamic data) {
+    try {
+      final dto = WhitelistDeletePhotoResponseDto.fromJson(parseJsonMap(data));
+      return _resolveBackendMessage(dto.message);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String? _resolveBackendMessage(String? message) {
+    final text = message?.trim() ?? '';
+    return text.isEmpty ? null : text;
   }
 }
 

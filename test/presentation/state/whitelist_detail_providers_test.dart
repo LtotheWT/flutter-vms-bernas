@@ -1,15 +1,23 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vms_bernas/data/datasources/auth_local_data_source.dart';
 import 'package:vms_bernas/data/models/auth_session_dto.dart';
+import 'package:vms_bernas/domain/entities/whitelist_delete_photo_result_entity.dart';
 import 'package:vms_bernas/domain/entities/whitelist_detail_entity.dart';
+import 'package:vms_bernas/domain/entities/whitelist_gallery_item_entity.dart';
 import 'package:vms_bernas/domain/entities/whitelist_search_filter_entity.dart';
 import 'package:vms_bernas/domain/entities/whitelist_search_item_entity.dart';
+import 'package:vms_bernas/domain/entities/whitelist_save_photo_result_entity.dart';
+import 'package:vms_bernas/domain/entities/whitelist_save_photo_submission_entity.dart';
 import 'package:vms_bernas/domain/entities/whitelist_submit_entity.dart';
 import 'package:vms_bernas/domain/entities/whitelist_submit_result_entity.dart';
 import 'package:vms_bernas/domain/repositories/whitelist_repository.dart';
+import 'package:vms_bernas/domain/usecases/delete_whitelist_photo_usecase.dart';
 import 'package:vms_bernas/domain/usecases/get_whitelist_detail_usecase.dart';
+import 'package:vms_bernas/domain/usecases/save_whitelist_photo_usecase.dart';
 import 'package:vms_bernas/domain/usecases/submit_whitelist_check_in_usecase.dart';
 import 'package:vms_bernas/domain/usecases/submit_whitelist_check_out_usecase.dart';
 import 'package:vms_bernas/presentation/state/auth_session_providers.dart';
@@ -29,6 +37,8 @@ class _FakeWhitelistRepository implements WhitelistRepository {
   String? lastVehiclePlate;
   WhitelistSubmitEntity? lastSubmission;
   String? lastIdempotencyKey;
+  WhitelistSavePhotoSubmissionEntity? lastSavePhotoSubmission;
+  int? lastDeletedPhotoId;
 
   @override
   Future<WhitelistDetailEntity> getWhitelistDetail({
@@ -59,6 +69,16 @@ class _FakeWhitelistRepository implements WhitelistRepository {
   }) {
     throw UnimplementedError();
   }
+
+  @override
+  Future<List<WhitelistGalleryItemEntity>> getWhitelistGalleryList({
+    required String guid,
+  }) async {
+    return const <WhitelistGalleryItemEntity>[];
+  }
+
+  @override
+  Future<Uint8List?> getWhitelistPhoto({required int photoId}) async => null;
 
   @override
   Future<WhitelistSubmitResultEntity> submitWhitelistCheckIn({
@@ -97,6 +117,35 @@ class _FakeWhitelistRepository implements WhitelistRepository {
       message: 'Whitelist checked OUT successfully.',
     );
   }
+
+  @override
+  Future<WhitelistSavePhotoResultEntity> saveWhitelistPhoto({
+    required WhitelistSavePhotoSubmissionEntity submission,
+  }) async {
+    lastSavePhotoSubmission = submission;
+    if (submitShouldThrow) {
+      throw Exception('photo submit failed');
+    }
+    return const WhitelistSavePhotoResultEntity(
+      success: true,
+      message: 'Photo saved successfully',
+      photoId: 31,
+    );
+  }
+
+  @override
+  Future<WhitelistDeletePhotoResultEntity> deleteWhitelistPhoto({
+    required int photoId,
+  }) async {
+    lastDeletedPhotoId = photoId;
+    if (submitShouldThrow) {
+      throw Exception('photo delete failed');
+    }
+    return const WhitelistDeletePhotoResultEntity(
+      success: true,
+      message: 'delete is successful',
+    );
+  }
 }
 
 class _FakeAuthLocalDataSource extends AuthLocalDataSource {
@@ -131,6 +180,12 @@ ProviderContainer _createContainer(_FakeWhitelistRepository repository) {
       ),
       submitWhitelistCheckOutUseCaseProvider.overrideWithValue(
         SubmitWhitelistCheckOutUseCase(repository),
+      ),
+      saveWhitelistPhotoUseCaseProvider.overrideWithValue(
+        SaveWhitelistPhotoUseCase(repository),
+      ),
+      deleteWhitelistPhotoUseCaseProvider.overrideWithValue(
+        DeleteWhitelistPhotoUseCase(repository),
       ),
     ],
   );
@@ -279,4 +334,85 @@ void main() {
     expect(second.status, isFalse);
     expect(second.message, 'Submission is currently in progress.');
   });
+
+  test(
+    'load generates one photo session guid and reuses it on reload',
+    () async {
+      final repository = _FakeWhitelistRepository();
+      final container = _createContainer(repository);
+      addTearDown(container.dispose);
+
+      final controller = container.read(
+        whitelistDetailControllerProvider.notifier,
+      );
+      await controller.load(
+        entity: 'AGYTEK',
+        vehiclePlate: 'www9233G',
+        checkType: 'I',
+      );
+      final firstGuid = container
+          .read(whitelistDetailControllerProvider)
+          .photoSessionGuid;
+
+      await controller.load(
+        entity: 'AGYTEK',
+        vehiclePlate: 'www9233G',
+        checkType: 'I',
+      );
+      final secondGuid = container
+          .read(whitelistDetailControllerProvider)
+          .photoSessionGuid;
+
+      expect(firstGuid, isNotNull);
+      expect(secondGuid, firstGuid);
+    },
+  );
+
+  test(
+    'save photo success updates uploading state and forwards submission',
+    () async {
+      final repository = _FakeWhitelistRepository();
+      final container = _createContainer(repository);
+      addTearDown(container.dispose);
+
+      final result = await container
+          .read(whitelistDetailControllerProvider.notifier)
+          .savePhoto(
+            submission: const WhitelistSavePhotoSubmissionEntity(
+              imageBase64: 'abc',
+              photoDescription: 'Gate',
+              guid: 'guid-123',
+              entity: 'AGYTEK',
+              site: 'FACTORY1',
+              uploadedBy: 'Ryan',
+            ),
+          );
+
+      expect(result.success, isTrue);
+      expect(repository.lastSavePhotoSubmission?.guid, 'guid-123');
+      expect(
+        container.read(whitelistDetailControllerProvider).isUploadingPhoto,
+        isFalse,
+      );
+    },
+  );
+
+  test(
+    'delete photo success clears deleting state and forwards photo id',
+    () async {
+      final repository = _FakeWhitelistRepository();
+      final container = _createContainer(repository);
+      addTearDown(container.dispose);
+
+      final result = await container
+          .read(whitelistDetailControllerProvider.notifier)
+          .deletePhoto(photoId: 31);
+
+      expect(result.success, isTrue);
+      expect(repository.lastDeletedPhotoId, 31);
+      final state = container.read(whitelistDetailControllerProvider);
+      expect(state.isDeletingPhoto, isFalse);
+      expect(state.deletingPhotoId, isNull);
+    },
+  );
 }

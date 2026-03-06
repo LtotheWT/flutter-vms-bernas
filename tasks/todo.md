@@ -241,3 +241,35 @@
 - Verification:
   - `flutter analyze lib/core/error_messages.dart lib/presentation/pages/invitation_add_page.dart lib/presentation/pages/invitation_listing_page.dart lib/presentation/pages/report_dashboard_page.dart lib/presentation/pages/visitor_check_in_page.dart lib/presentation/pages/whitelist_check_page.dart lib/presentation/state/employee_check_providers.dart lib/presentation/state/invitation_add_providers.dart lib/presentation/state/invitation_listing_providers.dart lib/presentation/state/permanent_contractor_check_providers.dart lib/presentation/state/report_dashboard_providers.dart lib/presentation/state/visitor_check_in_providers.dart lib/presentation/state/whitelist_check_providers.dart lib/presentation/state/whitelist_detail_providers.dart`
   - `flutter test test/core/error_messages_test.dart` *(blocked by local Flutter SDK/framework mismatch in semantics compile stage, same environment issue as prior runs).*
+
+## 2026-03-06 - Whitelist detail photo session integration
+- [x] Add whitelist photo domain/data contracts for gallery list, photo bytes, upload, and delete.
+- [x] Extend whitelist detail state with session GUID, gallery providers, and upload/delete flows.
+- [x] Extract shared photo upload sheet and deleteable gallery thumbnail widgets, then reuse from visitor + whitelist.
+- [x] Update whitelist detail page with camera action, preview/upload flow, in-page gallery, and local append/remove behavior.
+- [x] Add/extend targeted tests for whitelist photo DTOs, datasource/repository, providers, and detail page.
+- [x] Run targeted verification (`flutter analyze` + relevant `flutter test`).
+
+## Review (Whitelist Detail Photo Session)
+- Whitelist details now generate one UUID photo-session GUID per page open and reuse it for both `gallery-list/{guid}` and `save-photo` during that page session.
+- Whitelist details page now mirrors visitor photo UX: `Camera` opens capture, captured image shows in preview/upload bottom sheet, successful upload appends locally to the in-page gallery, and delete removes locally without refetch.
+- Shared presentation pieces were extracted into `lib/presentation/widgets/photo_upload_bottom_sheet.dart` and `lib/presentation/widgets/gallery_photo_tile.dart`, and visitor photo upload/gallery thumbnail code was refactored to reuse them.
+- Gallery layout is now standardized with shared `GridView.builder` behavior across visitor and whitelist via `lib/presentation/widgets/gallery_photo_grid.dart`.
+- Gallery photos are loaded lazily from `/wmsws/Whitelist/photo/{photoId}`, cached in memory, open fullscreen on tap, and show non-blocking placeholder behavior on missing/error.
+- Verification:
+  - `flutter analyze lib/data/datasources/whitelist_remote_data_source.dart lib/data/repositories/whitelist_repository_impl.dart lib/domain/repositories/whitelist_repository.dart lib/presentation/pages/visitor_check_in_page.dart lib/presentation/pages/whitelist_detail_page.dart lib/presentation/state/photo_cache_helpers.dart lib/presentation/state/visitor_check_in_providers.dart lib/presentation/state/whitelist_detail_providers.dart test/data/datasources/whitelist_remote_data_source_test.dart test/data/repositories/whitelist_repository_impl_test.dart test/domain/usecases/get_whitelist_detail_usecase_test.dart test/domain/usecases/search_whitelist_usecase_test.dart test/domain/usecases/submit_whitelist_check_in_usecase_test.dart test/domain/usecases/submit_whitelist_check_out_usecase_test.dart test/domain/usecases/save_whitelist_photo_usecase_test.dart test/domain/usecases/delete_whitelist_photo_usecase_test.dart test/presentation/pages/whitelist_check_page_test.dart test/presentation/pages/whitelist_detail_page_test.dart test/presentation/state/whitelist_check_providers_test.dart test/presentation/state/whitelist_detail_providers_test.dart test/data/models/whitelist_gallery_item_dto_test.dart test/data/models/whitelist_save_photo_request_dto_test.dart test/data/models/whitelist_save_photo_response_dto_test.dart test/data/models/whitelist_delete_photo_response_dto_test.dart`
+  - `flutter test test/data/models/whitelist_gallery_item_dto_test.dart test/data/models/whitelist_save_photo_request_dto_test.dart test/data/models/whitelist_save_photo_response_dto_test.dart test/data/models/whitelist_delete_photo_response_dto_test.dart test/data/datasources/whitelist_remote_data_source_test.dart test/data/repositories/whitelist_repository_impl_test.dart test/domain/usecases/get_whitelist_detail_usecase_test.dart test/domain/usecases/search_whitelist_usecase_test.dart test/domain/usecases/submit_whitelist_check_in_usecase_test.dart test/domain/usecases/submit_whitelist_check_out_usecase_test.dart test/domain/usecases/save_whitelist_photo_usecase_test.dart test/domain/usecases/delete_whitelist_photo_usecase_test.dart test/presentation/state/whitelist_check_providers_test.dart test/presentation/state/whitelist_detail_providers_test.dart test/presentation/pages/whitelist_check_page_test.dart test/presentation/pages/whitelist_detail_page_test.dart`
+
+## 2026-03-06 - Standardize gallery layout with shared GridView
+- [x] Extract shared gallery grid widget for photo galleries.
+- [x] Use the shared grid layout in visitor gallery.
+- [x] Use the shared grid layout in whitelist gallery.
+- [x] Run targeted verification for touched gallery layout files.
+
+## Review (Gallery Grid Standardization)
+- Visitor and whitelist galleries now share the same grid layout wrapper in `lib/presentation/widgets/gallery_photo_grid.dart`.
+- Both gallery screens now use `GridView.builder` with the same default 3-column square tile layout, removing the previous `GridView` vs `Wrap` mismatch.
+- Tile UI remains shared through `lib/presentation/widgets/gallery_photo_tile.dart`; this change standardizes the surrounding layout, not just the thumbnail widget.
+- Verification:
+  - `flutter analyze lib/presentation/widgets/gallery_photo_grid.dart lib/presentation/pages/visitor_check_in_page.dart lib/presentation/pages/whitelist_detail_page.dart`
+  - `flutter test test/presentation/pages/whitelist_detail_page_test.dart test/presentation/pages/visitor_check_in_page_test.dart` *(blocked by the existing local Flutter SDK/framework semantics mismatch in this environment).*

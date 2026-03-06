@@ -351,7 +351,7 @@ class VisitorGalleryPhotoKey extends Equatable {
 
   final int photoId;
 
-  String get cacheKey => 'gallery-photo-$photoId';
+  String get cacheKey => galleryPhotoCacheKey(photoId);
 
   @override
   List<Object?> get props => [photoId];
@@ -471,17 +471,15 @@ void seedVisitorGalleryPhotoCache(
   required int photoId,
   required Uint8List bytes,
 }) {
-  if (photoId <= 0 || bytes.isEmpty) {
-    return;
-  }
   final cache = ref.read(visitorGalleryPhotoCacheProvider);
-  cache['gallery-photo-$photoId'] = bytes;
+  seedPhotoMemoryCache(
+    cache,
+    cacheKey: galleryPhotoCacheKey(photoId),
+    bytes: bytes,
+  );
 }
 
 void removeVisitorGalleryPhotoCache(WidgetRef ref, {required int photoId}) {
-  if (photoId <= 0) {
-    return;
-  }
   final cache = ref.read(visitorGalleryPhotoCacheProvider);
-  cache.remove('gallery-photo-$photoId');
+  removePhotoMemoryCache(cache, cacheKey: galleryPhotoCacheKey(photoId));
 }

@@ -1,11 +1,18 @@
+import 'dart:typed_data';
+
+import '../../domain/entities/whitelist_delete_photo_result_entity.dart';
 import '../../domain/entities/whitelist_detail_entity.dart';
+import '../../domain/entities/whitelist_gallery_item_entity.dart';
 import '../../domain/entities/whitelist_search_filter_entity.dart';
 import '../../domain/entities/whitelist_search_item_entity.dart';
+import '../../domain/entities/whitelist_save_photo_result_entity.dart';
+import '../../domain/entities/whitelist_save_photo_submission_entity.dart';
 import '../../domain/entities/whitelist_submit_entity.dart';
 import '../../domain/entities/whitelist_submit_result_entity.dart';
 import '../../domain/repositories/whitelist_repository.dart';
 import '../datasources/auth_local_data_source.dart';
 import '../datasources/whitelist_remote_data_source.dart';
+import '../models/whitelist_save_photo_request_dto.dart';
 import '../models/whitelist_search_request_dto.dart';
 import '../models/whitelist_submit_request_dto.dart';
 
@@ -54,6 +61,71 @@ class WhitelistRepositoryImpl implements WhitelistRepository {
       throw Exception('Failed to load whitelist detail.');
     }
     return detail.toEntity();
+  }
+
+  @override
+  Future<List<WhitelistGalleryItemEntity>> getWhitelistGalleryList({
+    required String guid,
+  }) async {
+    final session = await _authLocalDataSource.getSession();
+    final accessToken = session?.accessToken.trim() ?? '';
+    if (accessToken.isEmpty) {
+      throw Exception('Please login again to load whitelist gallery.');
+    }
+
+    final dtos = await _remoteDataSource.getWhitelistGalleryList(
+      accessToken: accessToken,
+      guid: guid,
+    );
+    return dtos.map((dto) => dto.toEntity()).toList(growable: false);
+  }
+
+  @override
+  Future<Uint8List?> getWhitelistPhoto({required int photoId}) async {
+    final session = await _authLocalDataSource.getSession();
+    final accessToken = session?.accessToken.trim() ?? '';
+    if (accessToken.isEmpty) {
+      throw Exception('Please login again to load whitelist photo.');
+    }
+
+    return _remoteDataSource.getWhitelistPhoto(
+      accessToken: accessToken,
+      photoId: photoId,
+    );
+  }
+
+  @override
+  Future<WhitelistSavePhotoResultEntity> saveWhitelistPhoto({
+    required WhitelistSavePhotoSubmissionEntity submission,
+  }) async {
+    final session = await _authLocalDataSource.getSession();
+    final accessToken = session?.accessToken.trim() ?? '';
+    if (accessToken.isEmpty) {
+      throw Exception('Please login again to upload photo.');
+    }
+
+    final dto = await _remoteDataSource.saveWhitelistPhoto(
+      accessToken: accessToken,
+      request: WhitelistSavePhotoRequestDto.fromEntity(submission),
+    );
+    return dto.toEntity();
+  }
+
+  @override
+  Future<WhitelistDeletePhotoResultEntity> deleteWhitelistPhoto({
+    required int photoId,
+  }) async {
+    final session = await _authLocalDataSource.getSession();
+    final accessToken = session?.accessToken.trim() ?? '';
+    if (accessToken.isEmpty) {
+      throw Exception('Please login again to delete whitelist photo.');
+    }
+
+    final dto = await _remoteDataSource.deleteWhitelistPhoto(
+      accessToken: accessToken,
+      photoId: photoId,
+    );
+    return dto.toEntity();
   }
 
   @override
