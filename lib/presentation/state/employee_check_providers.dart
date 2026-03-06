@@ -364,6 +364,58 @@ class EmployeeCheckController extends Notifier<EmployeeCheckState> {
       return EmployeeDeletePhotoResultEntity(success: false, message: message);
     }
   }
+
+  void resetAfterSuccessfulSubmit() {
+    final previousGuid = state.photoSessionGuid.trim();
+    final previousGalleryItems = previousGuid.isEmpty
+        ? const <EmployeeGalleryItemEntity>[]
+        : ref
+                  .read(employeeGalleryListProvider(previousGuid))
+                  .maybeWhen(data: (items) => items, orElse: () => null) ??
+              const <EmployeeGalleryItemEntity>[];
+    final previousLocalItems =
+        ref.read(employeeGalleryLocalItemsProvider)[previousGuid] ??
+        const <EmployeeGalleryItemEntity>[];
+    final previousDeletedPhotoIds =
+        ref.read(employeeGalleryDeletedPhotoIdsProvider)[previousGuid] ??
+        const <int>{};
+
+    final galleryPhotoCache = ref.read(employeeGalleryPhotoCacheProvider);
+    final photoIdsToClear = <int>{
+      ...previousGalleryItems.map((item) => item.photoId),
+      ...previousLocalItems.map((item) => item.photoId),
+      ...previousDeletedPhotoIds,
+    };
+    for (final photoId in photoIdsToClear) {
+      removePhotoMemoryCache(
+        galleryPhotoCache,
+        cacheKey: galleryPhotoCacheKey(photoId),
+      );
+    }
+
+    if (previousGuid.isNotEmpty) {
+      ref
+          .read(employeeGalleryLocalItemsProvider.notifier)
+          .clearGuid(guid: previousGuid);
+      ref
+          .read(employeeGalleryDeletedPhotoIdsProvider.notifier)
+          .clearGuid(guid: previousGuid);
+      ref.invalidate(employeeGalleryListProvider(previousGuid));
+    }
+
+    state = state.copyWith(
+      searchInput: '',
+      info: null,
+      isSubmitting: false,
+      isUploadingPhoto: false,
+      isDeletingPhoto: false,
+      deletingPhotoId: null,
+      photoSessionGuid: _uuid.v4(),
+      idempotencyKey: null,
+      idempotencySignature: null,
+      errorMessage: null,
+    );
+  }
 }
 
 @immutable
@@ -456,6 +508,16 @@ class EmployeeGalleryLocalItemsController
     }
     state = next;
   }
+
+  void clearGuid({required String guid}) {
+    final key = guid.trim();
+    if (key.isEmpty || !state.containsKey(key)) {
+      return;
+    }
+    final next = <String, List<EmployeeGalleryItemEntity>>{...state};
+    next.remove(key);
+    state = next;
+  }
 }
 
 final employeeGalleryDeletedPhotoIdsProvider =
@@ -479,6 +541,16 @@ class EmployeeGalleryDeletedPhotoIdsController
     final current = <int>{...(next[key] ?? const <int>{})};
     current.add(photoId);
     next[key] = current;
+    state = next;
+  }
+
+  void clearGuid({required String guid}) {
+    final key = guid.trim();
+    if (key.isEmpty || !state.containsKey(key)) {
+      return;
+    }
+    final next = <String, Set<int>>{...state};
+    next.remove(key);
     state = next;
   }
 }

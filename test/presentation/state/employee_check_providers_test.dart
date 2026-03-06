@@ -19,6 +19,7 @@ import 'package:vms_bernas/domain/usecases/submit_employee_check_in_usecase.dart
 import 'package:vms_bernas/domain/usecases/submit_employee_check_out_usecase.dart';
 import 'package:vms_bernas/presentation/state/auth_session_providers.dart';
 import 'package:vms_bernas/presentation/state/employee_check_providers.dart';
+import 'package:vms_bernas/presentation/state/photo_cache_helpers.dart';
 
 class _FakeEmployeeAccessRepository implements EmployeeAccessRepository {
   _FakeEmployeeAccessRepository({
@@ -318,6 +319,64 @@ void main() {
     expect(firstGuid, isNotEmpty);
     expect(secondGuid, firstGuid);
   });
+
+  test(
+    'successful submit reset clears info and refreshes session guid',
+    () async {
+      final repository = _FakeEmployeeAccessRepository();
+      final container = _createContainer(repository);
+      addTearDown(container.dispose);
+
+      final controller = container.read(
+        employeeCheckControllerProvider.notifier,
+      );
+      controller.setCheckType(EmployeeCheckType.checkOut);
+      controller.updateSearchInput('EMP|EMP0001||');
+      await controller.search();
+      await controller.submit();
+
+      final beforeReset = container.read(employeeCheckControllerProvider);
+      final previousGuid = beforeReset.photoSessionGuid;
+      final previousCheckType = beforeReset.checkType;
+      expect(beforeReset.idempotencyKey, isNotNull);
+      expect(beforeReset.idempotencySignature, isNotNull);
+
+      container
+          .read(employeeGalleryLocalItemsProvider.notifier)
+          .append(
+            guid: previousGuid,
+            item: const EmployeeGalleryItemEntity(
+              photoId: 40,
+              photoDesc: 'Gate',
+              url: '/Employee/photo/40',
+            ),
+          );
+      container
+          .read(employeeGalleryDeletedPhotoIdsProvider.notifier)
+          .markDeleted(guid: previousGuid, photoId: 40);
+      final cache = container.read(employeeGalleryPhotoCacheProvider);
+      cache[galleryPhotoCacheKey(40)] = Uint8List.fromList(const [1, 2, 3]);
+
+      controller.resetAfterSuccessfulSubmit();
+
+      final afterReset = container.read(employeeCheckControllerProvider);
+      expect(afterReset.checkType, previousCheckType);
+      expect(afterReset.info, isNull);
+      expect(afterReset.photoSessionGuid, isNot(previousGuid));
+      expect(afterReset.idempotencyKey, isNull);
+      expect(afterReset.idempotencySignature, isNull);
+      expect(afterReset.errorMessage, isNull);
+      expect(
+        container.read(employeeGalleryLocalItemsProvider)[previousGuid],
+        isNull,
+      );
+      expect(
+        container.read(employeeGalleryDeletedPhotoIdsProvider)[previousGuid],
+        isNull,
+      );
+      expect(cache.containsKey(galleryPhotoCacheKey(40)), isFalse);
+    },
+  );
 
   test('save photo forwards submission and clears uploading state', () async {
     final repository = _FakeEmployeeAccessRepository();

@@ -297,6 +297,12 @@ void main() {
       find.text('Employee EMP0001 checked out successfully.'),
       findsOneWidget,
     );
+    expect(find.text('EMP0001'), findsNothing);
+    expect(find.text('Suraya'), findsNothing);
+    expect(
+      find.byKey(const Key('employee-gallery-camera-button')),
+      findsNothing,
+    );
   });
 
   testWidgets('camera upload uses current employee gallery session guid', (
@@ -456,4 +462,79 @@ void main() {
     expect(checkOutGuid, isNotNull);
     expect(checkOutGuid, checkInGuid);
   });
+
+  testWidgets(
+    'successful submit resets employee session and next upload uses new guid',
+    (tester) async {
+      final repository = _FakeEmployeeAccessRepository(
+        imageBytes: base64Decode(
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5WcMsAAAAASUVORK5CYII=',
+        ),
+      );
+      await tester.pumpWidget(
+        _buildApp(
+          repository: repository,
+          initialCheckType: EmployeeCheckType.checkIn,
+          cameraLauncher: (_) async => XFile.fromData(
+            base64Decode(
+              'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5WcMsAAAAASUVORK5CYII=',
+            ),
+            name: 'employee-camera.png',
+          ),
+        ),
+      );
+
+      await tester.enterText(find.byType(TextFormField).first, 'EMP|EMP0001||');
+      await tester.tap(find.widgetWithText(FilledButton, 'Search'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final listView = find.byType(ListView).first;
+      final cameraButton = find
+          .byKey(const Key('employee-gallery-camera-button'))
+          .first;
+      await tester.drag(listView, const Offset(0, -500));
+      await tester.pumpAndSettle();
+      await tester.tap(cameraButton);
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Upload'));
+      await tester.pumpAndSettle();
+
+      final firstGuid = repository.lastSavePhotoSubmission?.guid;
+      expect(firstGuid, isNotNull);
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Confirm Check-In'));
+      await tester.pumpAndSettle();
+
+      expect(repository.lastCheckInSubmission, isNotNull);
+      expect(
+        find.text('Employee EMP0001 checked in successfully.'),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('employee-gallery-camera-button')),
+        findsNothing,
+      );
+      expect(find.text('EMP0001'), findsNothing);
+
+      await tester.enterText(find.byType(TextFormField).first, 'EMP|EMP0001||');
+      await tester.tap(find.widgetWithText(FilledButton, 'Search'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final secondCameraButton = find
+          .byKey(const Key('employee-gallery-camera-button'))
+          .first;
+      await tester.drag(listView, const Offset(0, -500));
+      await tester.pumpAndSettle();
+      await tester.tap(secondCameraButton);
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Upload'));
+      await tester.pumpAndSettle();
+
+      final secondGuid = repository.lastSavePhotoSubmission?.guid;
+      expect(secondGuid, isNotNull);
+      expect(secondGuid, isNot(firstGuid));
+    },
+  );
 }

@@ -221,6 +221,11 @@ class _EmployeeCheckPageState extends ConsumerState<EmployeeCheckPage> {
         ? result.message.trim()
         : fallbackMessage;
     showAppSnackBar(context, message);
+    if (result.status) {
+      ref
+          .read(employeeCheckControllerProvider.notifier)
+          .resetAfterSuccessfulSubmit();
+    }
   }
 
   String _displayOrDash(String? value) {
