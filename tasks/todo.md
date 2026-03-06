@@ -331,3 +331,18 @@
 - Verification:
   - `flutter analyze lib/presentation/state/employee_check_providers.dart lib/presentation/pages/employee_check_page.dart test/presentation/state/employee_check_providers_test.dart test/presentation/pages/employee_check_page_test.dart`
   - `flutter test test/presentation/state/employee_check_providers_test.dart test/presentation/pages/employee_check_page_test.dart`
+
+## 2026-03-06 - Whitelist submit success auto-return
+- [x] Replace the whitelist detail page bool pop contract with a typed route result carrying refresh + success message.
+- [x] Return to the whitelist list immediately after successful check-in/out submit.
+- [x] Refresh the whitelist list and show the success snackbar on the list page after return.
+- [x] Update whitelist detail/list widget tests and rerun targeted verification.
+
+## Review (Whitelist Submit Auto-Return)
+- Whitelist detail submit success now pops immediately with a typed `WhitelistDetailPageResult` instead of waiting for manual back navigation.
+- The whitelist list page now consumes that result, refreshes using the existing filter state, and shows the backend/fallback success snackbar on the list page.
+- Failed whitelist submit still stays on the detail page and shows the error snackbar there.
+- Whitelist photo/gallery behavior is unchanged.
+- Verification:
+  - `flutter analyze lib/presentation/pages/whitelist_detail_page.dart lib/presentation/pages/whitelist_check_page.dart test/presentation/pages/whitelist_detail_page_test.dart test/presentation/pages/whitelist_check_page_test.dart`
+  - `flutter test test/presentation/pages/whitelist_detail_page_test.dart test/presentation/pages/whitelist_check_page_test.dart`

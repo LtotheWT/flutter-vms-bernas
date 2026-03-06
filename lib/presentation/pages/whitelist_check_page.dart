@@ -244,7 +244,7 @@ class _WhitelistCheckPageState extends ConsumerState<WhitelistCheckPage> {
                             return;
                           }
                           context
-                              .pushNamed<bool>(
+                              .pushNamed<WhitelistDetailPageResult>(
                                 whitelistDetailRouteName,
                                 extra: WhitelistDetailRouteArgs(
                                   entity: entity,
@@ -252,11 +252,17 @@ class _WhitelistCheckPageState extends ConsumerState<WhitelistCheckPage> {
                                   checkType: _currentType,
                                 ),
                               )
-                              .then((shouldRefresh) {
-                                if (!mounted || shouldRefresh != true) {
+                              .then((detailResult) {
+                                if (!context.mounted || detailResult == null) {
                                   return;
                                 }
-                                _requestListing();
+                                if (detailResult.shouldRefresh) {
+                                  _requestListing();
+                                }
+                                final message = detailResult.message.trim();
+                                if (message.isNotEmpty) {
+                                  showAppSnackBar(context, message);
+                                }
                               });
                         },
                       ),

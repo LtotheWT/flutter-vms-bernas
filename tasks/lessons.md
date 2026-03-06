@@ -21,3 +21,5 @@
 - If the same error-normalization branch (e.g., stripping `Exception:`) appears in multiple pages/providers, extract to `lib/core/` immediately and replace all duplicates in one pass.
 - If a backend photo/gallery API is keyed only by GUID and not by mode, default to one stable GUID per page session; do not split by UI toggle unless the product explicitly requires separate galleries.
 - If a successful submit logically ends the current page session, reset the loaded detail data and regenerate the session GUID immediately instead of leaving upload/camera actions active against stale context.
+- When a detail screen success must refresh the parent list and also show feedback, return a typed route result with both refresh intent and message instead of overloading a bare `bool`.
+- When `avoid-nested-conditional-expressions` is triggered, remove ternaries entirely and rewrite the block with explicit `if` / early-return branching; do not try to keep a chained ternary shape.

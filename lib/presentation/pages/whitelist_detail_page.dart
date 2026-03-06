@@ -33,6 +33,17 @@ class WhitelistDetailRouteArgs {
   final String checkType;
 }
 
+@immutable
+class WhitelistDetailPageResult {
+  const WhitelistDetailPageResult({
+    required this.shouldRefresh,
+    this.message = '',
+  });
+
+  final bool shouldRefresh;
+  final String message;
+}
+
 class WhitelistDetailPage extends ConsumerStatefulWidget {
   const WhitelistDetailPage({
     super.key,
@@ -50,7 +61,6 @@ class WhitelistDetailPage extends ConsumerStatefulWidget {
 
 class _WhitelistDetailPageState extends ConsumerState<WhitelistDetailPage> {
   bool _allowPop = false;
-  bool _shouldRefreshOnExit = false;
 
   @override
   void initState() {
@@ -185,18 +195,23 @@ class _WhitelistDetailPageState extends ConsumerState<WhitelistDetailPage> {
     if (!mounted) {
       return;
     }
-    if (result.status) {
-      _shouldRefreshOnExit = true;
+    final trimmedMessage = result.message.trim();
+    var message = trimmedMessage;
+    if (message.isEmpty) {
+      message = result.status
+          ? _submitSuccessFallback
+          : 'Failed to submit whitelist.';
     }
-    final message = result.message.trim().isEmpty
-        ? (result.status
-              ? _submitSuccessFallback
-              : 'Failed to submit whitelist.')
-        : result.message.trim();
+    if (result.status) {
+      _popWithResult(
+        WhitelistDetailPageResult(shouldRefresh: true, message: message),
+      );
+      return;
+    }
     showAppSnackBar(context, message);
   }
 
-  void _popWithRefreshResult() {
+  void _popWithResult(WhitelistDetailPageResult result) {
     if (_allowPop) {
       return;
     }
@@ -205,7 +220,7 @@ class _WhitelistDetailPageState extends ConsumerState<WhitelistDetailPage> {
       if (!mounted) {
         return;
       }
-      Navigator.of(context).pop(_shouldRefreshOnExit);
+      Navigator.of(context).pop(result);
     });
   }
 
@@ -219,13 +234,13 @@ class _WhitelistDetailPageState extends ConsumerState<WhitelistDetailPage> {
         ? 'Confirm Check-Out'
         : 'Confirm Check-In';
 
-    return PopScope<bool>(
+    return PopScope<WhitelistDetailPageResult>(
       canPop: _allowPop,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) {
           return;
         }
-        _popWithRefreshResult();
+        _popWithResult(const WhitelistDetailPageResult(shouldRefresh: false));
       },
       child: Scaffold(
         appBar: AppBar(title: const Text('Whitelist Details')),

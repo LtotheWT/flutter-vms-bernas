@@ -121,6 +121,7 @@ Widget _buildApp({
   required bool isCheckIn,
   void Function(WhitelistDetailRouteArgs args)? onDetailOpened,
   bool detailReturnsRefresh = false,
+  String detailReturnMessage = '',
 }) {
   final router = GoRouter(
     initialLocation: '/',
@@ -138,7 +139,12 @@ Widget _buildApp({
           if (detailReturnsRefresh) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (context.mounted) {
-                Navigator.of(context).pop(true);
+                Navigator.of(context).pop(
+                  WhitelistDetailPageResult(
+                    shouldRefresh: true,
+                    message: detailReturnMessage,
+                  ),
+                );
               }
             });
           }
@@ -326,6 +332,7 @@ void main() {
         repository: repository,
         isCheckIn: true,
         detailReturnsRefresh: true,
+        detailReturnMessage: 'Whitelist checked IN successfully.',
       ),
     );
     await tester.pump();
@@ -336,5 +343,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repository.searchCallCount, 2);
+    expect(find.text('Whitelist checked IN successfully.'), findsOneWidget);
   });
 }

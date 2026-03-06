@@ -150,6 +150,7 @@ Widget _buildApp({
   required _FakeWhitelistRepository repository,
   required String checkType,
   Future<XFile?> Function(BuildContext context)? cameraLauncher,
+  ValueChanged<WhitelistDetailPageResult?>? onResult,
 }) {
   return ProviderScope(
     overrides: [
@@ -172,16 +173,64 @@ Widget _buildApp({
       authLocalDataSourceProvider.overrideWithValue(_FakeAuthLocalDataSource()),
     ],
     child: MaterialApp(
-      home: WhitelistDetailPage(
-        args: WhitelistDetailRouteArgs(
-          entity: 'AGYTEK',
-          vehiclePlate: 'www9233G',
-          checkType: checkType,
-        ),
-        cameraLauncher: cameraLauncher,
-      ),
+      home: onResult == null
+          ? WhitelistDetailPage(
+              args: WhitelistDetailRouteArgs(
+                entity: 'AGYTEK',
+                vehiclePlate: 'www9233G',
+                checkType: checkType,
+              ),
+              cameraLauncher: cameraLauncher,
+            )
+          : _WhitelistDetailTestHost(
+              checkType: checkType,
+              cameraLauncher: cameraLauncher,
+              onResult: onResult,
+            ),
     ),
   );
+}
+
+class _WhitelistDetailTestHost extends StatefulWidget {
+  const _WhitelistDetailTestHost({
+    required this.checkType,
+    required this.onResult,
+    this.cameraLauncher,
+  });
+
+  final String checkType;
+  final Future<XFile?> Function(BuildContext context)? cameraLauncher;
+  final ValueChanged<WhitelistDetailPageResult?> onResult;
+
+  @override
+  State<_WhitelistDetailTestHost> createState() =>
+      _WhitelistDetailTestHostState();
+}
+
+class _WhitelistDetailTestHostState extends State<_WhitelistDetailTestHost> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final result = await Navigator.of(context)
+          .push<WhitelistDetailPageResult>(
+            MaterialPageRoute(
+              builder: (context) => WhitelistDetailPage(
+                args: WhitelistDetailRouteArgs(
+                  entity: 'AGYTEK',
+                  vehiclePlate: 'www9233G',
+                  checkType: widget.checkType,
+                ),
+                cameraLauncher: widget.cameraLauncher,
+              ),
+            ),
+          );
+      widget.onResult(result);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => const Scaffold(body: Text('Host'));
 }
 
 void main() {
@@ -216,34 +265,54 @@ void main() {
     );
   });
 
-  testWidgets('confirm submits check-in and shows success message', (
+  testWidgets('confirm submits check-in and pops with refresh result', (
     tester,
   ) async {
     final repository = _FakeWhitelistRepository();
+    WhitelistDetailPageResult? result;
 
-    await tester.pumpWidget(_buildApp(repository: repository, checkType: 'I'));
+    await tester.pumpWidget(
+      _buildApp(
+        repository: repository,
+        checkType: 'I',
+        onResult: (value) => result = value,
+      ),
+    );
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.widgetWithText(FilledButton, 'Confirm Check-In'));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
-    expect(find.text('Whitelist checked IN successfully.'), findsOneWidget);
+    expect(result, isNotNull);
+    expect(result?.shouldRefresh, isTrue);
+    expect(result?.message, 'Whitelist checked IN successfully.');
+    expect(find.byType(WhitelistDetailPage), findsNothing);
   });
 
-  testWidgets('confirm submits check-out and shows success message', (
+  testWidgets('confirm submits check-out and pops with refresh result', (
     tester,
   ) async {
     final repository = _FakeWhitelistRepository();
+    WhitelistDetailPageResult? result;
 
-    await tester.pumpWidget(_buildApp(repository: repository, checkType: 'O'));
+    await tester.pumpWidget(
+      _buildApp(
+        repository: repository,
+        checkType: 'O',
+        onResult: (value) => result = value,
+      ),
+    );
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.widgetWithText(FilledButton, 'Confirm Check-Out'));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
-    expect(find.text('Whitelist checked OUT successfully.'), findsOneWidget);
+    expect(result, isNotNull);
+    expect(result?.shouldRefresh, isTrue);
+    expect(result?.message, 'Whitelist checked OUT successfully.');
+    expect(find.byType(WhitelistDetailPage), findsNothing);
   });
 
   testWidgets('confirm submit failure shows error message', (tester) async {
@@ -283,10 +352,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Upload Photo'), findsOneWidget);
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Photo Description (Optional)'),
-      'Gate shot',
-    );
+    await tester.enterText(find.byType(TextFormField).last, 'Gate shot');
     await tester.tap(find.widgetWithText(FilledButton, 'Upload'));
     await tester.pumpAndSettle();
 
