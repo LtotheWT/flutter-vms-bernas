@@ -26,3 +26,28 @@ linter:
 
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options
+
+analyzer:
+  plugins:
+    - dart_code_metrics
+
+dart_code_metrics:
+  metrics:
+    cyclomatic-complexity: 20
+    lines-of-code: 100
+    maximum-nesting-level: 5
+    number-of-methods: 10
+    widgets-nesting-level: 5
+    weight-of-class: 0.33
+
+  metrics-exclude:
+    - test/**
+
+  rules:
+    - no-empty-block
+    - no-equal-then-else
+    - prefer-extracting-callbacks
+    - prefer-single-widget-per-file
+    - avoid-unnecessary-stateful-widgets
+    - avoid-redundant-async
+    - avoid-nested-conditional-expressions

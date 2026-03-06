@@ -11,6 +11,8 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
+.scannerwork
+sonar-project.properties
 
 # IntelliJ related
 *.iml
@@ -46,3 +48,4 @@ app.*.map.json
 
 # FVM Version Cache
 .fvm/
+
