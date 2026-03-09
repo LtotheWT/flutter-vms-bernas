@@ -1,10 +1,15 @@
 import '../entities/invitation_list_item_entity.dart';
+import '../entities/invitation_delete_result_entity.dart';
 import '../entities/invitation_listing_filter_entity.dart';
 import '../entities/invitation_submission_entity.dart';
 
 abstract class InvitationRepository {
   Future<List<InvitationListItemEntity>> listInvitations({
     required InvitationListingFilterEntity filter,
+  });
+
+  Future<InvitationDeleteResultEntity> cancelInvitation({
+    required String invitationId,
   });
 
   Future<InvitationSubmissionEntity> submitInvitation({

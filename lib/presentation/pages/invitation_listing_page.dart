@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/error_messages.dart';
 import '../../domain/entities/invitation_list_item_entity.dart';
 import '../../domain/entities/invitation_listing_filter_entity.dart';
+import '../app/router.dart';
 import '../state/async_option_helpers.dart';
 import '../state/department_option.dart';
 import '../state/entity_option.dart';
@@ -14,6 +15,7 @@ import '../state/reference_providers.dart';
 import '../state/site_option.dart';
 import '../state/visitor_type_option.dart';
 import '../widgets/app_filled_button.dart';
+import '../widgets/app_snackbar.dart';
 import '../widgets/labeled_form_rows.dart';
 import '../widgets/app_outlined_button.dart';
 import '../widgets/info_row.dart';
@@ -48,10 +50,8 @@ class _InvitationListingPageState extends ConsumerState<InvitationListingPage> {
   String? _visitorType;
   String? _status;
   bool _upcomingOnly = false;
-  final Set<String> _selectedIds = <String>{};
   final List<InvitationListItemEntity> _items = [];
   bool _showBackToTop = false;
-  bool _showActionBar = true;
   late final ProviderSubscription<InvitationListingState> _listingSubscription;
 
   @override
@@ -76,7 +76,6 @@ class _InvitationListingPageState extends ConsumerState<InvitationListingPage> {
           _items
             ..clear()
             ..addAll(next.items);
-          _selectedIds.clear();
         });
       },
       fireImmediately: true,
@@ -121,13 +120,6 @@ class _InvitationListingPageState extends ConsumerState<InvitationListingPage> {
     }
   }
 
-  void _deleteSelected() {
-    if (_selectedIds.isEmpty) {
-      return;
-    }
-    _confirmDelete();
-  }
-
   Future<void> _requestListing() {
     return ref
         .read(invitationListingControllerProvider.notifier)
@@ -166,13 +158,20 @@ class _InvitationListingPageState extends ConsumerState<InvitationListingPage> {
         : value;
   }
 
-  Future<void> _confirmDelete() async {
-    final count = _selectedIds.length;
+  Future<void> _confirmDelete(InvitationListItemEntity item) async {
+    final invitationId = item.invitationId.trim();
+    if (invitationId.isEmpty) {
+      showAppSnackBar(
+        context,
+        'Invitation ID is required to delete invitation.',
+      );
+      return;
+    }
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete invitations?'),
-        content: Text('You are about to delete $count invitation(s).'),
+        title: const Text('Delete invitation?'),
+        content: Text('You are about to delete invitation $invitationId.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -186,12 +185,22 @@ class _InvitationListingPageState extends ConsumerState<InvitationListingPage> {
       ),
     );
 
-    if (shouldDelete ?? false) {
-      setState(() {
-        _items.removeWhere((item) => _selectedIds.contains(item.invitationId));
-        _selectedIds.clear();
-      });
+    if (shouldDelete != true || !mounted) {
+      return;
     }
+
+    final result = await ref
+        .read(invitationListingControllerProvider.notifier)
+        .deleteInvitation(invitationId: invitationId);
+    if (!mounted) {
+      return;
+    }
+    final message = result.message.trim().isEmpty
+        ? (result.status
+              ? 'Invitation deleted successfully.'
+              : 'Failed to delete invitation. Please try again.')
+        : result.message;
+    showAppSnackBar(context, message);
   }
 
   Future<void> _openFilters() async {
@@ -252,160 +261,77 @@ class _InvitationListingPageState extends ConsumerState<InvitationListingPage> {
             tooltip: 'Filters',
           ),
           IconButton(
-            onPressed: () {},
+            onPressed: () => context.push(invitationAddRoutePath),
             icon: const Icon(Icons.add),
             tooltip: 'New',
           ),
         ],
       ),
-      body: Column(
-        children: [
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            child: _showActionBar
-                ? Padding(
-                    key: const ValueKey('select-bar'),
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                    child: Material(
-                      elevation: 1,
-                      borderRadius: BorderRadius.circular(12),
-                      color: colorScheme.surface,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: CheckboxListTile(
-                                value:
-                                    _selectedIds.length == _items.length &&
-                                    _items.isNotEmpty,
-                                onChanged: _items.isEmpty
-                                    ? null
-                                    : (checked) {
-                                        setState(() {
-                                          if (checked == true) {
-                                            _selectedIds.addAll(
-                                              _items.map(
-                                                (item) => item.invitationId,
-                                              ),
-                                            );
-                                          } else {
-                                            _selectedIds.clear();
-                                          }
-                                        });
-                                      },
-                                title: Text(
-                                  'Select all (${_selectedIds.length}/${_items.length})',
-                                ),
-                                controlAffinity:
-                                    ListTileControlAffinity.leading,
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            AppOutlinedButtonIcon(
-                              onPressed: _selectedIds.isEmpty
-                                  ? null
-                                  : _deleteSelected,
-                              icon: const Icon(Icons.delete_outline),
-                              label: Text(
-                                _selectedIds.isEmpty
-                                    ? 'Delete'
-                                    : 'Delete (${_selectedIds.length})',
-                              ),
-                            ),
-                          ],
+      body: RefreshIndicator(
+        onRefresh: _requestListing,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          controller: _scrollController,
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          children: [
+            if (showInitialLoader)
+              const Padding(
+                padding: EdgeInsets.only(top: 40),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            if (listingState.errorMessage != null &&
+                listingState.errorMessage!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 12, bottom: 8),
+                child: Card(
+                  color: colorScheme.errorContainer.withValues(alpha: 0.4),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          listingState.errorMessage!,
+                          style: TextStyle(color: colorScheme.error),
                         ),
-                      ),
-                    ),
-                  )
-                : const SizedBox.shrink(key: ValueKey('select-bar-hidden')),
-          ),
-          Expanded(
-            child: NotificationListener<UserScrollNotification>(
-              onNotification: (notification) {
-                final direction = notification.direction;
-                if (direction == ScrollDirection.forward && !_showActionBar) {
-                  setState(() => _showActionBar = true);
-                } else if (direction == ScrollDirection.reverse &&
-                    _showActionBar) {
-                  setState(() => _showActionBar = false);
-                }
-                return false;
-              },
-              child: ListView(
-                controller: _scrollController,
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                children: [
-                  if (showInitialLoader)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 40),
-                      child: Center(child: CircularProgressIndicator()),
-                    ),
-                  if (listingState.errorMessage != null &&
-                      listingState.errorMessage!.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 12, bottom: 8),
-                      child: Card(
-                        color: colorScheme.errorContainer.withValues(
-                          alpha: 0.4,
+                        const SizedBox(height: 10),
+                        AppOutlinedButton(
+                          onPressed: _requestListing,
+                          child: const Text('Retry'),
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                listingState.errorMessage!,
-                                style: TextStyle(color: colorScheme.error),
-                              ),
-                              const SizedBox(height: 10),
-                              AppOutlinedButton(
-                                onPressed: _requestListing,
-                                child: const Text('Retry'),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  if (showEmptyState)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 40),
-                      child: Text(
-                        'No records to display.',
-                        textAlign: TextAlign.center,
-                        style: textTheme.bodyMedium,
-                      ),
-                    ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Results',
-                    style: textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  for (final item in _items)
-                    _InvitationCard(
-                      item: item,
-                      visitorTypeLabel: _visitorTypeDisplay(item.visitorType),
-                      selected: _selectedIds.contains(item.invitationId),
-                      onSelected: (checked) {
-                        setState(() {
-                          if (checked == true) {
-                            _selectedIds.add(item.invitationId);
-                          } else {
-                            _selectedIds.remove(item.invitationId);
-                          }
-                        });
-                      },
-                    ),
-                ],
+                ),
+              ),
+
+            const SizedBox(height: 4),
+            Text(
+              'Results',
+              style: textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
               ),
             ),
-          ),
-        ],
+            if (showEmptyState)
+              Padding(
+                padding: const EdgeInsets.only(top: 40),
+                child: Text(
+                  'No records to display.',
+                  textAlign: TextAlign.center,
+                  style: textTheme.bodyMedium,
+                ),
+              ),
+            const SizedBox(height: 12),
+            for (final item in _items)
+              _InvitationCard(
+                item: item,
+                visitorTypeLabel: _visitorTypeDisplay(item.visitorType),
+                isDeleting:
+                    listingState.deletingInvitationId == item.invitationId,
+                onDeleteTap: () => _confirmDelete(item),
+              ),
+          ],
+        ),
       ),
       floatingActionButton: _showBackToTop
           ? FloatingActionButton(
@@ -1042,17 +968,18 @@ class _InvitationCard extends StatelessWidget {
   const _InvitationCard({
     required this.item,
     required this.visitorTypeLabel,
-    required this.selected,
-    required this.onSelected,
+    required this.isDeleting,
+    required this.onDeleteTap,
   });
 
   final InvitationListItemEntity item;
   final String visitorTypeLabel;
-  final bool selected;
-  final ValueChanged<bool?> onSelected;
+  final bool isDeleting;
+  final VoidCallback? onDeleteTap;
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ExpansionTile(
@@ -1060,20 +987,26 @@ class _InvitationCard extends StatelessWidget {
         childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
         title: Row(
           children: [
-            Checkbox(value: selected, onChanged: onSelected),
             Expanded(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      item.invitationId,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  InvitationStatusBadge(statusCode: item.statusCode),
-                ],
+              child: Text(
+                item.invitationId,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              ),
+            ),
+            InvitationStatusBadge(statusCode: item.statusCode),
+            const SizedBox(width: 8),
+            GestureDetector(
+              key: Key('invitation-delete-${item.invitationId}'),
+              onTap: isDeleting ? null : onDeleteTap,
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Icon(
+                  isDeleting ? Icons.hourglass_top : Icons.delete_outline,
+                  color: colorScheme.error,
+                  // size: 18,
+                ),
               ),
             ),
           ],

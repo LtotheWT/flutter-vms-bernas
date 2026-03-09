@@ -1,4 +1,5 @@
 import '../../core/date_time_formats.dart';
+import '../../domain/entities/invitation_delete_result_entity.dart';
 import '../../domain/entities/invitation_list_item_entity.dart';
 import '../../domain/entities/invitation_listing_filter_entity.dart';
 import '../../domain/entities/invitation_submission_entity.dart';
@@ -71,6 +72,28 @@ class InvitationRepositoryImpl implements InvitationRepository {
           return !dateOnly.isBefore(todayDate);
         })
         .toList(growable: false);
+  }
+
+  @override
+  Future<InvitationDeleteResultEntity> cancelInvitation({
+    required String invitationId,
+  }) async {
+    final normalizedInvitationId = invitationId.trim();
+    if (normalizedInvitationId.isEmpty) {
+      throw Exception('Invitation ID is required to delete invitation.');
+    }
+
+    final session = await _authLocalDataSource.getSession();
+    final accessToken = session?.accessToken.trim() ?? '';
+    if (accessToken.isEmpty) {
+      throw Exception('Please login again to delete invitation.');
+    }
+
+    final response = await _remoteDataSource.cancelInvitation(
+      accessToken: accessToken,
+      invitationId: normalizedInvitationId,
+    );
+    return response.toEntity();
   }
 
   @override

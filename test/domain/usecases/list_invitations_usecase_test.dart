@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vms_bernas/domain/entities/invitation_list_item_entity.dart';
+import 'package:vms_bernas/domain/entities/invitation_delete_result_entity.dart';
 import 'package:vms_bernas/domain/entities/invitation_listing_filter_entity.dart';
 import 'package:vms_bernas/domain/entities/invitation_submission_entity.dart';
 import 'package:vms_bernas/domain/repositories/invitation_repository.dart';
@@ -35,6 +36,13 @@ class _FakeInvitationRepository implements InvitationRepository {
         updateBy: '',
       ),
     ];
+  }
+
+  @override
+  Future<InvitationDeleteResultEntity> cancelInvitation({
+    required String invitationId,
+  }) {
+    throw UnimplementedError();
   }
 
   @override

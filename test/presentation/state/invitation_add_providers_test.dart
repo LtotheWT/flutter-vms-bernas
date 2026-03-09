@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vms_bernas/domain/entities/invitation_delete_result_entity.dart';
 import 'package:vms_bernas/domain/entities/invitation_list_item_entity.dart';
 import 'package:vms_bernas/domain/entities/invitation_listing_filter_entity.dart';
 import 'package:vms_bernas/domain/entities/invitation_submission_entity.dart';
@@ -15,6 +16,13 @@ class _FakeInvitationRepository implements InvitationRepository {
   @override
   Future<List<InvitationListItemEntity>> listInvitations({
     required InvitationListingFilterEntity filter,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<InvitationDeleteResultEntity> cancelInvitation({
+    required String invitationId,
   }) {
     throw UnimplementedError();
   }

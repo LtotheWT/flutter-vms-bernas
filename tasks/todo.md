@@ -364,3 +364,30 @@
 - Verification:
   - `flutter analyze lib/domain/repositories/reference_repository.dart lib/data/datasources/reference_remote_data_source.dart lib/data/repositories/reference_repository_impl.dart lib/presentation/state/permanent_contractor_check_providers.dart lib/presentation/pages/permanent_contractor_check_page.dart test/presentation/state/permanent_contractor_check_providers_test.dart test/presentation/pages/permanent_contractor_check_page_test.dart test/data/models/permanent_contractor_gallery_item_dto_test.dart test/data/models/permanent_contractor_save_photo_request_dto_test.dart test/data/models/permanent_contractor_save_photo_response_dto_test.dart test/data/models/permanent_contractor_delete_photo_response_dto_test.dart test/data/datasources/reference_remote_data_source_gallery_test.dart test/data/repositories/reference_repository_impl_gallery_test.dart`
   - `flutter test test/presentation/state/permanent_contractor_check_providers_test.dart test/presentation/pages/permanent_contractor_check_page_test.dart test/data/models/permanent_contractor_gallery_item_dto_test.dart test/data/models/permanent_contractor_save_photo_request_dto_test.dart test/data/models/permanent_contractor_save_photo_response_dto_test.dart test/data/models/permanent_contractor_delete_photo_response_dto_test.dart test/data/datasources/reference_remote_data_source_gallery_test.dart test/data/repositories/reference_repository_impl_gallery_test.dart`
+
+## 2026-03-10 - Invitation listing add action routing
+- [x] Wire the app bar add action on Invitation Listing to open Invitation Add.
+- [x] Verify the touched page with `flutter analyze`.
+
+## Review (Invitation Listing Add Action)
+- Invitation Listing app bar `+` action now navigates to `/invitation/add` using the existing GoRouter route constant.
+- No listing/filter behavior changed.
+- Verification:
+  - `flutter analyze lib/presentation/pages/invitation_listing_page.dart`
+
+## 2026-03-10 - Invitation listing delete + pull to refresh
+- [x] Add invitation cancel domain entity/use case/repository contract and datasource support for `DELETE /wmsws/Invitations/{invitationId}/cancel`.
+- [x] Extend invitation listing provider state with row delete lifecycle and local list removal on successful delete.
+- [x] Remove bulk selection UI from Invitation Listing and add per-row delete with confirmation.
+- [x] Add pull-to-refresh that reloads using the current filters.
+- [x] Add/extend data, use case, state, and page tests for delete and refresh flows.
+- [x] Run targeted verification (`flutter analyze` + `flutter test`).
+
+## Review (Invitation Listing Delete + Refresh)
+- Invitation Listing now deletes invitations per row via the live cancel endpoint and removes successful deletions from the current list locally without refetching.
+- The old multi-select/select-all/delete bar is removed; each row now has its own delete action with confirmation and row-specific loading state.
+- Pull-to-refresh is enabled through `RefreshIndicator` and reloads the list using the page's current filter values.
+- Existing filter and add navigation behavior remain unchanged.
+- Verification:
+  - `flutter analyze lib/domain/entities/invitation_delete_result_entity.dart lib/domain/usecases/cancel_invitation_usecase.dart lib/data/models/invitation_delete_response_dto.dart lib/domain/repositories/invitation_repository.dart lib/data/datasources/invitation_remote_data_source.dart lib/data/repositories/invitation_repository_impl.dart lib/presentation/state/invitation_listing_providers.dart lib/presentation/pages/invitation_listing_page.dart test/domain/usecases/list_invitations_usecase_test.dart test/domain/usecases/cancel_invitation_usecase_test.dart test/domain/usecases/submit_invitation_usecase_test.dart test/presentation/state/invitation_add_providers_test.dart test/data/repositories/invitation_repository_impl_test.dart test/presentation/state/invitation_listing_providers_test.dart test/data/models/invitation_delete_response_dto_test.dart test/data/datasources/invitation_remote_data_source_test.dart test/presentation/pages/invitation_listing_page_test.dart`
+  - `flutter test test/domain/usecases/list_invitations_usecase_test.dart test/domain/usecases/cancel_invitation_usecase_test.dart test/domain/usecases/submit_invitation_usecase_test.dart test/presentation/state/invitation_add_providers_test.dart test/data/repositories/invitation_repository_impl_test.dart test/presentation/state/invitation_listing_providers_test.dart test/data/models/invitation_delete_response_dto_test.dart test/data/datasources/invitation_remote_data_source_test.dart test/presentation/pages/invitation_listing_page_test.dart`

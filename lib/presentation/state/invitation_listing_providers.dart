@@ -2,8 +2,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/error_messages.dart';
+import '../../domain/entities/invitation_delete_result_entity.dart';
 import '../../domain/entities/invitation_list_item_entity.dart';
 import '../../domain/entities/invitation_listing_filter_entity.dart';
+import '../../domain/usecases/cancel_invitation_usecase.dart';
 import '../../domain/usecases/list_invitations_usecase.dart';
 import 'invitation_add_providers.dart';
 
@@ -12,29 +14,46 @@ final listInvitationsUseCaseProvider = Provider<ListInvitationsUseCase>((ref) {
   return ListInvitationsUseCase(repository);
 });
 
+final cancelInvitationUseCaseProvider = Provider<CancelInvitationUseCase>((
+  ref,
+) {
+  final repository = ref.read(invitationRepositoryProvider);
+  return CancelInvitationUseCase(repository);
+});
+
 @immutable
 class InvitationListingState {
   const InvitationListingState({
     this.items = const <InvitationListItemEntity>[],
     this.isLoading = false,
+    this.isDeleting = false,
+    this.deletingInvitationId,
     this.errorMessage,
     this.hasLoaded = false,
   });
 
   final List<InvitationListItemEntity> items;
   final bool isLoading;
+  final bool isDeleting;
+  final String? deletingInvitationId;
   final String? errorMessage;
   final bool hasLoaded;
 
   InvitationListingState copyWith({
     List<InvitationListItemEntity>? items,
     bool? isLoading,
+    bool? isDeleting,
+    Object? deletingInvitationId = _unset,
     Object? errorMessage = _unset,
     bool? hasLoaded,
   }) {
     return InvitationListingState(
       items: items ?? this.items,
       isLoading: isLoading ?? this.isLoading,
+      isDeleting: isDeleting ?? this.isDeleting,
+      deletingInvitationId: identical(deletingInvitationId, _unset)
+          ? this.deletingInvitationId
+          : deletingInvitationId as String?,
       errorMessage: identical(errorMessage, _unset)
           ? this.errorMessage
           : errorMessage as String?,
@@ -61,6 +80,57 @@ class InvitationListingController extends Notifier<InvitationListingState> {
 
   Future<void> applyFilters(InvitationListingFilterEntity filter) {
     return _fetch(filter: filter);
+  }
+
+  Future<InvitationDeleteResultEntity> deleteInvitation({
+    required String invitationId,
+  }) async {
+    final normalizedInvitationId = invitationId.trim();
+    if (normalizedInvitationId.isEmpty) {
+      return const InvitationDeleteResultEntity(
+        status: false,
+        message: 'Invitation ID is required to delete invitation.',
+      );
+    }
+    if (state.isDeleting &&
+        state.deletingInvitationId == normalizedInvitationId) {
+      return const InvitationDeleteResultEntity(
+        status: false,
+        message: 'Deletion is currently in progress.',
+      );
+    }
+
+    state = state.copyWith(
+      isDeleting: true,
+      deletingInvitationId: normalizedInvitationId,
+      errorMessage: null,
+    );
+
+    try {
+      final useCase = ref.read(cancelInvitationUseCaseProvider);
+      final result = await useCase(invitationId: normalizedInvitationId);
+      state = state.copyWith(
+        isDeleting: false,
+        deletingInvitationId: null,
+        items: result.status
+            ? state.items
+                  .where((item) => item.invitationId != normalizedInvitationId)
+                  .toList(growable: false)
+            : state.items,
+      );
+      return result;
+    } catch (error) {
+      final message = toDisplayErrorMessage(
+        error,
+        fallback: 'Failed to delete invitation. Please try again.',
+      );
+      state = state.copyWith(
+        isDeleting: false,
+        deletingInvitationId: null,
+        errorMessage: message,
+      );
+      return InvitationDeleteResultEntity(status: false, message: message);
+    }
   }
 
   Future<void> _fetch({required InvitationListingFilterEntity filter}) async {

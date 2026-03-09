@@ -1,15 +1,18 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:vms_bernas/domain/entities/invitation_delete_result_entity.dart';
 import 'package:vms_bernas/domain/entities/invitation_list_item_entity.dart';
 import 'package:vms_bernas/domain/entities/invitation_listing_filter_entity.dart';
 import 'package:vms_bernas/domain/repositories/invitation_repository.dart';
 import 'package:vms_bernas/domain/entities/invitation_submission_entity.dart';
+import 'package:vms_bernas/domain/usecases/cancel_invitation_usecase.dart';
 import 'package:vms_bernas/domain/usecases/list_invitations_usecase.dart';
 import 'package:vms_bernas/presentation/state/invitation_listing_providers.dart';
 
 class _FakeInvitationRepository implements InvitationRepository {
   _FakeInvitationRepository({
     this.shouldThrow = false,
+    this.shouldDeleteThrow = false,
     this.items = const <InvitationListItemEntity>[
       InvitationListItemEntity(
         invitationId: 'IV20251200001',
@@ -35,8 +38,10 @@ class _FakeInvitationRepository implements InvitationRepository {
   });
 
   final bool shouldThrow;
+  final bool shouldDeleteThrow;
   final List<InvitationListItemEntity> items;
   InvitationListingFilterEntity? lastFilter;
+  String? lastDeletedInvitationId;
 
   @override
   Future<List<InvitationListItemEntity>> listInvitations({
@@ -48,6 +53,20 @@ class _FakeInvitationRepository implements InvitationRepository {
     }
 
     return items;
+  }
+
+  @override
+  Future<InvitationDeleteResultEntity> cancelInvitation({
+    required String invitationId,
+  }) async {
+    lastDeletedInvitationId = invitationId;
+    if (shouldDeleteThrow) {
+      throw Exception('delete boom');
+    }
+    return const InvitationDeleteResultEntity(
+      status: true,
+      message: 'Visitor deleted successfully',
+    );
   }
 
   @override
@@ -76,6 +95,9 @@ void main() {
         listInvitationsUseCaseProvider.overrideWithValue(
           ListInvitationsUseCase(repo),
         ),
+        cancelInvitationUseCaseProvider.overrideWithValue(
+          CancelInvitationUseCase(repo),
+        ),
       ],
     );
     addTearDown(container.dispose);
@@ -97,6 +119,9 @@ void main() {
       overrides: [
         listInvitationsUseCaseProvider.overrideWithValue(
           ListInvitationsUseCase(repo),
+        ),
+        cancelInvitationUseCaseProvider.overrideWithValue(
+          CancelInvitationUseCase(repo),
         ),
       ],
     );
@@ -125,6 +150,9 @@ void main() {
       overrides: [
         listInvitationsUseCaseProvider.overrideWithValue(
           ListInvitationsUseCase(repo),
+        ),
+        cancelInvitationUseCaseProvider.overrideWithValue(
+          CancelInvitationUseCase(repo),
         ),
       ],
     );
@@ -210,6 +238,9 @@ void main() {
         listInvitationsUseCaseProvider.overrideWithValue(
           ListInvitationsUseCase(repo),
         ),
+        cancelInvitationUseCaseProvider.overrideWithValue(
+          CancelInvitationUseCase(repo),
+        ),
       ],
     );
     addTearDown(container.dispose);
@@ -224,5 +255,61 @@ void main() {
       'OLD',
       'INVALID',
     ]);
+  });
+
+  test('deleteInvitation removes item locally on success', () async {
+    final repo = _FakeInvitationRepository();
+    final container = ProviderContainer(
+      overrides: [
+        listInvitationsUseCaseProvider.overrideWithValue(
+          ListInvitationsUseCase(repo),
+        ),
+        cancelInvitationUseCaseProvider.overrideWithValue(
+          CancelInvitationUseCase(repo),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container
+        .read(invitationListingControllerProvider.notifier)
+        .loadInitial();
+    final result = await container
+        .read(invitationListingControllerProvider.notifier)
+        .deleteInvitation(invitationId: 'IV20251200001');
+
+    final state = container.read(invitationListingControllerProvider);
+    expect(repo.lastDeletedInvitationId, 'IV20251200001');
+    expect(result.status, isTrue);
+    expect(state.items, isEmpty);
+    expect(state.deletingInvitationId, isNull);
+  });
+
+  test('deleteInvitation failure keeps items and exposes message', () async {
+    final repo = _FakeInvitationRepository(shouldDeleteThrow: true);
+    final container = ProviderContainer(
+      overrides: [
+        listInvitationsUseCaseProvider.overrideWithValue(
+          ListInvitationsUseCase(repo),
+        ),
+        cancelInvitationUseCaseProvider.overrideWithValue(
+          CancelInvitationUseCase(repo),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container
+        .read(invitationListingControllerProvider.notifier)
+        .loadInitial();
+    final result = await container
+        .read(invitationListingControllerProvider.notifier)
+        .deleteInvitation(invitationId: 'IV20251200001');
+
+    final state = container.read(invitationListingControllerProvider);
+    expect(result.status, isFalse);
+    expect(result.message, 'delete boom');
+    expect(state.items, hasLength(1));
+    expect(state.deletingInvitationId, isNull);
   });
 }
